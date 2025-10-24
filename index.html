@@ -78,7 +78,7 @@
         <!-- Rodapé -->
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID do Usuário: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.1 (HTML)</p>
+            <p>App de Ranking v2.2 (HTML)</p>
         </footer>
 
     </div>
@@ -692,8 +692,8 @@
                             <tbody>${rankingsHtml}</tbody>
                         </table>
                         <div class="flex justify-between mt-2 text-sm">
-                            <span class="text-green-300">▲ Série Ouro</span>
-                            <span class="text-yellow-300">▼ Série Prata</span>
+                            <span class="text-green-300">▲ Dupla Ouro</span>
+                            <span class="text-yellow-300">▼ Dupla Prata</span>
                         </div>
                     </div>
                 </div>
@@ -742,6 +742,7 @@
             }
         };
 
+        // ALTERADO: Esta função agora renderiza DUPLAS (pairs)
         const renderBracket = (title, bracket, bracketType, iconSvg, isFinished) => {
             const rounds = {};
             bracket.forEach(match => {
@@ -751,12 +752,12 @@
             const maxRound = Math.max(...Object.keys(rounds).map(Number));
 
             const final = bracket.find(m => m.round === maxRound);
-            const champion = final?.winner;
+            const champion = final?.winner; // 'champion' é um objeto DUPLA
 
             const championHtml = champion ? `
                 <div class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-gray-900 p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
                     ${icons.medal}
-                    <h4 class="text-2xl font-black uppercase tracking-wider">Campeão</h4>
+                    <h4 class="text-2xl font-black uppercase tracking-wider">Campeões</h4>
                     <p class="text-3xl font-bold">${champion.name}</p>
                 </div>
             ` : '';
@@ -767,28 +768,28 @@
                     : `Rodada ${roundNum}`;
                 
                 const matchesHtml = rounds[roundNum].map(match => {
-                    const p1 = match.players[0];
-                    const p2 = match.players[1];
-                    const isP1Winner = match.winner && p1 && match.winner.id === p1.id;
-                    const isP2Winner = match.winner && p2 && match.winner.id === p2.id;
+                    const pair1 = match.pairs[0]; // A 'dupla' 1
+                    const pair2 = match.pairs[1]; // A 'dupla' 2
+                    const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
+                    const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     
                     return `
                     <div class="bg-gray-700 rounded-lg shadow-md p-4">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="font-medium ${isP1Winner ? 'text-green-400 font-bold' : isP2Winner ? 'text-gray-400' : 'text-white'}">
-                                ${p1 ? p1.name : 'Aguardando...'}
+                            <span class="font-medium ${isPair1Winner ? 'text-green-400 font-bold' : isPair2Winner ? 'text-gray-400' : 'text-white'}">
+                                ${pair1 ? pair1.name : 'Aguardando...'}
                             </span>
                             <input
                                 type="number"
                                 min="0"
                                 value="${score1 === null ? '' : score1}"
-                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isFinished || (match.winner && p1 && p2) ? 'opacity-70' : ''}"
+                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isFinished || (match.winner && pair1 && pair2) ? 'opacity-70' : ''}"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
                                 data-score-index="0"
-                                ${(!p1 || !p2 || isFinished || match.winner) ? 'disabled' : ''}
+                                ${(!pair1 || !pair2 || isFinished || match.winner) ? 'disabled' : ''}
                             />
                         </div>
                         
@@ -799,18 +800,18 @@
                         </div>
 
                         <div class="flex justify-between items-center">
-                            <span class="font-medium ${isP2Winner ? 'text-green-400 font-bold' : isP1Winner ? 'text-gray-400' : 'text-white'}">
-                                ${p2 ? p2.name : 'Aguardando...'}
+                            <span class="font-medium ${isPair2Winner ? 'text-green-400 font-bold' : isPair1Winner ? 'text-gray-400' : 'text-white'}">
+                                ${pair2 ? pair2.name : 'Aguardando...'}
                             </span>
                             <input
                                 type="number"
                                 min="0"
                                 value="${score2 === null ? '' : score2}"
-                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isFinished || (match.winner && p1 && p2) ? 'opacity-70' : ''}"
+                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isFinished || (match.winner && pair1 && pair2) ? 'opacity-70' : ''}"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
                                 data-score-index="1"
-                                ${(!p1 || !p2 || isFinished || match.winner) ? 'disabled' : ''}
+                                ${(!pair1 || !pair2 || isFinished || match.winner) ? 'disabled' : ''}
                             />
                         </div>
                     </div>
@@ -910,7 +911,6 @@
                     });
                 }
                 
-                // CORREÇÃO: Atualiza o status no doc de dados
                 const newChampData = {
                     ...activeChampionship,
                     status: 'groups',
@@ -935,23 +935,37 @@
             saveActiveChampionship(newChampData); // Salva sem esperar
         };
 
+        // ALTERADO: Esta função agora cria DUPLAS
         const handleFinalizeGroups = async () => {
             if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata e bloquear os grupos.")) return;
 
             try {
-                let goldSeriesPlayers = [];
-                let silverSeriesPlayers = [];
+                let goldSeriesPairs = [];
+                let silverSeriesPairs = [];
                 
                 activeChampionship.groups.forEach(group => {
-                    const rankings = getRankings(group);
-                    goldSeriesPlayers.push(rankings[0], rankings[1]);
-                    silverSeriesPlayers.push(rankings[2], rankings[3]);
+                    const rankings = getRankings(group); // [p1, p2, p3, p4]
+                    
+                    // Cria a Dupla Ouro (1º e 2º)
+                    const goldPair = {
+                        id: `${rankings[0].id}_${rankings[1].id}`,
+                        name: `${rankings[0].name} / ${rankings[1].name}`,
+                        players: [rankings[0], rankings[1]] // Armazena os jogadores individuais
+                    };
+                    goldSeriesPairs.push(goldPair);
+
+                    // Cria a Dupla Prata (3º e 4º)
+                    const silverPair = {
+                        id: `${rankings[2].id}_${rankings[3].id}`,
+                        name: `${rankings[2].name} / ${rankings[3].name}`,
+                        players: [rankings[2], rankings[3]]
+                    };
+                    silverSeriesPairs.push(silverPair);
                 });
                 
-                const goldBracket = createBracket(goldSeriesPlayers);
-                const silverBracket = createBracket(silverSeriesPlayers);
+                const goldBracket = createBracket(goldSeriesPairs);
+                const silverBracket = createBracket(silverSeriesPairs);
                 
-                // CORREÇÃO: Atualiza o status no doc de dados
                 const newChampData = {
                     ...activeChampionship,
                     status: 'knockout',
@@ -971,6 +985,7 @@
             }
         };
 
+        // ALTERADO: Esta função agora avança DUPLAS
         const handleKnockoutScoreChange = async (bracketType, matchId, scoreIndex, value) => {
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
@@ -985,23 +1000,23 @@
                 
                 // Define o vencedor da partida
                 if (s0 !== null && s1 !== null) {
-                    if (s0 > s1) match.winner = match.players[0];
-                    else if (s1 > s0) match.winner = match.players[1];
+                    if (s0 > s1) match.winner = match.pairs[0]; // Vencedor é a Dupla 1
+                    else if (s1 > s0) match.winner = match.pairs[1]; // Vencedor é a Dupla 2
                     else match.winner = null; // Empate não define vencedor
                     
-                    // Avança o vencedor para a próxima chave
+                    // Avança a dupla vencedora para a próxima chave
                     if (match.winner && match.nextMatchId) {
                         const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
-                        if (nextMatch) nextMatch.players[match.nextMatchSlot] = match.winner;
+                        if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
                     }
                 } else {
-                    // Se um placar for apagado, remove o vencedor e o jogador da próxima fase
+                    // Se um placar for apagado, remove o vencedor e a dupla da próxima fase
                     const oldWinner = match.winner;
                     match.winner = null;
                     if (oldWinner && match.nextMatchId) {
                         const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
-                        if (nextMatch && nextMatch.players[match.nextMatchSlot]?.id === oldWinner.id) {
-                            nextMatch.players[match.nextMatchSlot] = null;
+                        if (nextMatch && nextMatch.pairs[match.nextMatchSlot]?.id === oldWinner.id) {
+                            nextMatch.pairs[match.nextMatchSlot] = null;
                         }
                     }
                 }
@@ -1017,12 +1032,13 @@
            Lógica de Cálculo de Ranking
            ============================================================================= */
 
+        // ALTERADO: Esta função agora lê DUPLAS
         const checkAndFinalizeChampionship = async (champData) => {
             const goldFinal = champData.goldBracket.find(m => !m.nextMatchId);
             const silverFinal = champData.silverBracket.find(m => !m.nextMatchId);
 
-            const goldWinner = goldFinal?.winner;
-            const silverWinner = silverFinal?.winner;
+            const goldWinner = goldFinal?.winner; // 'goldWinner' é um objeto Dupla
+            const silverWinner = silverFinal?.winner; // 'silverWinner' é um objeto Dupla
 
             // Se ambos os campeões (Ouro e Prata) estiverem definidos, o torneio acabou!
             if (goldWinner && silverWinner) {
@@ -1041,22 +1057,22 @@
                 showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
                 
                 try {
-                    // 1. Define os vencedores
-                    const goldRunnerUp = goldFinal.players.find(p => p.id !== goldWinner.id);
-                    const silverRunnerUp = silverFinal.players.find(p => p.id !== silverWinner.id);
+                    // 1. Define os vencedores e vices (que também são Duplas)
+                    const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
+                    const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
 
                     // 2. Atualiza o documento principal do campeonato
                     await setDoc(champRef, {
                         status: 'finished',
-                        winnerGold: goldWinner.name,
-                        winnerSilver: silverWinner.name
+                        winnerGold: goldWinner.name, // Salva o nome da dupla
+                        winnerSilver: silverWinner.name // Salva o nome da dupla
                     }, { merge: true });
 
                     // 3. Atualiza o Ranking Global (operação complexa)
                     await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp });
 
                     hideModal();
-                    showModal("Sucesso!", `Ranking global atualizado! Campeão Ouro: ${goldWinner.name}. Campeão Prata: ${silverWinner.name}.`);
+                    showModal("Sucesso!", `Ranking global atualizado! Campeões Ouro: ${goldWinner.name}. Campeões Prata: ${silverWinner.name}.`);
                 
                 } catch (error) {
                     console.error("Erro ao finalizar e aplicar ranking:", error);
@@ -1065,12 +1081,14 @@
             }
         };
 
+        // ALTERADO: Esta função agora aplica pontos aos DOIS jogadores de cada dupla
         const updateGlobalRanking = async (champData, winners) => {
-            // Usamos uma transação para garantir que a leitura e escrita dos pontos seja atômica
+            // 'winners' contém { goldWinner: Dupla, goldRunnerUp: Dupla, ... }
+
             await runTransaction(db, async (transaction) => {
                 const playerPointsMap = new Map();
 
-                // 1. Adiciona pontos de participação para todos
+                // 1. Adiciona pontos de participação para todos os *jogadores individuais*
                 for (const player of champData.players) {
                     playerPointsMap.set(player.id, {
                         name: player.name,
@@ -1080,27 +1098,36 @@
                     });
                 }
 
-                // 2. Adiciona pontos de performance
+                // 2. Adiciona pontos de performance para as *duplas*
                 if (winners.goldWinner) {
-                    const p = playerPointsMap.get(winners.goldWinner.id);
-                    p.points += RANKING_POINTS.GOLD_WINNER;
-                    p.goldWins = 1;
+                    // Itera sobre os 2 jogadores da dupla campeã
+                    for (const player of winners.goldWinner.players) {
+                        const p = playerPointsMap.get(player.id);
+                        p.points += RANKING_POINTS.GOLD_WINNER;
+                        p.goldWins = 1;
+                    }
                 }
                 if (winners.goldRunnerUp) {
-                    const p = playerPointsMap.get(winners.goldRunnerUp.id);
-                    p.points += RANKING_POINTS.GOLD_RUNNERUP;
+                    for (const player of winners.goldRunnerUp.players) {
+                        const p = playerPointsMap.get(player.id);
+                        p.points += RANKING_POINTS.GOLD_RUNNERUP;
+                    }
                 }
                 if (winners.silverWinner) {
-                    const p = playerPointsMap.get(winners.silverWinner.id);
-                    p.points += RANKING_POINTS.SILVER_WINNER;
-                    p.silverWins = 1;
+                    for (const player of winners.silverWinner.players) {
+                        const p = playerPointsMap.get(player.id);
+                        p.points += RANKING_POINTS.SILVER_WINNER;
+                        p.silverWins = 1;
+                    }
                 }
                 if (winners.silverRunnerUp) {
-                    const p = playerPointsMap.get(winners.silverRunnerUp.id);
-                    p.points += RANKING_POINTS.SILVER_RUNNERUP;
+                     for (const player of winners.silverRunnerUp.players) {
+                        const p = playerPointsMap.get(player.id);
+                        p.points += RANKING_POINTS.SILVER_RUNNERUP;
+                    }
                 }
 
-                // 3. Lê e atualiza os documentos no 'global_players'
+                // 3. Lê e atualiza os documentos no 'global_players' (esta parte não muda)
                 for (const [playerId, data] of playerPointsMap.entries()) {
                     const playerRef = doc(db, 'users', appState.userId, 'global_players', playerId);
                     const playerDoc = await transaction.get(playerRef);
@@ -1154,14 +1181,16 @@
             return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
         };
 
-        const createBracket = (bracketPlayers) => {
-            const shuffledPlayers = [...bracketPlayers].sort(() => 0.5 - Math.random());
+        // ALTERADO: Esta função agora recebe DUPLAS e faz o sorteio (embaralha)
+        const createBracket = (bracketPairs) => {
+            // Sorteio aleatório das duplas (cumprindo requisito)
+            const shuffledPairs = [...bracketPairs].sort(() => 0.5 - Math.random());
             const bracket = [];
-            const numPlayers = bracketPlayers.length;
+            const numPairs = bracketPairs.length;
             
-            if (numPlayers < 2) return [];
+            if (numPairs < 2) return [];
 
-            const numRounds = Math.log2(numPlayers);
+            const numRounds = Math.log2(numPairs);
 
             for (let r = numRounds; r >= 1; r--) {
                 const matchesInRound = Math.pow(2, r - 1);
@@ -1180,7 +1209,7 @@
                     bracket.push({
                         id: matchId,
                         round: r,
-                        players: [null, null],
+                        pairs: [null, null], // ALTERADO de 'players' para 'pairs'
                         score: [null, null],
                         winner: null,
                         nextMatchId: nextMatchId,
@@ -1189,9 +1218,10 @@
                 }
             }
             
+            // Preenche a Rodada 1 com as duplas sorteadas
             const round1Matches = bracket.filter(m => m.round === 1);
             round1Matches.forEach((match, index) => {
-                match.players = [shuffledPlayers[index * 2] || null, shuffledPlayers[index * 2 + 1] || null];
+                match.pairs = [shuffledPairs[index * 2] || null, shuffledPairs[index * 2 + 1] || null];
             });
 
             return bracket.sort((a, b) => a.round - b.round);
