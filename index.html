@@ -78,7 +78,7 @@
         <!-- Rodapé -->
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID do Usuário: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.0 (HTML)</p>
+            <p>App de Ranking v2.1 (HTML)</p>
         </footer>
 
     </div>
@@ -400,9 +400,18 @@
             button.lastChild.textContent = "Criando...";
             
             try {
-                // 1. Cria o documento principal do campeonato
+                // CORREÇÃO: Usar um 'batch' para criar ambos os documentos atomicamente
+                const batch = writeBatch(db);
+
+                // 1. Cria a referência para o NOVO doc de campeonato (gera ID localmente)
                 const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
-                const champDoc = await addDoc(champCollectionRef, {
+                const newChampRef = doc(champCollectionRef);
+
+                // 2. Cria a referência para o doc de dados aninhado
+                const champDataRef = doc(db, 'users', appState.userId, 'championships', newChampRef.id, 'data', 'main');
+
+                // 3. Adiciona os dados ao batch
+                batch.set(newChampRef, {
                     name: champName,
                     createdAt: Timestamp.now(),
                     status: 'registration', // 'registration', 'groups', 'knockout', 'finished'
@@ -410,14 +419,16 @@
                     winnerSilver: null
                 });
 
-                // 2. Cria o documento de dados (data) aninhado
-                const champDataRef = doc(db, 'users', appState.userId, 'championships', champDoc.id, 'data', 'main');
-                await setDoc(champDataRef, {
+                batch.set(champDataRef, {
                     players: [], // Jogadores deste torneio específico
                     groups: [],
                     goldBracket: [],
-                    silverBracket: []
+                    silverBracket: [],
+                    status: 'registration' // Status inicial também no doc de dados
                 });
+
+                // 4. Executa o batch
+                await batch.commit();
 
                 input.value = '';
                 showModal("Sucesso!", `Campeonato "${champName}" criado.`);
@@ -513,7 +524,7 @@
                 return;
             }
 
-            // Se em andamento, renderiza a fase atual
+            // Se em andamento, renderiza a fase atual (baseado no status do doc de DADOS)
             switch (activeChampionship.status) {
                 case 'groups':
                     renderGroupStage();
@@ -773,11 +784,11 @@
                                 type="number"
                                 min="0"
                                 value="${score1 === null ? '' : score1}"
-                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isFinished || match.winner ? 'opacity-70' : ''}"
+                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isFinished || (match.winner && p1 && p2) ? 'opacity-70' : ''}"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
                                 data-score-index="0"
-                                ${(!p1 || !p2 || isFinished) ? 'disabled' : ''}
+                                ${(!p1 || !p2 || isFinished || match.winner) ? 'disabled' : ''}
                             />
                         </div>
                         
@@ -795,11 +806,11 @@
                                 type="number"
                                 min="0"
                                 value="${score2 === null ? '' : score2}"
-                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isFinished || match.winner ? 'opacity-70' : ''}"
+                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isFinished || (match.winner && p1 && p2) ? 'opacity-70' : ''}"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
                                 data-score-index="1"
-                                ${(!p1 || !p2 || isFinished) ? 'disabled' : ''}
+                                ${(!p1 || !p2 || isFinished || match.winner) ? 'disabled' : ''}
                             />
                         </div>
                     </div>
@@ -899,14 +910,15 @@
                     });
                 }
                 
+                // CORREÇÃO: Atualiza o status no doc de dados
                 const newChampData = {
                     ...activeChampionship,
-                    status: 'groups', // <-- Erro estava aqui, faltava esta linha
+                    status: 'groups',
                     groups: newGroups
                 };
                 await saveActiveChampionship(newChampData);
                 
-                // Atualiza o status principal do campeonato
+                // Atualiza o status principal do campeonato (para a lista)
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
                 await setDoc(champRef, { status: 'groups' }, { merge: true });
 
@@ -939,16 +951,17 @@
                 const goldBracket = createBracket(goldSeriesPlayers);
                 const silverBracket = createBracket(silverSeriesPlayers);
                 
+                // CORREÇÃO: Atualiza o status no doc de dados
                 const newChampData = {
                     ...activeChampionship,
-                    status: 'knockout', // <-- Erro estava aqui
+                    status: 'knockout',
                     goldBracket: goldBracket,
                     silverBracket: silverBracket,
                 };
                 
                 await saveActiveChampionship(newChampData);
 
-                // Atualiza o status principal do campeonato
+                // Atualiza o status principal do campeonato (para a lista)
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
                 await setDoc(champRef, { status: 'knockout' }, { merge: true });
                 
@@ -1235,13 +1248,13 @@
                         render();
                     }
                 } else {
-                    showModal("Erro", "Não foi possível carregar os dados deste campeonato.");
+                    showModal("Erro", "Não foi possível carregar os dados deste campeonato. (O doc 'data/main' não foi encontrado).");
                     navigateTo('championshipList');
                 }
                 render(); // Renderiza para atualizar os dados (ex: placares)
             }, (error) => {
                 console.error("Erro ao carregar campeonato ativo:", error);
-                showModal("Erro", "Não foi possível carregar este campeonato.");
+                showModal("Erro", "Não foi possível carregar este campeonato. Verifique as regras do Firestore.");
                 navigateTo('championshipList');
             });
         };
