@@ -63,7 +63,7 @@
         <!-- Rodapé -->
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID do Usuário: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Torneio v1.1 (HTML)</p>
+            <p>App de Torneio v1.2 (HTML)</p> <!-- Versão atualizada -->
         </footer>
 
     </div>
@@ -123,16 +123,16 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        setLogLevel('debug'); // 'debug' para logs detalhados, 'silent' para desligar
+        setLogLevel('debug'); 
 
         /* =============================================================================
            Estado Global do Aplicativo
            ============================================================================= */
         let authInfo = { userId: null, isAuthReady: false };
-        let players = []; // Lista master de jogadores
-        let tournament = null; // Objeto de estado do torneio
-        let unsubscribePlayers = () => {}; // Função para desligar o listener
-        let unsubscribeTournament = () => {}; // Função para desligar o listener
+        let players = []; 
+        let tournament = null; 
+        let unsubscribePlayers = () => {}; 
+        let unsubscribeTournament = () => {}; 
 
         /* =============================================================================
            Referências do DOM
@@ -150,7 +150,7 @@
         const modalCloseIcon = document.getElementById('modal-close-icon');
 
         /* =============================================================================
-           Ícones SVG (Substitutos do Lucide-React)
+           Ícones SVG
            ============================================================================= */
         const icons = {
             users: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
@@ -178,20 +178,16 @@
 
         modalCloseBtn.addEventListener('click', hideModal);
         modalCloseIcon.addEventListener('click', hideModal);
-        modal.addEventListener('click', hideModal); // Fecha ao clicar fora
-        modal.firstElementChild.addEventListener('click', (e) => e.stopPropagation()); // Impede de fechar ao clicar dentro
+        modal.addEventListener('click', hideModal);
+        modal.firstElementChild.addEventListener('click', (e) => e.stopPropagation());
 
         /* =============================================================================
            Funções Principais do Torneio
            ============================================================================= */
         
-        /**
-         * Salva o estado completo do torneio no Firestore
-         */
         const saveTournament = async (newTournamentState) => {
             if (!authInfo.userId) return;
             try {
-                // NOVO CAMINHO: 'users/{userId}/bt_tournament/main'
                 const tournamentDocRef = doc(db, 'users', authInfo.userId, 'bt_tournament', 'main');
                 await setDoc(tournamentDocRef, newTournamentState);
             } catch (error) {
@@ -200,9 +196,6 @@
             }
         };
 
-        /**
-         * Reinicia o campeonato, voltando à tela de registro
-         */
         const resetChampionship = async () => {
             if (confirm("TEM CERTEZA? Isso irá apagar todos os grupos e chaves e voltar para a tela de cadastro. Os jogadores cadastrados NÃO serão apagados.")) {
                 const newTournamentState = {
@@ -216,9 +209,6 @@
         };
         resetChampionshipBtn.addEventListener('click', resetChampionship);
 
-        /**
-         * Lógica de cálculo de ranking do grupo (copiada do React)
-         */
         const getRankings = (group) => {
             const playerStats = {};
             group.players.forEach(p => {
@@ -242,9 +232,7 @@
             return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
         };
 
-        /**
-         * Lógica de criação de chaves (copiada do React)
-         */
+        // Esta função agora funciona para qualquer potência de 2 (2, 4, 8, 16...)
         const createBracket = (bracketPlayers) => {
             const shuffledPlayers = [...bracketPlayers].sort(() => 0.5 - Math.random());
             const bracket = [];
@@ -252,6 +240,7 @@
             
             if (numPlayers < 2) return [];
 
+            // AQUI ESTÁ A LÓGICA QUE FUNCIONA (pois numPlayers será 2, 4, 8, etc.)
             const numRounds = Math.log2(numPlayers);
 
             for (let r = numRounds; r >= 1; r--) {
@@ -260,7 +249,7 @@
                 for (let m = 0; m < matchesInRound; m++) {
                     const matchId = `R${r}_M${m+1}`;
                     let nextMatchId = null;
-                    let nextMatchSlot = null; // 0 ou 1
+                    let nextMatchSlot = null; 
 
                     if (r < numRounds) {
                         const nextRoundMatchIndex = Math.floor(m / 2);
@@ -292,20 +281,15 @@
            Funções de Renderização de Tela (O "Router")
            ============================================================================= */
         
-        /**
-         * Função principal que decide qual tela mostrar
-         */
         const renderApp = () => {
-            if (!tournament) return; // Não faz nada se o torneio não foi carregado
+            if (!tournament) return; 
 
-            // Atualiza o botão de reset
             if (tournament.status !== 'registration') {
                 resetChampionshipBtn.classList.remove('hidden');
             } else {
                 resetChampionshipBtn.classList.add('hidden');
             }
             
-            // "Router"
             switch (tournament.status) {
                 case 'groups':
                     renderGroupStage();
@@ -318,14 +302,9 @@
                     renderPlayerRegistration();
                     break;
             }
-
-            // Atualiza os ícones do Lucide (necessário após injetar HTML)
             lucide.createIcons();
         };
 
-        /**
-         * Renderiza a tela de Cadastro de Jogadores
-         */
         const renderPlayerRegistration = () => {
             const playersListHtml = players.length === 0
                 ? `<p class="text-gray-400 text-center py-4">Nenhum jogador cadastrado.</p>`
@@ -338,16 +317,22 @@
                     </div>
                 `).join('');
 
+            // **MUDANÇA AQUI**: Verifica se o número de jogadores é válido (4, 8, 16, 32)
+            const validPlayerCounts = [4, 8, 16, 32];
+            const canGenerate = validPlayerCounts.includes(players.length);
+
             const generateButtonHtml = players.length >= 4
                 ? `
                 <div class="mt-8 text-center">
                     <button
                         id="generate-champ-btn"
                         type="button"
-                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto">
+                        ${!canGenerate ? 'disabled' : ''}
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto ${!canGenerate ? 'opacity-50 cursor-not-allowed' : ''}">
                         ${icons.swords}
                         Gerar Campeonato
                     </button>
+                    ${!canGenerate ? `<p class="text-yellow-400 text-sm mt-3">O campeonato requer 4, 8, 16 ou 32 jogadores. Você tem ${players.length}.</p>` : ''}
                 </div>
                 ` : '';
 
@@ -383,19 +368,15 @@
                 </div>
             `;
 
-            // Adiciona os event listeners após o HTML ser injetado
             document.getElementById('add-player-form').addEventListener('submit', handleAddPlayer);
             document.querySelectorAll('.delete-player-btn').forEach(btn => {
                 btn.addEventListener('click', () => handleDeletePlayer(btn.dataset.id));
             });
-            if (players.length >= 4) {
+            if (canGenerate) { // Só adiciona o listener se o botão for clicável
                 document.getElementById('generate-champ-btn').addEventListener('click', handleGenerateChampionship);
             }
         };
 
-        /**
-         * Renderiza a tela da Fase de Grupos
-         */
         const renderGroupStage = () => {
             let allScoresFilled = true;
             const groupsHtml = tournament.groups.map((group, groupIndex) => {
@@ -487,7 +468,6 @@
                 </div>
             `;
 
-            // Adiciona event listeners
             document.querySelectorAll('.score-input').forEach(input => {
                 input.addEventListener('change', (e) => {
                     const { groupIndex, matchIndex, scoreIndex } = e.target.dataset;
@@ -497,16 +477,12 @@
             document.getElementById('finalize-groups-btn').addEventListener('click', handleFinalizeGroups);
         };
         
-        /**
-         * Renderiza a tela do Mata-Mata (Ambas as chaves)
-         */
         const renderKnockoutView = () => {
             const goldHtml = renderBracket('Série Ouro', tournament.goldBracket, 'goldBracket', icons.shield);
             const silverHtml = renderBracket('Série Prata', tournament.silverBracket, 'silverBracket', icons.shieldOff);
             
             mainContent.innerHTML = goldHtml + silverHtml;
             
-            // Adiciona event listeners
             document.querySelectorAll('.knockout-score-input').forEach(input => {
                 input.addEventListener('change', (e) => {
                     const { bracketType, matchId, scoreIndex } = e.target.dataset;
@@ -515,11 +491,7 @@
             });
         };
 
-        /**
-         * Helper para renderizar uma chave (Ouro ou Prata)
-         */
         const renderBracket = (title, bracket, bracketType, iconSvg) => {
-            // Agrupa partidas por rodada
             const rounds = {};
             bracket.forEach(match => {
                 if (!rounds[match.round]) rounds[match.round] = [];
@@ -553,7 +525,6 @@
                     
                     return `
                     <div class="bg-gray-700 rounded-lg shadow-md p-4">
-                        <!-- Jogador 1 -->
                         <div class="flex justify-between items-center mb-2">
                             <span class="font-medium ${isP1Winner ? 'text-green-400 font-bold' : isP2Winner ? 'text-gray-400' : 'text-white'}">
                                 ${p1 ? p1.name : 'Aguardando...'}
@@ -570,14 +541,12 @@
                             />
                         </div>
                         
-                        <!-- Divisor -->
                         <div class="flex items-center my-2">
                             <div class="flex-grow border-t border-gray-600"></div>
                             <span class="mx-2 text-xs text-gray-400">vs</span>
                             <div class="flex-grow border-t border-gray-600"></div>
                         </div>
 
-                        <!-- Jogador 2 -->
                         <div class="flex justify-between items-center">
                             <span class="font-medium ${isP2Winner ? 'text-green-400 font-bold' : isP1Winner ? 'text-gray-400' : 'text-white'}">
                                 ${p2 ? p2.name : 'Aguardando...'}
@@ -623,9 +592,6 @@
            Manipuladores de Eventos (Lógica do App)
            ============================================================================= */
         
-        /**
-         * Adiciona um novo jogador
-         */
         const handleAddPlayer = async (e) => {
             e.preventDefault();
             const input = document.getElementById('player-name-input');
@@ -637,7 +603,6 @@
             button.lastChild.textContent = "Adicionando...";
             
             try {
-                // NOVO CAMINHO: 'users/{userId}/bt_players'
                 const playersCollectionRef = collection(db, 'users', authInfo.userId, 'bt_players');
                 await addDoc(playersCollectionRef, { name: playerName });
                 input.value = '';
@@ -650,13 +615,9 @@
             button.lastChild.textContent = "Adicionar";
         };
 
-        /**
-         * Exclui um jogador
-         */
         const handleDeletePlayer = async (playerId) => {
             if (!confirm("Tem certeza que deseja excluir este jogador?")) return;
             try {
-                // NOVO CAMINHO: 'users/{userId}/bt_players/{playerId}'
                 const playerDocRef = doc(db, 'users', authInfo.userId, 'bt_players', playerId);
                 await deleteDoc(playerDocRef);
             } catch (error) {
@@ -669,14 +630,14 @@
          * Gera o campeonato
          */
         const handleGenerateChampionship = async () => {
-            if (players.length < 4) {
-                showModal("Jogadores Insuficientes", "Você precisa de pelo menos 4 jogadores para iniciar um campeonato.");
+            // **MUDANÇA CRÍTICA AQUI**
+            const validPlayerCounts = [4, 8, 16, 32];
+            if (!validPlayerCounts.includes(players.length)) {
+                showModal("Número de Jogadores Inválido", `Você precisa de 4, 8, 16 ou 32 jogadores para gerar um campeonato com chaves corretas. Você tem ${players.length} jogadores.`);
                 return;
             }
-            if (players.length % 4 !== 0) {
-                showModal("Número de Jogadores Inválido", `Você precisa de um número de jogadores múltiplo de 4 (Ex: 4, 8, 12, 16...). Você tem ${players.length} jogadores.`);
-                return;
-            }
+            // Fim da mudança
+
             if (!confirm(`Iniciar campeonato com ${players.length} jogadores? Isso criará ${players.length / 4} grupos.`)) {
                 return;
             }
@@ -715,26 +676,14 @@
             }
         };
 
-        /**
-         * Salva o placar de um jogo da fase de grupos
-         */
         const handleGroupScoreChange = (groupIndex, matchIndex, scoreIndex, value) => {
-            // Cria uma cópia profunda para evitar mutar o estado global diretamente
             const newTournament = JSON.parse(JSON.stringify(tournament));
             const score = value === '' ? null : parseInt(value, 10);
-            
-            // Garante que o placar seja um número válido ou nulo
             newTournament.groups[groupIndex].matches[matchIndex].score[scoreIndex] = isNaN(score) ? null : score;
-            
-            // Salva o estado atualizado. O listener (onSnapshot) cuidará da re-renderização.
             saveTournament(newTournament);
         };
 
-        /**
-         * Finaliza a fase de grupos e gera as chaves
-         */
         const handleFinalizeGroups = () => {
-            // A verificação de placares preenchidos já é feita no botão (disabled)
             if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata.")) return;
 
             try {
@@ -747,6 +696,7 @@
                     silverSeriesPlayers.push(rankings[2], rankings[3]);
                 });
                 
+                // Agora isso vai funcionar, pois gold/silver terá 2, 4, 8 ou 16 jogadores
                 const goldBracket = createBracket(goldSeriesPlayers);
                 const silverBracket = createBracket(silverSeriesPlayers);
                 
@@ -765,9 +715,6 @@
             }
         };
 
-        /**
-         * Salva o placar de um jogo do mata-mata
-         */
         const handleKnockoutScoreChange = (bracketType, matchId, scoreIndex, value) => {
             const newTournament = JSON.parse(JSON.stringify(tournament));
             const bracketToUpdate = newTournament[bracketType];
@@ -780,18 +727,15 @@
                 const s0 = match.score[0];
                 const s1 = match.score[1];
                 
-                // Checa se os dois placares estão preenchidos para definir o vencedor
                 if (s0 !== null && s1 !== null) {
                     if (s0 > s1) {
                         match.winner = match.players[0];
                     } else if (s1 > s0) {
                         match.winner = match.players[1];
                     } else {
-                        // Em caso de empate, limpa o vencedor
                         match.winner = null; 
                     }
                     
-                    // Avança o vencedor para a próxima chave
                     if (match.winner && match.nextMatchId) {
                         const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
                         if (nextMatch) {
@@ -799,7 +743,6 @@
                         }
                     }
                 } else {
-                    // Se um placar for limpo, remove o vencedor e o avanço
                     const oldWinner = match.winner;
                     match.winner = null;
                     if (oldWinner && match.nextMatchId) {
@@ -818,18 +761,13 @@
            Inicialização do App (Autenticação e Listeners)
            ============================================================================= */
 
-        /**
-         * Ouve mudanças na lista de jogadores
-         */
         const listenToPlayers = () => {
-            unsubscribePlayers(); // Desliga o listener anterior, se houver
-            // NOVO CAMINHO: 'users/{userId}/bt_players'
+            unsubscribePlayers(); 
             const playersCollectionRef = collection(db, 'users', authInfo.userId, 'bt_players');
             const q = query(playersCollectionRef);
             
             unsubscribePlayers = onSnapshot(q, (querySnapshot) => {
                 players = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                // Se estivermos na tela de registro, re-renderiza
                 if (tournament?.status === 'registration') {
                     renderApp();
                 }
@@ -839,27 +777,19 @@
             });
         };
 
-        /**
-         * Ouve mudanças no estado do torneio
-         */
         const listenToTournament = () => {
-            unsubscribeTournament(); // Desliga o listener anterior
-            // NOVO CAMINHO: 'users/{userId}/bt_tournament/main'
+            unsubscribeTournament(); 
             const tournamentDocRef = doc(db, 'users', authInfo.userId, 'bt_tournament', 'main');
             
             unsubscribeTournament = onSnapshot(tournamentDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     tournament = docSnap.data();
                 } else {
-                    // Se não existe, cria o estado inicial (registro)
                     tournament = { status: 'registration' };
                 }
                 
-                // Esconde o spinner e mostra o conteúdo
                 loadingSpinner.classList.add('hidden');
                 mainContent.classList.remove('hidden');
-                
-                // Renderiza a tela correta
                 renderApp();
             }, (error) => {
                 console.error("Erro ao carregar campeonato:", error);
@@ -868,19 +798,15 @@
             });
         };
         
-        // Ponto de entrada: Autenticação
         onAuthStateChanged(auth, async (user) => {
             let currentUserId = user?.uid;
 
             if (!user) {
                 try {
-                    // Como estamos usando um projeto Firebase pessoal, usamos o login anônimo.
                     const userCredential = await signInAnonymously(auth);
                     currentUserId = userCredential.user.uid;
                 } catch (error) {
                     console.error("Erro na autenticação anônima:", error);
-                    // **MUDANÇA AQUI**
-                    // Verifica o código de erro específico e mostra uma mensagem de modal mais útil.
                     let errorMessage = "Não foi possível conectar ao Firebase. Verifique sua conexão.";
                     if (error.code === 'auth/configuration-not-found') {
                         errorMessage = "Erro de Autenticação: O 'Login Anônimo' (Anonymous) não está ATIVADO no seu painel do Firebase. Por favor, ative-o na seção 'Authentication' > 'Sign-in method' para que o app possa funcionar.";
@@ -892,8 +818,6 @@
             if (currentUserId) {
                 authInfo = { userId: currentUserId, isAuthReady: true };
                 userIdFooter.textContent = currentUserId;
-                
-                // Inicia os listeners de dados
                 listenToPlayers();
                 listenToTournament();
             }
