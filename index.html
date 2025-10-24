@@ -78,7 +78,7 @@
         <!-- Rodapé -->
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.4 (HTML)</p>
+            <p>App de Ranking v2.5 (HTML)</p>
         </footer>
 
     </div>
@@ -144,9 +144,8 @@
         setLogLevel('debug'); 
 
         /* =============================================================================
-           NOVA CONSTANTE: ID Mestre
+           ID Mestre
            ============================================================================= */
-        // Este é o ID fixo que todos os dispositivos usarão.
         const MESTRE_USER_ID = "campeonato-sortudo-admin";
 
         /* =============================================================================
@@ -184,9 +183,10 @@
         const modalCloseIcon = document.getElementById('modal-close-icon');
 
         /* =============================================================================
-           Constantes de Pontuação
+           Constantes de Pontuação (Padrão)
            ============================================================================= */
-        const RANKING_POINTS = {
+        // Usado como fallback e valores padrão dos inputs
+        const DEFAULT_RANKING_POINTS = {
             GOLD_WINNER: 100,
             GOLD_RUNNERUP: 70,
             SILVER_WINNER: 40,
@@ -355,25 +355,62 @@
             mainContent.innerHTML = `
                 <div class="animate-fade-in">
                     <!-- Card de Criar Novo -->
-                    <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8">
-                        <h2 class="text-2xl font-bold text-cyan-400 mb-4">Novo Campeonato</h2>
-                        <form id="add-championship-form" class="flex flex-col sm:flex-row gap-3">
-                            <input
-                                type="text"
-                                id="championship-name-input"
-                                placeholder="Nome do Campeonato (ex: Torneio de Verão)"
-                                class="flex-grow bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                                required
-                            />
+                    <form id="add-championship-form">
+                        <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8">
+                            <h2 class="text-2xl font-bold text-cyan-400 mb-4">Novo Campeonato</h2>
+                            
+                            <!-- Input do Nome -->
+                            <div class="mb-4">
+                                <label for="championship-name-input" class="block text-sm font-medium text-gray-300 mb-1">Nome do Campeonato</label>
+                                <input
+                                    type="text"
+                                    id="championship-name-input"
+                                    placeholder="ex: Torneio de Verão"
+                                    class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                    required
+                                />
+                            </div>
+
+                            <!-- Inputs de Pontuação -->
+                            <h3 class="text-lg font-semibold text-gray-200 mb-3">Configuração de Pontos</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                                <div>
+                                    <label for="points-gold-winner" class="block text-xs font-medium text-green-300 mb-1">Campeão Ouro</label>
+                                    <input type="number" id="points-gold-winner" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_WINNER}"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                                </div>
+                                <div>
+                                    <label for="points-gold-runnerup" class="block text-xs font-medium text-green-400 mb-1">Vice Ouro</label>
+                                    <input type="number" id="points-gold-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_RUNNERUP}"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                                </div>
+                                <div>
+                                    <label for="points-silver-winner" class="block text-xs font-medium text-yellow-300 mb-1">Campeão Prata</label>
+                                    <input type="number" id="points-silver-winner" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_WINNER}"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                                </div>
+                                <div>
+                                    <label for="points-silver-runnerup" class="block text-xs font-medium text-yellow-400 mb-1">Vice Prata</label>
+                                    <input type="number" id="points-silver-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_RUNNERUP}"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                                </div>
+                                <div>
+                                    <label for="points-participation" class="block text-xs font-medium text-gray-400 mb-1">Participação</label>
+                                    <input type="number" id="points-participation" min="0" value="${DEFAULT_RANKING_POINTS.PARTICIPATION}"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                                </div>
+                            </div>
+
+                            <!-- Botão de Criar -->
                             <button
                                 type="submit"
                                 id="add-championship-btn"
-                                class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                                class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                                 ${icons.plus}
-                                <span>Criar</span>
+                                <span>Criar Campeonato</span>
                             </button>
-                        </form>
-                    </div>
+                        </div>
+                    </form>
 
                     <!-- Card da Lista Histórica -->
                     <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8">
@@ -405,11 +442,19 @@
             button.disabled = true;
             button.lastChild.textContent = "Criando...";
             
+            // Coleta os pontos personalizados
+            const pointsConfig = {
+                goldWinner: parseInt(document.getElementById('points-gold-winner').value) || 0,
+                goldRunnerUp: parseInt(document.getElementById('points-gold-runnerup').value) || 0,
+                silverWinner: parseInt(document.getElementById('points-silver-winner').value) || 0,
+                silverRunnerUp: parseInt(document.getElementById('points-silver-runnerup').value) || 0,
+                participation: parseInt(document.getElementById('points-participation').value) || 0
+            };
+
             try {
-                // CORREÇÃO: Usar um 'batch' para criar ambos os documentos atomicamente
                 const batch = writeBatch(db);
 
-                // 1. Cria a referência para o NOVO doc de campeonato (gera ID localmente)
+                // 1. Cria a referência para o NOVO doc de campeonato
                 const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
                 const newChampRef = doc(champCollectionRef);
 
@@ -420,17 +465,18 @@
                 batch.set(newChampRef, {
                     name: champName,
                     createdAt: Timestamp.now(),
-                    status: 'registration', // 'registration', 'groups', 'knockout', 'finished'
+                    status: 'registration',
                     winnerGold: null,
-                    winnerSilver: null
+                    winnerSilver: null,
+                    pointsConfig: pointsConfig // Salva os pontos personalizados
                 });
 
                 batch.set(champDataRef, {
-                    players: [], // Jogadores deste torneio específico
+                    players: [],
                     groups: [],
                     goldBracket: [],
                     silverBracket: [],
-                    status: 'registration' // Status inicial também no doc de dados
+                    status: 'registration'
                 });
 
                 // 4. Executa o batch
@@ -444,12 +490,15 @@
             }
             
             button.disabled = false;
-            button.lastChild.textContent = "Criar";
+            button.lastChild.textContent = "Criar Campeonato";
         };
 
         const handleDeleteChampionship = async (champId) => {
             const champ = championships.find(c => c.id === champId);
-            if (!confirm(`TEM CERTEZA? Isso irá apagar o campeonato "${champ.name}" e todos os seus dados (grupos, chaves, etc). O ranking global NÃO será afetado.`)) return;
+            if (window.prompt(`Para confirmar, digite o nome do campeonato: "${champ.name}"`) !== champ.name) {
+                showModal("Cancelado", "A exclusão foi cancelada.");
+                return;
+            }
             
             try {
                 // Deleta o documento de dados
@@ -1074,9 +1123,8 @@
                     return;
                 }
 
-                if (!confirm("Torneio finalizado! Calcular e aplicar pontos ao Ranking Global? Esta ação é irreversível.")) {
-                    return;
-                }
+                // **BUG FIX**: Remove a confirmação (confirm()).
+                // O ranking será aplicado automaticamente.
                 
                 showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
                 
@@ -1084,6 +1132,9 @@
                     // 1. Define os vencedores e vices (que também são Duplas)
                     const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
                     const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
+
+                    // **NOVA FUNCIONALIDADE**: Pega os pontos do doc principal, ou usa o padrão
+                    const effectivePoints = champDoc.data().pointsConfig || DEFAULT_RANKING_POINTS;
 
                     // 2. Atualiza o documento principal do campeonato
                     await setDoc(champRef, {
@@ -1093,7 +1144,8 @@
                     }, { merge: true });
 
                     // 3. Atualiza o Ranking Global (operação complexa)
-                    await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp });
+                    // Passa a configuração de pontos para a função
+                    await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp }, effectivePoints);
 
                     hideModal();
                     showModal("Sucesso!", `Ranking global atualizado! Campeões Ouro: ${goldWinner.name}. Campeões Prata: ${silverWinner.name}.`);
@@ -1105,9 +1157,10 @@
             }
         };
 
-        // Esta função agora aplica pontos aos DOIS jogadores de cada dupla
-        const updateGlobalRanking = async (champData, winners) => {
+        // **NOVA FUNCIONALIDADE**: Esta função agora recebe a configuração de pontos
+        const updateGlobalRanking = async (champData, winners, pointsConfig) => {
             // 'winners' contém { goldWinner: Dupla, goldRunnerUp: Dupla, ... }
+            // 'pointsConfig' contém os pontos personalizados (ex: { goldWinner: 100, ... })
 
             await runTransaction(db, async (transaction) => {
                 const playerPointsMap = new Map();
@@ -1116,7 +1169,7 @@
                 for (const player of champData.players) {
                     playerPointsMap.set(player.id, {
                         name: player.name,
-                        points: RANKING_POINTS.PARTICIPATION,
+                        points: pointsConfig.participation, // Usa pontos personalizados
                         goldWins: 0,
                         silverWins: 0
                     });
@@ -1128,7 +1181,7 @@
                     for (const player of winners.goldWinner.players) {
                         const p = playerPointsMap.get(player.id);
                         if (p) { // Garante que o jogador ainda existe no mapa
-                            p.points += RANKING_POINTS.GOLD_WINNER;
+                            p.points += pointsConfig.goldWinner; // Usa pontos personalizados
                             p.goldWins = 1;
                         }
                     }
@@ -1136,14 +1189,14 @@
                 if (winners.goldRunnerUp) {
                     for (const player of winners.goldRunnerUp.players) {
                         const p = playerPointsMap.get(player.id);
-                         if (p) p.points += RANKING_POINTS.GOLD_RUNNERUP;
+                         if (p) p.points += pointsConfig.goldRunnerUp; // Usa pontos personalizados
                     }
                 }
                 if (winners.silverWinner) {
                     for (const player of winners.silverWinner.players) {
                         const p = playerPointsMap.get(player.id);
                          if (p) {
-                            p.points += RANKING_POINTS.SILVER_WINNER;
+                            p.points += pointsConfig.silverWinner; // Usa pontos personalizados
                             p.silverWins = 1;
                          }
                     }
@@ -1151,7 +1204,7 @@
                 if (winners.silverRunnerUp) {
                      for (const player of winners.silverRunnerUp.players) {
                         const p = playerPointsMap.get(player.id);
-                         if (p) p.points += RANKING_POINTS.SILVER_RUNNERUP;
+                         if (p) p.points += pointsConfig.silverRunnerUp; // Usa pontos personalizados
                     }
                 }
 
