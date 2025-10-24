@@ -77,8 +77,8 @@
 
         <!-- Rodapé -->
         <footer class="text-center mt-8 text-gray-500 text-sm">
-            <p>ID do Usuário: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.3 (HTML)</p>
+            <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
+            <p>App de Ranking v2.4 (HTML)</p>
         </footer>
 
     </div>
@@ -144,10 +144,16 @@
         setLogLevel('debug'); 
 
         /* =============================================================================
+           NOVA CONSTANTE: ID Mestre
+           ============================================================================= */
+        // Este é o ID fixo que todos os dispositivos usarão.
+        const MESTRE_USER_ID = "campeonato-sortudo-admin";
+
+        /* =============================================================================
            Estado Global do Aplicativo
            ============================================================================= */
         let appState = {
-            userId: null,
+            userId: null, // Será preenchido com o MESTRE_USER_ID
             isAuthReady: false,
             currentView: 'loading', // 'loading', 'championshipList', 'championshipView', 'globalRanking'
             currentChampionshipId: null,
@@ -742,15 +748,23 @@
             }
         };
 
-        // ALTERADO: Esta função agora renderiza DUPLAS (pairs)
+        // Esta função agora renderiza DUPLAS (pairs)
         const renderBracket = (title, bracket, bracketType, iconSvg, isFinished) => {
             const rounds = {};
+            if (!bracket || bracket.length === 0) {
+                 return `<div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8">
+                    <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
+                        ${iconSvg} ${title}
+                    </h3>
+                    <p class="text-gray-400">Chave ainda não gerada.</p>
+                 </div>`;
+            }
+
             bracket.forEach(match => {
                 if (!rounds[match.round]) rounds[match.round] = [];
                 rounds[match.round].push(match);
             });
             
-            // CORREÇÃO: Encontra o número da rodada mais alta (Final)
             const maxRound = Math.max(...bracket.map(m => m.round));
 
             const final = bracket.find(m => m.round === maxRound);
@@ -765,7 +779,6 @@
             ` : '';
 
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
-                // CORREÇÃO: Lógica de título da rodada
                 const roundTitle = Number(roundNum) === maxRound ? 'Final'
                     : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
                     : Number(roundNum) === maxRound - 2 ? 'Quartas de Final'
@@ -939,7 +952,7 @@
             saveActiveChampionship(newChampData); // Salva sem esperar
         };
 
-        // ALTERADO: Esta função agora cria DUPLAS
+        // Esta função agora cria DUPLAS
         const handleFinalizeGroups = async () => {
             if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata e bloquear os grupos.")) return;
 
@@ -989,7 +1002,7 @@
             }
         };
 
-        // ALTERADO: Esta função agora avança DUPLAS
+        // Esta função agora avança DUPLAS
         const handleKnockoutScoreChange = async (bracketType, matchId, scoreIndex, value) => {
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
@@ -1036,9 +1049,12 @@
            Lógica de Cálculo de Ranking
            ============================================================================= */
 
-        // ALTERADO: Esta função agora lê DUPLAS
+        // Esta função agora lê DUPLAS
         const checkAndFinalizeChampionship = async (champData) => {
-            // CORREÇÃO: Encontra o número da rodada mais alta (Final)
+            if (!champData.goldBracket || !champData.silverBracket || champData.goldBracket.length === 0 || champData.silverBracket.length === 0) {
+                return; // Chaves ainda não foram geradas
+            }
+
             const maxRoundGold = Math.max(...champData.goldBracket.map(m => m.round));
             const maxRoundSilver = Math.max(...champData.silverBracket.map(m => m.round));
             
@@ -1089,7 +1105,7 @@
             }
         };
 
-        // ALTERADO: Esta função agora aplica pontos aos DOIS jogadores de cada dupla
+        // Esta função agora aplica pontos aos DOIS jogadores de cada dupla
         const updateGlobalRanking = async (champData, winners) => {
             // 'winners' contém { goldWinner: Dupla, goldRunnerUp: Dupla, ... }
 
@@ -1111,27 +1127,31 @@
                     // Itera sobre os 2 jogadores da dupla campeã
                     for (const player of winners.goldWinner.players) {
                         const p = playerPointsMap.get(player.id);
-                        p.points += RANKING_POINTS.GOLD_WINNER;
-                        p.goldWins = 1;
+                        if (p) { // Garante que o jogador ainda existe no mapa
+                            p.points += RANKING_POINTS.GOLD_WINNER;
+                            p.goldWins = 1;
+                        }
                     }
                 }
                 if (winners.goldRunnerUp) {
                     for (const player of winners.goldRunnerUp.players) {
                         const p = playerPointsMap.get(player.id);
-                        p.points += RANKING_POINTS.GOLD_RUNNERUP;
+                         if (p) p.points += RANKING_POINTS.GOLD_RUNNERUP;
                     }
                 }
                 if (winners.silverWinner) {
                     for (const player of winners.silverWinner.players) {
                         const p = playerPointsMap.get(player.id);
-                        p.points += RANKING_POINTS.SILVER_WINNER;
-                        p.silverWins = 1;
+                         if (p) {
+                            p.points += RANKING_POINTS.SILVER_WINNER;
+                            p.silverWins = 1;
+                         }
                     }
                 }
                 if (winners.silverRunnerUp) {
                      for (const player of winners.silverRunnerUp.players) {
                         const p = playerPointsMap.get(player.id);
-                        p.points += RANKING_POINTS.SILVER_RUNNERUP;
+                         if (p) p.points += RANKING_POINTS.SILVER_RUNNERUP;
                     }
                 }
 
@@ -1189,7 +1209,7 @@
             return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
         };
 
-        // ALTERADO E CORRIGIDO: Esta função agora recebe DUPLAS e faz o sorteio (embaralha)
+        // CORRIGIDO: Esta função agora recebe DUPLAS e faz o sorteio (embaralha)
         const createBracket = (bracketPairs) => {
             // Sorteio aleatório das duplas (cumprindo requisito)
             const shuffledPairs = [...bracketPairs].sort(() => 0.5 - Math.random());
@@ -1245,6 +1265,7 @@
 
         const listenToGlobalPlayers = () => {
             unsubscribeGlobalPlayers(); 
+            // Usa o appState.userId (que será o MESTRE_USER_ID)
             const playersCollectionRef = collection(db, 'users', appState.userId, 'global_players');
             const q = query(playersCollectionRef);
             
@@ -1261,6 +1282,7 @@
 
         const listenToChampionships = () => {
             unsubscribeChampionships();
+            // Usa o appState.userId (que será o MESTRE_USER_ID)
             const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
             const q = query(champCollectionRef);
             
@@ -1277,6 +1299,7 @@
 
         const listenToActiveChampionship = (champId) => {
             unsubscribeActiveChampionship();
+            // Usa o appState.userId (que será o MESTRE_USER_ID)
             const champDataRef = doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main');
             
             unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
@@ -1302,12 +1325,11 @@
         
         // Ponto de entrada da aplicação
         onAuthStateChanged(auth, async (user) => {
-            let currentUserId = user?.uid;
-
+            // O login anônimo ainda é NECESSÁRIO para ter a "permissão" de falar com o Firebase.
             if (!user) {
                 try {
-                    const userCredential = await signInAnonymously(auth);
-                    currentUserId = userCredential.user.uid;
+                    await signInAnonymously(auth);
+                    // Não precisamos do userCredential.user.uid aleatório
                 } catch (error) {
                     console.error("Erro na autenticação anônima:", error);
                     let errorMessage = "Não foi possível conectar ao Firebase. Verifique sua conexão.";
@@ -1319,11 +1341,17 @@
                 }
             }
             
-            if (currentUserId && !appState.isAuthReady) {
-                appState = { ...appState, userId: currentUserId, isAuthReady: true };
-                userIdFooter.textContent = currentUserId;
+            // Esta verificação garante que a inicialização só ocorra uma vez.
+            if (user && !appState.isAuthReady) {
                 
-                // Inicia os listeners globais
+                // MUDANÇA PRINCIPAL:
+                // Ignoramos o 'user.uid' aleatório e forçamos o ID Mestre
+                const effectiveUserId = MESTRE_USER_ID; 
+                
+                appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
+                userIdFooter.textContent = effectiveUserId; // Mostra o ID Mestre no rodapé
+                
+                // Inicia os listeners globais (que agora usarão o ID Mestre)
                 listenToGlobalPlayers();
                 listenToChampionships();
                 
