@@ -78,7 +78,7 @@
         <!-- Rodapé -->
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID do Usuário: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.2 (HTML)</p>
+            <p>App de Ranking v2.3 (HTML)</p>
         </footer>
 
     </div>
@@ -749,7 +749,9 @@
                 if (!rounds[match.round]) rounds[match.round] = [];
                 rounds[match.round].push(match);
             });
-            const maxRound = Math.max(...Object.keys(rounds).map(Number));
+            
+            // CORREÇÃO: Encontra o número da rodada mais alta (Final)
+            const maxRound = Math.max(...bracket.map(m => m.round));
 
             const final = bracket.find(m => m.round === maxRound);
             const champion = final?.winner; // 'champion' é um objeto DUPLA
@@ -763,8 +765,10 @@
             ` : '';
 
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
+                // CORREÇÃO: Lógica de título da rodada
                 const roundTitle = Number(roundNum) === maxRound ? 'Final'
                     : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
+                    : Number(roundNum) === maxRound - 2 ? 'Quartas de Final'
                     : `Rodada ${roundNum}`;
                 
                 const matchesHtml = rounds[roundNum].map(match => {
@@ -1034,8 +1038,12 @@
 
         // ALTERADO: Esta função agora lê DUPLAS
         const checkAndFinalizeChampionship = async (champData) => {
-            const goldFinal = champData.goldBracket.find(m => !m.nextMatchId);
-            const silverFinal = champData.silverBracket.find(m => !m.nextMatchId);
+            // CORREÇÃO: Encontra o número da rodada mais alta (Final)
+            const maxRoundGold = Math.max(...champData.goldBracket.map(m => m.round));
+            const maxRoundSilver = Math.max(...champData.silverBracket.map(m => m.round));
+            
+            const goldFinal = champData.goldBracket.find(m => m.round === maxRoundGold);
+            const silverFinal = champData.silverBracket.find(m => m.round === maxRoundSilver);
 
             const goldWinner = goldFinal?.winner; // 'goldWinner' é um objeto Dupla
             const silverWinner = silverFinal?.winner; // 'silverWinner' é um objeto Dupla
@@ -1181,34 +1189,37 @@
             return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
         };
 
-        // ALTERADO: Esta função agora recebe DUPLAS e faz o sorteio (embaralha)
+        // ALTERADO E CORRIGIDO: Esta função agora recebe DUPLAS e faz o sorteio (embaralha)
         const createBracket = (bracketPairs) => {
             // Sorteio aleatório das duplas (cumprindo requisito)
             const shuffledPairs = [...bracketPairs].sort(() => 0.5 - Math.random());
             const bracket = [];
-            const numPairs = bracketPairs.length;
+            const numPairs = bracketPairs.length; // 4 duplas
             
             if (numPairs < 2) return [];
 
-            const numRounds = Math.log2(numPairs);
+            const numRounds = Math.log2(numPairs); // log2(4) = 2 rodadas
 
-            for (let r = numRounds; r >= 1; r--) {
-                const matchesInRound = Math.pow(2, r - 1);
+            // Loop crescente (Rodada 1, Rodada 2, ...)
+            for (let r = 1; r <= numRounds; r++) { // r=1 (Semi), r=2 (Final)
                 
-                for (let m = 0; m < matchesInRound; m++) {
+                // CORREÇÃO DA FÓRMULA:
+                const matchesInRound = numPairs / Math.pow(2, r); // r=1 -> 4/2=2. r=2 -> 4/4=1.
+                
+                for (let m = 0; m < matchesInRound; m++) { 
                     const matchId = `R${r}_M${m+1}`;
                     let nextMatchId = null;
                     let nextMatchSlot = null; 
 
-                    if (r < numRounds) {
-                        const nextRoundMatchIndex = Math.floor(m / 2);
-                        nextMatchId = `R${r+1}_M${nextRoundMatchIndex+1}`;
-                        nextMatchSlot = m % 2;
+                    if (r < numRounds) { // Se r=1 (Semi)
+                        const nextRoundMatchIndex = Math.floor(m / 2); // m=0 -> 0. m=1 -> 0.
+                        nextMatchId = `R${r+1}_M${nextRoundMatchIndex+1}`; // R2_M1, R2_M1
+                        nextMatchSlot = m % 2; // m=0 -> 0. m=1 -> 1.
                     }
                     
                     bracket.push({
                         id: matchId,
-                        round: r,
+                        round: r, 
                         pairs: [null, null], // ALTERADO de 'players' para 'pairs'
                         score: [null, null],
                         winner: null,
@@ -1224,7 +1235,7 @@
                 match.pairs = [shuffledPairs[index * 2] || null, shuffledPairs[index * 2 + 1] || null];
             });
 
-            return bracket.sort((a, b) => a.round - b.round);
+            return bracket; // O sort não é mais necessário
         };
 
 
