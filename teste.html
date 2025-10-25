@@ -72,7 +72,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.9.8 (Telão com Grid)</p>
+            <p>App de Ranking v2.9.9 (Telão Flexível)</p>
         </footer>
 
     </div>
@@ -1407,13 +1407,14 @@
             }
 
             // =================================================================
-            // === MUDANÇA (v2.9.8): Layout em Grid para o Telão
+            // === MUDANÇA (v2.9.9): Troca Grid por Flexbox
             // =================================================================
-            // Se for a tela de registro, ela já é centralizada e única.
-            // Se for a tela de grupos/chaves, aplica o grid.
             if (activeChampionship.status !== 'registration') {
+                // `flex-wrap` permite que os itens quebrem a linha
+                // `justify-center` centraliza os itens na linha
+                // `gap-6` adiciona espaço entre eles
                 html += `
-                <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 animate-fade-in">
+                <div class="flex flex-wrap justify-center gap-6 animate-fade-in">
                     ${contentHtml}
                 </div>
                 `;
@@ -1492,10 +1493,15 @@
                 `).join('');
 
                 // =================================================================
-                // === MUDANÇA (v2.9.8): Card de grupo individual, sem wrapper
+                // === MUDANÇA (v2.9.9): Adiciona classes Flexbox ao card
                 // =================================================================
+                // `flex-1`: Permite crescer
+                // `basis-full`: Em telas pequenas, ocupa 100%
+                // `md:basis-[480px]`: Em telas médias, "tenta" ter 480px
+                // `min-w-[380px]`: Não encolhe menos que 380px
+                // `2xl:basis-[550px]`: Em telas gigantes, "tenta" ser um pouco maior
                 return `
-                <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in">
+                <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in flex-1 basis-full md:basis-[480px] 2xl:basis-[550px] min-w-[380px]">
                     <div class="flex justify-between items-center mb-5">
                         <h3 class="text-3xl font-bold text-cyan-400">Grupo ${groupIndex + 1}</h3>
                     </div>
@@ -1521,9 +1527,6 @@
                 `;
             }).join('');
 
-            // =================================================================
-            // === MUDANÇA (v2.9.8): Remove o wrapper `space-y-8`
-            // =================================================================
             return groupsHtml; // Retorna a string de cards diretamente
         };
         
@@ -1542,8 +1545,11 @@
                     const coveiros = stats.filter(p => p.gamesWon === minGames);
                     const coveiroNames = coveiros.map(c => c.name).join(' / ');
                     
+                    // =================================================================
+                    // === MUDANÇA (v2.9.9): Adiciona classes Flexbox ao card
+                    // =================================================================
                     coveiroHtml = `
-                    <div class="bg-gray-700 text-white p-6 rounded-lg shadow-2xl mt-8 text-center animate-fade-in">
+                    <div class="bg-gray-700 text-white p-6 rounded-lg shadow-2xl text-center animate-fade-in flex-1 basis-full md:basis-[480px] 2xl:basis-[550px] min-w-[380px]">
                         ${icons.shovel}
                         <h4 class="text-2xl font-black uppercase tracking-wider">Prêmio Coveiro</h4>
                         <p class="text-3xl font-bold">${coveiroNames}</p>
@@ -1553,9 +1559,6 @@
                 }
             }
             
-            // =================================================================
-            // === MUDANÇA (v2.9.8): Remove o wrapper `animate-fade-in`
-            // =================================================================
             return goldHtml + silverHtml + coveiroHtml; // Retorna a string de cards diretamente
         };
 
@@ -1563,7 +1566,7 @@
         const renderBracket_ReadOnly = (title, bracket, bracketType, iconSvg, isFinished) => {
             const rounds = {};
             if (!bracket || bracket.length === 0) {
-                 return `<div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8">
+                 return `<div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8 flex-1 basis-full md:basis-[480px] 2xl:basis-[550px] min-w-[380px]">
                      <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
                          ${iconSvg} ${title}
                      </h3>
@@ -1636,9 +1639,6 @@
                     `;
                 }).join('');
 
-                // =================================================================
-                // === MUDANÇA (v2.9.8): Remove `flex-shrink-0`
-                // =================================================================
                 return `
                 <div class="flex flex-col space-y-6 w-72 sm:w-80">
                     <h4 class="text-xl font-semibold text-white">${roundTitle}</h4>
@@ -1648,10 +1648,10 @@
             }).join('');
 
             // =================================================================
-            // === MUDANÇA (v2.9.8): Card de grupo individual, sem wrapper
+            // === MUDANÇA (v2.9.9): Adiciona classes Flexbox ao card
             // =================================================================
             return `
-            <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8">
+            <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8 flex-1 basis-full md:basis-[480px] 2xl:basis-[550px] min-w-[380px]">
                 <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
                     ${iconSvg}
                     ${title}
