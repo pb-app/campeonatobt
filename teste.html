@@ -69,7 +69,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.6 (Admin/Visitante)</p>
+            <p>App de Ranking v2.7 (Edição Total)</p>
         </footer>
 
     </div>
@@ -140,7 +140,7 @@
         // ==========================================
         // === MUDE SUA SENHA DE ADMIN AQUI ===
         // ==========================================
-        const ADMIN_PASSWORD = "adm2025"; 
+        const ADMIN_PASSWORD = "mudar123"; 
 
         /* =============================================================================
            Estado Global do Aplicativo
@@ -648,6 +648,10 @@
            TELA 3: Visão do Campeonato (O App Antigo, agora "Modular")
            ============================================================================= */
         
+        // =============================================================================
+        // === MUDANÇA (REQUEST 2): Estas 4 funções foram reestruturadas ===
+        // =============================================================================
+
         // Função "Router" da tela do campeonato
         const renderChampionshipView = () => {
             if (!activeChampionship) {
@@ -661,25 +665,73 @@
                 return;
             }
 
+            let html = '';
             const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+
             if (champInfo?.status === 'finished') {
-                // Se finalizado, mostra a tela de finalizado
-                renderKnockoutView(true); // 'true' para modo finalizado
-                return;
+                // REQ 2: Mostra grupos (read-only) + knockout (finished)
+                html = renderGroupStage() + renderKnockoutView(true);
+            
+            } else if (activeChampionship.status === 'knockout') {
+                // REQ 2: Mostra grupos (read-only) + knockout (active)
+                html = renderGroupStage() + renderKnockoutView(false);
+            
+            } else if (activeChampionship.status === 'groups') {
+                // Mostra grupos (editable)
+                html = renderGroupStage();
+            
+            } else { // 'registration'
+                // Mostra registro
+                html = renderPlayerRegistration();
             }
 
-            // Se em andamento, renderiza a fase atual (baseado no status do doc de DADOS)
-            switch (activeChampionship.status) {
-                case 'groups':
-                    renderGroupStage();
-                    break;
-                case 'knockout':
-                    renderKnockoutView(false);
-                    break;
-                case 'registration':
-                default:
-                    renderPlayerRegistration();
-                    break;
+            // Injeta o HTML de todas as seções de uma vez
+            mainContent.innerHTML = html;
+
+            // ===========================================
+            // === RE-ATTACH ALL LISTENERS ===
+            // Esta função agora é responsável por ligar todos os listeners
+            // das sub-telas que ela renderizou.
+            // ===========================================
+            
+            // Listeners de Registro (se existirem)
+            if (appState.isAdmin && activeChampionship.status === 'registration') {
+                const addPlayerForm = document.getElementById('add-player-form');
+                if (addPlayerForm) addPlayerForm.addEventListener('submit', handleAddPlayerToChampionship);
+                
+                document.querySelectorAll('.delete-player-btn').forEach(btn => {
+                    btn.addEventListener('click', () => handleDeletePlayerFromChampionship(btn.dataset.id));
+                });
+                
+                const generateBtn = document.getElementById('generate-champ-btn');
+                if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship);
+            }
+            
+            // Listeners da Fase de Grupos (se existirem e for admin)
+            // (Agora escuta em todas as fases pós-registro)
+            if (appState.isAdmin && (activeChampionship.status === 'groups' || activeChampionship.status === 'knockout' || champInfo?.status === 'finished')) {
+                 document.querySelectorAll('.score-input').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const { groupIndex, matchIndex, scoreIndex } = e.target.dataset;
+                        handleGroupScoreChange(groupIndex, matchIndex, scoreIndex, e.target.value);
+                    });
+                });
+                
+                // Botão de Finalizar Grupos (SÓ na fase 'groups')
+                if (activeChampionship.status === 'groups') {
+                    const finalizeBtn = document.getElementById('finalize-groups-btn');
+                    if (finalizeBtn) finalizeBtn.addEventListener('click', handleFinalizeGroups);
+                }
+            }
+
+            // Listeners do Mata-Mata (se existirem e for admin)
+            if (appState.isAdmin && (activeChampionship.status === 'knockout' || champInfo?.status === 'finished')) {
+                 document.querySelectorAll('.knockout-score-input').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const { bracketType, matchId, scoreIndex } = e.target.dataset;
+                        handleKnockoutScoreChange(bracketType, matchId, scoreIndex, e.target.value);
+                    });
+                });
             }
         };
 
@@ -701,6 +753,7 @@
         };
 
         // -- Sub-tela: Registro de Jogadores (do Torneio) --
+        // (Agora RETORNA HTML)
         const renderPlayerRegistration = () => {
             const playersListHtml = activeChampionship.players.length === 0
                 ? `<p class="text-gray-400 text-center py-4">Nenhum jogador cadastrado neste torneio.</p>`
@@ -757,7 +810,8 @@
             </form>
             ` : '';
 
-            mainContent.innerHTML = `
+            // Agora retorna o HTML em vez de injetar
+            return `
                 <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in">
                     
                     ${addPlayerFormHtml}
@@ -775,27 +829,16 @@
                     ${appState.isAdmin ? generateButtonHtml : ''}
                 </div>
             `;
-
-            // NOVO: Listeners só são adicionados se os botões existirem (isAdmin)
-            if (appState.isAdmin) {
-                const addPlayerForm = document.getElementById('add-player-form');
-                if (addPlayerForm) addPlayerForm.addEventListener('submit', handleAddPlayerToChampionship);
-                
-                document.querySelectorAll('.delete-player-btn').forEach(btn => {
-                    btn.addEventListener('click', () => handleDeletePlayerFromChampionship(btn.dataset.id));
-                });
-                
-                if (canGenerate) {
-                    const generateBtn = document.getElementById('generate-champ-btn');
-                    if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship);
-                }
-            }
         };
         
         // -- Sub-tela: Fase de Grupos --
+        // (Agora RETORNA HTML)
         const renderGroupStage = () => {
             let allScoresFilled = true;
-            // NOVO: Define se os inputs estão desabilitados
+            // Admins podem editar, visitantes não
+            // =================================================================
+            // === MUDANÇA (REQUEST 1): Campo só trava se não for admin ===
+            // =================================================================
             const isDisabled = !appState.isAdmin ? 'disabled' : '';
 
             const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
@@ -873,8 +916,8 @@
                 `;
             }).join('');
 
-            // NOVO: Botão de finalizar grupos só para admin
-            const finalizeButtonHtml = appState.isAdmin ? `
+            // Botão de finalizar SÓ aparece para admin E SÓ na fase de grupos
+            const finalizeButtonHtml = (appState.isAdmin && activeChampionship.status === 'groups') ? `
             <div class="mt-8 text-center">
                 <button
                     id="finalize-groups-btn"
@@ -887,43 +930,23 @@
             </div>
             ` : '';
 
-            mainContent.innerHTML = `
+            // Agora retorna o HTML
+            return `
                 <div class="space-y-8 animate-fade-in">
                     ${groupsHtml}
                     ${finalizeButtonHtml}
                 </div>
             `;
-            
-            // NOVO: Listeners só são adicionados se for admin
-            if (appState.isAdmin) {
-                document.querySelectorAll('.score-input').forEach(input => {
-                    input.addEventListener('change', (e) => {
-                        const { groupIndex, matchIndex, scoreIndex } = e.target.dataset;
-                        handleGroupScoreChange(groupIndex, matchIndex, scoreIndex, e.target.value);
-                    });
-                });
-                
-                const finalizeBtn = document.getElementById('finalize-groups-btn');
-                if (finalizeBtn) finalizeBtn.addEventListener('click', handleFinalizeGroups);
-            }
         };
         
         // -- Sub-tela: Chaves (Mata-Mata) --
+        // (Agora RETORNA HTML)
         const renderKnockoutView = (isFinished) => {
             const goldHtml = renderBracket('Série Ouro', activeChampionship.goldBracket, 'goldBracket', icons.shield, isFinished);
             const silverHtml = renderBracket('Série Prata', activeChampionship.silverBracket, 'silverBracket', icons.shieldOff, isFinished);
             
-            mainContent.innerHTML = `<div class="animate-fade-in">${goldHtml}${silverHtml}</div>`;
-            
-            // NOVO: Listeners só são adicionados se NÃO estiver finalizado E for admin
-            if (!isFinished && appState.isAdmin) {
-                document.querySelectorAll('.knockout-score-input').forEach(input => {
-                    input.addEventListener('change', (e) => {
-                        const { bracketType, matchId, scoreIndex } = e.target.dataset;
-                        handleKnockoutScoreChange(bracketType, matchId, scoreIndex, e.target.value);
-                    });
-                });
-            }
+            // Agora retorna o HTML
+            return `<div class="animate-fade-in">${goldHtml}${silverHtml}</div>`;
         };
 
         // Esta função agora renderiza DUPLAS (pairs)
@@ -970,8 +993,10 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     
-                    // NOVO: Lógica de desabilitar o input
-                    const isDisabled = (!pair1 || !pair2 || isFinished || match.winner || !appState.isAdmin) ? 'disabled' : '';
+                    // =================================================================
+                    // === MUDANÇA (REQUEST 1): Campo só trava se não for admin ===
+                    // =================================================================
+                    const isDisabled = (!pair1 || !pair2 || !appState.isAdmin) ? 'disabled' : '';
 
                     return `
                     <div class="bg-gray-700 rounded-lg shadow-md p-4">
@@ -1254,17 +1279,12 @@
             // Se ambos os campeões (Ouro e Prata) estiverem definidos, o torneio acabou!
             if (goldWinner && silverWinner) {
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
-                const champDoc = await getDoc(champRef);
-
-                // Evita rodar a finalização duas vezes
-                if (champDoc.exists() && champDoc.data().status === 'finished') {
-                    return;
-                }
-
-                // **BUG FIX**: Remove a confirmação (confirm()).
-                // O ranking será aplicado automaticamente.
                 
-                showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+                // =================================================================
+                // === MUDANÇA (REQUEST 1): Proteção contra ranking duplicado ===
+                // =================================================================
+                const champDoc = await getDoc(champRef);
+                const wasAlreadyFinished = (champDoc.exists() && champDoc.data().status === 'finished');
                 
                 try {
                     // 1. Define os vencedores e vices (que também são Duplas)
@@ -1274,19 +1294,26 @@
                     // **NOVA FUNCIONALIDADE**: Pega os pontos do doc principal, ou usa o padrão
                     const effectivePoints = champDoc.data().pointsConfig || DEFAULT_RANKING_POINTS;
 
-                    // 2. Atualiza o documento principal do campeonato
+                    // 2. Atualiza o documento principal do campeonato (sempre atualiza)
                     await setDoc(champRef, {
                         status: 'finished',
                         winnerGold: goldWinner.name, // Salva o nome da dupla
                         winnerSilver: silverWinner.name // Salva o nome da dupla
                     }, { merge: true });
 
-                    // 3. Atualiza o Ranking Global (operação complexa)
-                    // Passa a configuração de pontos para a função
-                    await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp }, effectivePoints);
+                    // 3. Atualiza o Ranking Global (SÓ SE NÃO ESTAVA FINALIZADO ANTES)
+                    if (!wasAlreadyFinished) {
+                        showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+                        
+                        // Passa a configuração de pontos para a função
+                        await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp }, effectivePoints);
 
-                    hideModal();
-                    showModal("Sucesso!", `Ranking global atualizado! Campeões Ouro: ${goldWinner.name}. Campeões Prata: ${silverWinner.name}.`);
+                        hideModal();
+                        showModal("Sucesso!", `Ranking global atualizado! Campeões Ouro: ${goldWinner.name}. Campeões Prata: ${silverWinner.name}.`);
+                    } else {
+                         // Se já estava finalizado, apenas avisa o admin que o placar mudou
+                         showModal("Placar Atualizado", `O placar final foi alterado. O ranking global NÃO foi recalculado para evitar duplicidade.`);
+                    }
                 
                 } catch (error) {
                     console.error("Erro ao finalizar e aplicar ranking:", error);
@@ -1499,14 +1526,18 @@
                     // Se o status mudou (ex: de 'registration' para 'groups'), atualiza a view
                     const oldStatus = appState.currentStatus;
                     appState.currentStatus = activeChampionship.status;
-                    if (oldStatus !== activeChampionship.status) {
-                        render();
-                    }
+                    
+                    // ===========================================
+                    // === MUDANÇA (REQUEST 2) ===
+                    // A render() agora é chamada mesmo se o status não mudou
+                    // para atualizar os placares em tempo real.
+                    // ===========================================
+                    render(); 
                 } else {
                     showModal("Erro", "Não foi possível carregar os dados deste campeonato. (O doc 'data/main' não foi encontrado).");
                     navigateTo('championshipList');
                 }
-                render(); // Renderiza para atualizar os dados (ex: placares)
+                // render(); // Removido daqui, pois já está dentro do if(docSnap.exists())
             }, (error) => {
                 console.error("Erro ao carregar campeonato ativo:", error);
                 showModal("Erro", "Não foi possível carregar este campeonato. Verifique as regras do Firestore.");
