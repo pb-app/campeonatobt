@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ranking Beach Tennis</title>
-    <!-- Carrega o TailwindCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Carrega a biblioteca de ícones Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* Estilos personalizados */
@@ -51,39 +49,31 @@
 </head>
 <body class="text-white">
 
-    <!-- Container Principal do App -->
     <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
-        <!-- Cabeçalho -->
         <header class="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 gap-4">
             <h1 class="text-3xl sm:text-4xl font-bold text-cyan-400 text-center sm:text-left">
                 Ranking Beach Tennis
             </h1>
             <div id="header-buttons" class="flex gap-3">
-                <!-- Botões do cabeçalho (Ranking/Voltar) serão injetados aqui -->
-            </div>
+                </div>
         </header>
 
-        <!-- Spinner de Carregamento Global -->
         <div id="loading-spinner" class="text-center py-20">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto"></div>
             <p class="mt-4 text-gray-300">Carregando dados...</p>
         </div>
 
-        <!-- Conteúdo Principal (será preenchido pelo JS) -->
         <main id="main-content" class="hidden">
-            <!-- As visualizações (Lista de Torneios, Ranking, Torneio Específico) serão injetadas aqui -->
-        </main>
+            </main>
 
-        <!-- Rodapé -->
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.5 (HTML)</p>
+            <p>App de Ranking v2.6 (Admin/Visitante)</p>
         </footer>
 
     </div>
 
-    <!-- Estrutura do Modal (escondido por padrão) -->
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full mx-auto animate-fade-in-sm">
             <div class="flex justify-between items-center mb-4">
@@ -101,28 +91,27 @@
         </div>
     </div>
 
-    <!-- Scripts do Firebase -->
     <script type="module">
         // Importações do Firebase SDK
         import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
-          getAuth, 
-          signInAnonymously, 
-          onAuthStateChanged 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
-          getFirestore, 
-          doc, 
-          setDoc, 
-          onSnapshot, 
-          collection, 
-          addDoc, 
-          deleteDoc, 
-          query,
-          Timestamp,
-          getDoc,
-          writeBatch,
-          runTransaction
+            getFirestore, 
+            doc, 
+            setDoc, 
+            onSnapshot, 
+            collection, 
+            addDoc, 
+            deleteDoc, 
+            query,
+            Timestamp,
+            getDoc,
+            writeBatch,
+            runTransaction
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         /* =============================================================================
@@ -144,9 +133,14 @@
         setLogLevel('debug'); 
 
         /* =============================================================================
-           ID Mestre
+           ID Mestre e Senha de Admin
            ============================================================================= */
         const MESTRE_USER_ID = "campeonato-sortudo-admin";
+        
+        // ==========================================
+        // === MUDE SUA SENHA DE ADMIN AQUI ===
+        // ==========================================
+        const ADMIN_PASSWORD = "adm2025"; 
 
         /* =============================================================================
            Estado Global do Aplicativo
@@ -154,7 +148,8 @@
         let appState = {
             userId: null, // Será preenchido com o MESTRE_USER_ID
             isAuthReady: false,
-            currentView: 'loading', // 'loading', 'championshipList', 'championshipView', 'globalRanking'
+            isAdmin: false, // NOVO: Controla o modo admin
+            currentView: 'loading', // 'loading', 'login', 'championshipList', 'championshipView', 'globalRanking'
             currentChampionshipId: null,
         };
 
@@ -208,7 +203,9 @@
             medal: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-white"><path d="M12 16.5l4-2.3 4 2.3-1.5-4.6 3.5-3.4-4.6-.7-2-4.2-2 4.2-4.6.7 3.5 3.4L8 16.5z"></path><path d="M12 15l-4-2.3V7.9l4 2.3 4-2.3v4.8L12 15z"></path></svg>',
             award: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>',
             arrowLeft: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
-            eye: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>'
+            eye: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+            logIn: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>',
+            logOut: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>'
         };
 
         /* =============================================================================
@@ -249,6 +246,9 @@
 
             // Renderiza o conteúdo principal baseado na view
             switch (appState.currentView) {
+                case 'login': // NOVO
+                    renderLogin();
+                    break;
                 case 'championshipList':
                     renderChampionshipList();
                     break;
@@ -267,6 +267,11 @@
         };
 
         const navigateTo = (view, champId = null) => {
+            // NOVO: Se sair do modo admin, reseta o estado
+            if (view === 'login') {
+                appState.isAdmin = false;
+            }
+
             appState.currentView = view;
             appState.currentChampionshipId = champId;
 
@@ -284,9 +289,12 @@
         };
 
         const renderHeaderButtons = () => {
-            let html = '';
+            let navHtml = ''; // Botões de Navegação (Voltar/Ranking)
+            let authHtml = ''; // Botões de Autenticação (Login/Sair)
+            
+            // Lógica de Navegação
             if (appState.currentView === 'championshipList') {
-                html = `
+                navHtml = `
                 <button
                     id="nav-to-ranking"
                     class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 text-sm">
@@ -295,7 +303,7 @@
                 </button>
                 `;
             } else if (appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') {
-                html = `
+                navHtml = `
                 <button
                     id="nav-to-list"
                     class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 text-sm">
@@ -304,7 +312,31 @@
                 </button>
                 `;
             }
-            headerButtons.innerHTML = html;
+
+            // Lógica de Autenticação
+            if (appState.currentView !== 'login') {
+                if (appState.isAdmin) {
+                    authHtml = `
+                    <button
+                        id="nav-to-login"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 text-sm">
+                        ${icons.logOut}
+                        Sair (Admin)
+                    </button>
+                    `;
+                } else {
+                    authHtml = `
+                    <button
+                        id="nav-to-login"
+                        class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 text-sm">
+                        ${icons.logIn}
+                        Login (Admin)
+                    </button>
+                    `;
+                }
+            }
+
+            headerButtons.innerHTML = navHtml + authHtml; // Concatena os botões
 
             // Adiciona listeners aos botões
             const rankingBtn = document.getElementById('nav-to-ranking');
@@ -312,6 +344,53 @@
 
             const listBtn = document.getElementById('nav-to-list');
             if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
+            
+            const loginBtn = document.getElementById('nav-to-login');
+            if (loginBtn) loginBtn.addEventListener('click', () => navigateTo('login'));
+        };
+
+        /* =============================================================================
+           TELA 0: Login (NOVA TELA)
+           ============================================================================= */
+        
+        const renderLogin = () => {
+            mainContent.innerHTML = `
+                <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
+                    <h2 class="text-3xl font-bold text-center text-cyan-400 mb-8">Bem-vindo(a)</h2>
+                    
+                    <div class="space-y-4">
+                        <button
+                            id="visitor-login-btn"
+                            class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
+                            ${icons.eye}
+                            Modo Visitante
+                        </button>
+                        
+                        <button
+                            id="admin-login-btn"
+                            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
+                            ${icons.logIn}
+                            Modo Administrador
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Listeners
+            document.getElementById('visitor-login-btn').addEventListener('click', () => {
+                appState.isAdmin = false;
+                navigateTo('championshipList');
+            });
+            
+            document.getElementById('admin-login-btn').addEventListener('click', () => {
+                const password = prompt("Digite a senha de administrador:");
+                if (password === ADMIN_PASSWORD) {
+                    appState.isAdmin = true;
+                    navigateTo('championshipList');
+                } else if (password !== null) { // Só mostra erro se o usuário não clicou em "Cancelar"
+                    showModal("Acesso Negado", "Senha incorreta.");
+                }
+            });
         };
 
         /* =============================================================================
@@ -329,6 +408,14 @@
                     if (champ.status === 'registration') { statusColor = 'text-cyan-400'; statusText = 'Em Inscrição'; }
                     if (champ.status === 'finished') { statusColor = 'text-green-400'; statusText = 'Finalizado'; }
 
+                    // NOVO: Botão de deletar só aparece para Admins
+                    const deleteButtonHtml = (appState.isAdmin && champ.status !== 'finished') ? `
+                    <button
+                        class="delete-champ-btn text-red-400 hover:text-red-300 transition-colors p-2 rounded-lg bg-gray-800"
+                        data-id="${champ.id}">
+                        ${icons.trash}
+                    </button>` : '';
+
                     return `
                     <div class="flex flex-col sm:flex-row justify-between items-center bg-gray-700 p-4 rounded-lg animate-fade-in-sm gap-3">
                         <div>
@@ -342,77 +429,72 @@
                                 data-id="${champ.id}">
                                 ${icons.eye} Ver
                             </button>
-                            ${champ.status !== 'finished' ? `
-                            <button
-                                class="delete-champ-btn text-red-400 hover:text-red-300 transition-colors p-2 rounded-lg bg-gray-800"
-                                data-id="${champ.id}">
-                                ${icons.trash}
-                            </button>` : ''}
+                            ${deleteButtonHtml}
                         </div>
                     </div>
-                `}).join('');
+                    `}).join('');
+
+            // NOVO: Formulário de "Novo Campeonato" só aparece para Admins
+            const newChampionshipFormHtml = appState.isAdmin ? `
+            <form id="add-championship-form">
+                <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8">
+                    <h2 class="text-2xl font-bold text-cyan-400 mb-4">Novo Campeonato</h2>
+                    
+                    <div class="mb-4">
+                        <label for="championship-name-input" class="block text-sm font-medium text-gray-300 mb-1">Nome do Campeonato</label>
+                        <input
+                            type="text"
+                            id="championship-name-input"
+                            placeholder="ex: Torneio de Verão"
+                            class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            required
+                        />
+                    </div>
+
+                    <h3 class="text-lg font-semibold text-gray-200 mb-3">Configuração de Pontos</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                        <div>
+                            <label for="points-gold-winner" class="block text-xs font-medium text-green-300 mb-1">Campeão Ouro</label>
+                            <input type="number" id="points-gold-winner" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_WINNER}"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                        </div>
+                        <div>
+                            <label for="points-gold-runnerup" class="block text-xs font-medium text-green-400 mb-1">Vice Ouro</label>
+                            <input type="number" id="points-gold-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_RUNNERUP}"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                        </div>
+                        <div>
+                            <label for="points-silver-winner" class="block text-xs font-medium text-yellow-300 mb-1">Campeão Prata</label>
+                            <input type="number" id="points-silver-winner" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_WINNER}"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                        </div>
+                        <div>
+                            <label for="points-silver-runnerup" class="block text-xs font-medium text-yellow-400 mb-1">Vice Prata</label>
+                            <input type="number" id="points-silver-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_RUNNERUP}"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                        </div>
+                        <div>
+                            <label for="points-participation" class="block text-xs font-medium text-gray-400 mb-1">Participação</label>
+                            <input type="number" id="points-participation" min="0" value="${DEFAULT_RANKING_POINTS.PARTICIPATION}"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="add-championship-btn"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        ${icons.plus}
+                        <span>Criar Campeonato</span>
+                    </button>
+                </div>
+            </form>
+            ` : ''; // Se não for admin, não mostra nada
 
             mainContent.innerHTML = `
                 <div class="animate-fade-in">
-                    <!-- Card de Criar Novo -->
-                    <form id="add-championship-form">
-                        <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8">
-                            <h2 class="text-2xl font-bold text-cyan-400 mb-4">Novo Campeonato</h2>
-                            
-                            <!-- Input do Nome -->
-                            <div class="mb-4">
-                                <label for="championship-name-input" class="block text-sm font-medium text-gray-300 mb-1">Nome do Campeonato</label>
-                                <input
-                                    type="text"
-                                    id="championship-name-input"
-                                    placeholder="ex: Torneio de Verão"
-                                    class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                                    required
-                                />
-                            </div>
+                    ${newChampionshipFormHtml}
 
-                            <!-- Inputs de Pontuação -->
-                            <h3 class="text-lg font-semibold text-gray-200 mb-3">Configuração de Pontos</h3>
-                            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                                <div>
-                                    <label for="points-gold-winner" class="block text-xs font-medium text-green-300 mb-1">Campeão Ouro</label>
-                                    <input type="number" id="points-gold-winner" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_WINNER}"
-                                           class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
-                                </div>
-                                <div>
-                                    <label for="points-gold-runnerup" class="block text-xs font-medium text-green-400 mb-1">Vice Ouro</label>
-                                    <input type="number" id="points-gold-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_RUNNERUP}"
-                                           class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
-                                </div>
-                                <div>
-                                    <label for="points-silver-winner" class="block text-xs font-medium text-yellow-300 mb-1">Campeão Prata</label>
-                                    <input type="number" id="points-silver-winner" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_WINNER}"
-                                           class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
-                                </div>
-                                <div>
-                                    <label for="points-silver-runnerup" class="block text-xs font-medium text-yellow-400 mb-1">Vice Prata</label>
-                                    <input type="number" id="points-silver-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_RUNNERUP}"
-                                           class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
-                                </div>
-                                <div>
-                                    <label for="points-participation" class="block text-xs font-medium text-gray-400 mb-1">Participação</label>
-                                    <input type="number" id="points-participation" min="0" value="${DEFAULT_RANKING_POINTS.PARTICIPATION}"
-                                           class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
-                                </div>
-                            </div>
-
-                            <!-- Botão de Criar -->
-                            <button
-                                type="submit"
-                                id="add-championship-btn"
-                                class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                                ${icons.plus}
-                                <span>Criar Campeonato</span>
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Card da Lista Histórica -->
                     <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8">
                         <h3 class="text-2xl font-bold mb-5 text-cyan-400">Histórico de Campeonatos</h3>
                         <div class="max-h-[60vh] overflow-y-auto pr-2 space-y-3">
@@ -422,18 +504,24 @@
                 </div>
             `;
 
-            // Listeners
-            document.getElementById('add-championship-form').addEventListener('submit', handleAddChampionship);
+            // Listeners (só adiciona se o elemento existir)
+            if (appState.isAdmin) {
+                const addForm = document.getElementById('add-championship-form');
+                if (addForm) addForm.addEventListener('submit', handleAddChampionship);
+                
+                document.querySelectorAll('.delete-champ-btn').forEach(btn => {
+                    btn.addEventListener('click', () => handleDeleteChampionship(btn.dataset.id));
+                });
+            }
+
             document.querySelectorAll('.open-champ-btn').forEach(btn => {
                 btn.addEventListener('click', () => navigateTo('championshipView', btn.dataset.id));
-            });
-            document.querySelectorAll('.delete-champ-btn').forEach(btn => {
-                btn.addEventListener('click', () => handleDeleteChampionship(btn.dataset.id));
             });
         };
 
         const handleAddChampionship = async (e) => {
             e.preventDefault();
+            // Esta função só é chamada se o formulário existir (isAdmin = true)
             const input = document.getElementById('championship-name-input');
             const button = document.getElementById('add-championship-btn');
             const champName = input.value.trim();
@@ -494,6 +582,7 @@
         };
 
         const handleDeleteChampionship = async (champId) => {
+            // Esta função só é chamada se o botão existir (isAdmin = true)
             const champ = championships.find(c => c.id === champId);
             if (window.prompt(`Para confirmar, digite o nome do campeonato: "${champ.name}"`) !== champ.name) {
                 showModal("Cancelado", "A exclusão foi cancelada.");
@@ -597,6 +686,11 @@
         // Salva os dados DO CAMPEONATO ATIVO
         const saveActiveChampionship = async (newChampData) => {
             if (!appState.userId || !appState.currentChampionshipId) return;
+            // NOVO: Só salva se for admin
+            if (!appState.isAdmin) {
+                console.warn("Modo Visitante: Alterações não foram salvas.");
+                return;
+            }
             try {
                 const champDataRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId, 'data', 'main');
                 await setDoc(champDataRef, newChampData);
@@ -610,14 +704,20 @@
         const renderPlayerRegistration = () => {
             const playersListHtml = activeChampionship.players.length === 0
                 ? `<p class="text-gray-400 text-center py-4">Nenhum jogador cadastrado neste torneio.</p>`
-                : activeChampionship.players.map(player => `
+                : activeChampionship.players.map(player => {
+                    // NOVO: Botão de deletar só para admin
+                    const deleteButton = appState.isAdmin ? `
+                    <button class="delete-player-btn text-red-400 hover:text-red-300 transition-colors" data-id="${player.id}">
+                        ${icons.trash}
+                    </button>` : '';
+                    
+                    return `
                     <div class="flex justify-between items-center bg-gray-700 p-3 rounded-lg animate-fade-in-sm">
                         <span class="text-white font-medium">${player.name}</span>
-                        <button class="delete-player-btn text-red-400 hover:text-red-300 transition-colors" data-id="${player.id}">
-                            ${icons.trash}
-                        </button>
+                        ${deleteButton}
                     </div>
-                `).join('');
+                    `
+                }).join('');
 
             const validPlayerCounts = [4, 8, 16, 32];
             const playerCount = activeChampionship.players.length;
@@ -637,24 +737,30 @@
                     ${!canGenerate ? `<p class="text-yellow-400 text-sm mt-3">O campeonato requer 4, 8, 16 ou 32 jogadores. Você tem ${playerCount}.</p>` : ''}
                 </div>
                 ` : '';
+            
+            // NOVO: Formulário de adicionar jogador só para admin
+            const addPlayerFormHtml = appState.isAdmin ? `
+            <form id="add-player-form" class="mb-6 flex flex-col sm:flex-row gap-3">
+                <input
+                    type="text"
+                    id="player-name-input"
+                    placeholder="Nome do Jogador"
+                    class="flex-grow bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+                <button
+                    type="submit"
+                    id="add-player-btn"
+                    class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                    ${icons.plus}
+                    <span>Adicionar</span>
+                </button>
+            </form>
+            ` : '';
 
             mainContent.innerHTML = `
                 <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in">
-                    <form id="add-player-form" class="mb-6 flex flex-col sm:flex-row gap-3">
-                        <input
-                            type="text"
-                            id="player-name-input"
-                            placeholder="Nome do Jogador"
-                            class="flex-grow bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                        />
-                        <button
-                            type="submit"
-                            id="add-player-btn"
-                            class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                            ${icons.plus}
-                            <span>Adicionar</span>
-                        </button>
-                    </form>
+                    
+                    ${addPlayerFormHtml}
 
                     <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6">
                         <h3 class="text-xl font-semibold mb-4 text-cyan-400 flex items-center gap-2">
@@ -666,22 +772,32 @@
                         </div>
                     </div>
                     
-                    ${generateButtonHtml}
+                    ${appState.isAdmin ? generateButtonHtml : ''}
                 </div>
             `;
 
-            document.getElementById('add-player-form').addEventListener('submit', handleAddPlayerToChampionship);
-            document.querySelectorAll('.delete-player-btn').forEach(btn => {
-                btn.addEventListener('click', () => handleDeletePlayerFromChampionship(btn.dataset.id));
-            });
-            if (canGenerate) {
-                document.getElementById('generate-champ-btn').addEventListener('click', handleGenerateChampionship);
+            // NOVO: Listeners só são adicionados se os botões existirem (isAdmin)
+            if (appState.isAdmin) {
+                const addPlayerForm = document.getElementById('add-player-form');
+                if (addPlayerForm) addPlayerForm.addEventListener('submit', handleAddPlayerToChampionship);
+                
+                document.querySelectorAll('.delete-player-btn').forEach(btn => {
+                    btn.addEventListener('click', () => handleDeletePlayerFromChampionship(btn.dataset.id));
+                });
+                
+                if (canGenerate) {
+                    const generateBtn = document.getElementById('generate-champ-btn');
+                    if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship);
+                }
             }
         };
         
         // -- Sub-tela: Fase de Grupos --
         const renderGroupStage = () => {
             let allScoresFilled = true;
+            // NOVO: Define se os inputs estão desabilitados
+            const isDisabled = !appState.isAdmin ? 'disabled' : '';
+
             const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
                 const rankings = getRankings(group);
                 
@@ -702,20 +818,22 @@
                                 type="number"
                                 min="0"
                                 value="${score1 === null ? '' : score1}"
-                                class="score-input w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                class="score-input w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 data-group-index="${groupIndex}"
                                 data-match-index="${matchIndex}"
                                 data-score-index="0"
+                                ${isDisabled}
                             />
                             <span class="text-gray-400">-</span>
                             <input
                                 type="number"
                                 min="0"
                                 value="${score2 === null ? '' : score2}"
-                                class="score-input w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                class="score-input w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 data-group-index="${groupIndex}"
                                 data-match-index="${matchIndex}"
                                 data-score-index="1"
+                                ${isDisabled}
                             />
                         </div>
                     </div>
@@ -755,29 +873,39 @@
                 `;
             }).join('');
 
+            // NOVO: Botão de finalizar grupos só para admin
+            const finalizeButtonHtml = appState.isAdmin ? `
+            <div class="mt-8 text-center">
+                <button
+                    id="finalize-groups-btn"
+                    type="button"
+                    ${!allScoresFilled ? 'disabled' : ''}
+                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
+                    ${icons.trophy}
+                    ${allScoresFilled ? "Finalizar Grupos e Gerar Chaves" : "Preencha todos os placares"}
+                </button>
+            </div>
+            ` : '';
+
             mainContent.innerHTML = `
                 <div class="space-y-8 animate-fade-in">
                     ${groupsHtml}
-                    <div class="mt-8 text-center">
-                        <button
-                            id="finalize-groups-btn"
-                            type="button"
-                            ${!allScoresFilled ? 'disabled' : ''}
-                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
-                            ${icons.trophy}
-                            ${allScoresFilled ? "Finalizar Grupos e Gerar Chaves" : "Preencha todos os placares"}
-                        </button>
-                    </div>
+                    ${finalizeButtonHtml}
                 </div>
             `;
-
-            document.querySelectorAll('.score-input').forEach(input => {
-                input.addEventListener('change', (e) => {
-                    const { groupIndex, matchIndex, scoreIndex } = e.target.dataset;
-                    handleGroupScoreChange(groupIndex, matchIndex, scoreIndex, e.target.value);
+            
+            // NOVO: Listeners só são adicionados se for admin
+            if (appState.isAdmin) {
+                document.querySelectorAll('.score-input').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const { groupIndex, matchIndex, scoreIndex } = e.target.dataset;
+                        handleGroupScoreChange(groupIndex, matchIndex, scoreIndex, e.target.value);
+                    });
                 });
-            });
-            document.getElementById('finalize-groups-btn').addEventListener('click', handleFinalizeGroups);
+                
+                const finalizeBtn = document.getElementById('finalize-groups-btn');
+                if (finalizeBtn) finalizeBtn.addEventListener('click', handleFinalizeGroups);
+            }
         };
         
         // -- Sub-tela: Chaves (Mata-Mata) --
@@ -787,7 +915,8 @@
             
             mainContent.innerHTML = `<div class="animate-fade-in">${goldHtml}${silverHtml}</div>`;
             
-            if (!isFinished) {
+            // NOVO: Listeners só são adicionados se NÃO estiver finalizado E for admin
+            if (!isFinished && appState.isAdmin) {
                 document.querySelectorAll('.knockout-score-input').forEach(input => {
                     input.addEventListener('change', (e) => {
                         const { bracketType, matchId, scoreIndex } = e.target.dataset;
@@ -802,11 +931,11 @@
             const rounds = {};
             if (!bracket || bracket.length === 0) {
                  return `<div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8">
-                    <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
-                        ${iconSvg} ${title}
-                    </h3>
-                    <p class="text-gray-400">Chave ainda não gerada.</p>
-                 </div>`;
+                     <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
+                         ${iconSvg} ${title}
+                     </h3>
+                     <p class="text-gray-400">Chave ainda não gerada.</p>
+                  </div>`;
             }
 
             bracket.forEach(match => {
@@ -820,11 +949,11 @@
             const champion = final?.winner; // 'champion' é um objeto DUPLA
 
             const championHtml = champion ? `
-                <div class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-gray-900 p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
-                    ${icons.medal}
-                    <h4 class="text-2xl font-black uppercase tracking-wider">Campeões</h4>
-                    <p class="text-3xl font-bold">${champion.name}</p>
-                </div>
+            <div class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-gray-900 p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
+                ${icons.medal}
+                <h4 class="text-2xl font-black uppercase tracking-wider">Campeões</h4>
+                <p class="text-3xl font-bold">${champion.name}</p>
+            </div>
             ` : '';
 
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
@@ -841,6 +970,9 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     
+                    // NOVO: Lógica de desabilitar o input
+                    const isDisabled = (!pair1 || !pair2 || isFinished || match.winner || !appState.isAdmin) ? 'disabled' : '';
+
                     return `
                     <div class="bg-gray-700 rounded-lg shadow-md p-4">
                         <div class="flex justify-between items-center mb-2">
@@ -851,11 +983,11 @@
                                 type="number"
                                 min="0"
                                 value="${score1 === null ? '' : score1}"
-                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isFinished || (match.winner && pair1 && pair2) ? 'opacity-70' : ''}"
+                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
                                 data-score-index="0"
-                                ${(!pair1 || !pair2 || isFinished || match.winner) ? 'disabled' : ''}
+                                ${isDisabled}
                             />
                         </div>
                         
@@ -873,11 +1005,11 @@
                                 type="number"
                                 min="0"
                                 value="${score2 === null ? '' : score2}"
-                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isFinished || (match.winner && pair1 && pair2) ? 'opacity-70' : ''}"
+                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
                                 data-score-index="1"
-                                ${(!pair1 || !pair2 || isFinished || match.winner) ? 'disabled' : ''}
+                                ${isDisabled}
                             />
                         </div>
                     </div>
@@ -907,11 +1039,12 @@
         };
 
         /* =============================================================================
-           Lógica do Campeonato Ativo
+           Lógica do Campeonato Ativo (Ações de Admin)
            ============================================================================= */
         
         const handleAddPlayerToChampionship = async (e) => {
             e.preventDefault();
+            // Esta função só é chamada pelo listener do admin
             const input = document.getElementById('player-name-input');
             const button = document.getElementById('add-player-btn');
             const playerName = input.value.trim();
@@ -938,6 +1071,7 @@
         };
 
         const handleDeletePlayerFromChampionship = async (playerId) => {
+            // Esta função só é chamada pelo listener do admin
             if (!confirm("Tem certeza que deseja remover este jogador DO TORNEIO?")) return;
             
             const newChampData = {
@@ -948,6 +1082,7 @@
         };
 
         const handleGenerateChampionship = async () => {
+            // Esta função só é chamada pelo listener do admin
             const playerCount = activeChampionship.players.length;
             const validPlayerCounts = [4, 8, 16, 32];
             if (!validPlayerCounts.includes(playerCount)) {
@@ -995,6 +1130,7 @@
         };
 
         const handleGroupScoreChange = (groupIndex, matchIndex, scoreIndex, value) => {
+            // Esta função só é chamada pelo listener do admin
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const score = value === '' ? null : parseInt(value, 10);
             newChampData.groups[groupIndex].matches[matchIndex].score[scoreIndex] = isNaN(score) ? null : score;
@@ -1003,6 +1139,7 @@
 
         // Esta função agora cria DUPLAS
         const handleFinalizeGroups = async () => {
+            // Esta função só é chamada pelo listener do admin
             if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata e bloquear os grupos.")) return;
 
             try {
@@ -1053,6 +1190,7 @@
 
         // Esta função agora avança DUPLAS
         const handleKnockoutScoreChange = async (bracketType, matchId, scoreIndex, value) => {
+            // Esta função só é chamada pelo listener do admin
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
             const match = bracketToUpdate.find(m => m.id === matchId);
@@ -1409,11 +1547,11 @@
                 listenToChampionships();
                 
                 // Define a tela inicial
-                navigateTo('championshipList');
+                // MODIFICADO: Navega para a tela de LOGIN primeiro
+                navigateTo('login');
             }
         });
 
     </script>
 </body>
 </html>
-
