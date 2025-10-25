@@ -69,7 +69,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.9 (Confirmar Placar + Excluir)</p>
+            <p>App de Ranking v2.9.1 (Correção de Transação)</p>
         </footer>
 
     </div>
@@ -1330,7 +1330,7 @@
         };
 
         const handleDeletePlayerFromChampionship = async (playerId) => {
-            // Esta função só é chamada pelo listener do admin
+            // Esta função só है chamada pelo listener do admin
             if (!confirm("Tem certeza que deseja remover este jogador DO TORNEIO?")) return;
             
             const newChampData = {
@@ -1596,7 +1596,7 @@
         };
 
         // =================================================================
-        // === MUDANÇA (REQUEST 3): Função agora salva em /rankings/{rankingId}/players
+        // === FUNÇÃO CORRIGIDA (Reads first, then Writes) ===
         // =================================================================
         const updateGlobalRanking = async (champData, winners, pointsConfig, rankingId) => {
             // 'rankingId' é o ID do ranking para onde os pontos devem ir (ex: "temporada_2025")
@@ -1604,61 +1604,63 @@
             await runTransaction(db, async (transaction) => {
                 const playerPointsMap = new Map();
 
-                // 1. Adiciona pontos de participação para todos os *jogadores individuais*
+                // 1. CALCULAR PONTOS (Em memória - sem alteração)
                 for (const player of champData.players) {
                     playerPointsMap.set(player.id, {
                         name: player.name,
-                        points: pointsConfig.participation, // Usa pontos personalizados
+                        points: pointsConfig.participation,
                         goldWins: 0,
                         silverWins: 0
                     });
                 }
-
-                // 2. Adiciona pontos de performance para as *duplas*
                 if (winners.goldWinner) {
-                    // Itera sobre os 2 jogadores da dupla campeã
                     for (const player of winners.goldWinner.players) {
                         const p = playerPointsMap.get(player.id);
-                        if (p) { // Garante que o jogador ainda existe no mapa
-                            p.points += pointsConfig.goldWinner; // Usa pontos personalizados
-                            p.goldWins = 1;
-                        }
+                        if (p) { p.points += pointsConfig.goldWinner; p.goldWins = 1; }
                     }
                 }
                 if (winners.goldRunnerUp) {
                     for (const player of winners.goldRunnerUp.players) {
                         const p = playerPointsMap.get(player.id);
-                         if (p) p.points += pointsConfig.goldRunnerUp; // Usa pontos personalizados
+                         if (p) p.points += pointsConfig.goldRunnerUp;
                     }
                 }
                 if (winners.silverWinner) {
                     for (const player of winners.silverWinner.players) {
                         const p = playerPointsMap.get(player.id);
-                         if (p) {
-                            p.points += pointsConfig.silverWinner; // Usa pontos personalizados
-                            p.silverWins = 1;
-                         }
+                         if (p) { p.points += pointsConfig.silverWinner; p.silverWins = 1; }
                     }
                 }
                 if (winners.silverRunnerUp) {
                      for (const player of winners.silverRunnerUp.players) {
                         const p = playerPointsMap.get(player.id);
-                         if (p) p.points += pointsConfig.silverRunnerUp; // Usa pontos personalizados
+                         if (p) p.points += pointsConfig.silverRunnerUp;
                     }
                 }
+                // Fim do cálculo em memória
+                
 
-                // 3. Lê e atualiza os documentos no ranking específico
+                // 2. FASE DE LEITURA (Reads)
+                // Guarda os documentos lidos para usar na próxima fase
+                const playerDocsData = new Map();
+                
+                // Primeiro loop: Apenas LEITURA
                 for (const [playerId, data] of playerPointsMap.entries()) {
-                    
-                    // === MUDANÇA CRÍTICA AQUI ===
-                    // O caminho agora é dinâmico, apontando para a sub-coleção correta
                     const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
-                    // === FIM DA MUDANÇA ===
-
                     const playerDoc = await transaction.get(playerRef);
+                    playerDocsData.set(playerId, playerDoc); // Salva o documento lido
+                }
+
+                // 3. FASE DE ESCRITA (Writes)
+                // Agora que todas as leituras acabaram, podemos escrever
+                
+                // Segundo loop: Apenas ESCRITA
+                for (const [playerId, data] of playerPointsMap.entries()) {
+                    const playerDoc = playerDocsData.get(playerId); // Pega o documento da Fase 1
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); // Ref para a escrita
 
                     if (!playerDoc.exists()) {
-                        // Se é a primeira vez do jogador NESSE RANKING, cria o documento
+                        // É a primeira vez do jogador NESSE RANKING, cria o documento
                         transaction.set(playerRef, {
                             name: data.name,
                             points: data.points,
