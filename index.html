@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ranking Beach Tennis</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
         /* Estilos personalizados */
         body {
@@ -69,7 +69,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.9.3 (Edição Coveiro)</p>
+            <p>App de Ranking v2.9.4 (Correção de Ícones)</p>
         </footer>
 
     </div>
@@ -211,9 +211,6 @@
             logOut: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>',
             check: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
             settings: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
-            // =================================================================
-            // === NOVO ÍCONE: "Pá" para o Coveiro ===
-            // =================================================================
             shovel: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-white"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>',
             shovelSmall: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>'
         };
@@ -238,8 +235,9 @@
         
         // Router Principal
         const render = () => {
-            // Garante que ícones sejam recriados após cada renderização
-            lucide.createIcons();
+            // =================================================================
+            // === MUDANÇA: Removida a chamada lucide.createIcons()
+            // =================================================================
             
             // Esconde o spinner global se não estivermos na tela de loading
             if (appState.currentView !== 'loading') {
@@ -272,13 +270,12 @@
                 default:
                     mainContent.innerHTML = `<p>Estado desconhecido: ${appState.currentView}</p>`;
             }
-            // Recria os ícones do Lucide
-            lucide.createIcons();
+            
+            // =================================================================
+            // === MUDANÇA: Removida a chamada lucide.createIcons()
+            // =================================================================
         };
 
-        // =================================================================
-        // === MUDANÇA (REQUEST 4): Lógica de navegação atualizada
-        // =================================================================
         const navigateTo = (view, champId = null) => {
             if (view === 'login') {
                 appState.isAdmin = false;
@@ -1215,13 +1212,23 @@
             const final = bracket.find(m => m.round === maxRound);
             const champion = final?.winner; // 'champion' é um objeto DUPLA
 
+            // =================================================================
+            // === MUDANÇA (REQUEST 5): Estilo do card de campeão
+            // =================================================================
+            const isGold = bracketType === 'goldBracket';
+            const cardStyle = isGold 
+                ? 'bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-gray-900' // Gold Style
+                : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900'; // Silver Style
+            
             const championHtml = champion ? `
-            <div class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-gray-900 p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
+            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
                 ${icons.medal}
                 <h4 class="text-2xl font-black uppercase tracking-wider">Campeões</h4>
                 <p class="text-3xl font-bold">${champion.name}</p>
             </div>
             ` : '';
+            // === Fim da Mudança ===
+
 
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
                 const roundTitle = Number(roundNum) === maxRound ? 'Final'
