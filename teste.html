@@ -70,7 +70,6 @@
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
             <p>App de Ranking v2.6 (Admin/Visitante)</p>
-            <button id="logout-btn" class="hidden text-red-400 hover:text-red-300 transition-colors mt-2">Sair (Admin)</button>
         </footer>
 
     </div>
@@ -116,15 +115,15 @@
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         /* =============================================================================
-            Configuração do Firebase (Fornecida pelo usuário)
-            ============================================================================= */
+           Configuração do Firebase (Fornecida pelo usuário)
+           ============================================================================= */
         const firebaseConfig = {
-            apiKey: "AIzaSyDeS-rk8OJKhghv1djVucmR3-erOa-ppMY",
-            authDomain: "campeonato-sortudo.firebaseapp.com",
-            projectId: "campeonato-sortudo",
-            storageBucket: "campeonato-sortudo.firebasestorage.app",
-            messagingSenderId: "706083235199",
-            appId: "1:706083235199:web:5eca6041bb817401ee264a"
+          apiKey: "AIzaSyDeS-rk8OJKhghv1djVucmR3-erOa-ppMY",
+          authDomain: "campeonato-sortudo.firebaseapp.com",
+          projectId: "campeonato-sortudo",
+          storageBucket: "campeonato-sortudo.firebasestorage.app",
+          messagingSenderId: "706083235199",
+          appId: "1:706083235199:web:5eca6041bb817401ee264a"
         };
         
         // Inicialização do Firebase
@@ -134,25 +133,24 @@
         setLogLevel('debug'); 
 
         /* =============================================================================
-            ID Mestre e Senha de Admin
-            ============================================================================= */
+           ID Mestre e Senha de Admin
+           ============================================================================= */
         const MESTRE_USER_ID = "campeonato-sortudo-admin";
         
-        // NOVO: Senha de Admin
-        // TROQUE ESTA SENHA por uma senha segura!
-        const ADMIN_PASSWORD = "admin"; 
+        // ==========================================
+        // === MUDE SUA SENHA DE ADMIN AQUI ===
+        // ==========================================
+        const ADMIN_PASSWORD = "mudar123"; 
 
         /* =============================================================================
-            Estado Global do Aplicativo
-            ============================================================================= */
+           Estado Global do Aplicativo
+           ============================================================================= */
         let appState = {
             userId: null, // Será preenchido com o MESTRE_USER_ID
             isAuthReady: false,
-            // MODIFICADO: A view inicial agora é 'auth' (login)
-            currentView: 'auth', // 'auth', 'loading', 'championshipList', 'championshipView', 'globalRanking'
+            isAdmin: false, // NOVO: Controla o modo admin
+            currentView: 'loading', // 'loading', 'login', 'championshipList', 'championshipView', 'globalRanking'
             currentChampionshipId: null,
-            // NOVO: Estado de Admin
-            isAdmin: false 
         };
 
         let championships = []; // Lista de todos os campeonatos
@@ -165,14 +163,12 @@
         let unsubscribeActiveChampionship = () => {}; 
 
         /* =============================================================================
-            Referências do DOM
-            ============================================================================= */
+           Referências do DOM
+           ============================================================================= */
         const mainContent = document.getElementById('main-content');
         const loadingSpinner = document.getElementById('loading-spinner');
         const headerButtons = document.getElementById('header-buttons');
         const userIdFooter = document.getElementById('user-id-footer');
-        // NOVO: Botão de Logout
-        const logoutBtn = document.getElementById('logout-btn');
         
         // Modal
         const modal = document.getElementById('modal');
@@ -182,8 +178,9 @@
         const modalCloseIcon = document.getElementById('modal-close-icon');
 
         /* =============================================================================
-            Constantes de Pontuação (Padrão)
-            ============================================================================= */
+           Constantes de Pontuação (Padrão)
+           ============================================================================= */
+        // Usado como fallback e valores padrão dos inputs
         const DEFAULT_RANKING_POINTS = {
             GOLD_WINNER: 100,
             GOLD_RUNNERUP: 70,
@@ -193,8 +190,8 @@
         };
 
         /* =============================================================================
-            Ícones SVG (Reutilizados)
-            ============================================================================= */
+           Ícones SVG (Reutilizados)
+           ============================================================================= */
         const icons = {
             users: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
             plus: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
@@ -206,12 +203,14 @@
             medal: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-white"><path d="M12 16.5l4-2.3 4 2.3-1.5-4.6 3.5-3.4-4.6-.7-2-4.2-2 4.2-4.6.7 3.5 3.4L8 16.5z"></path><path d="M12 15l-4-2.3V7.9l4 2.3 4-2.3v4.8L12 15z"></path></svg>',
             award: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>',
             arrowLeft: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
-            eye: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>'
+            eye: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+            logIn: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>',
+            logOut: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>'
         };
 
         /* =============================================================================
-            Funções do Modal
-            ============================================================================= */
+           Funções do Modal
+           ============================================================================= */
         const showModal = (title, message) => {
             modalTitle.textContent = title;
             modalMessage.textContent = message;
@@ -224,8 +223,8 @@
         modal.firstElementChild.addEventListener('click', (e) => e.stopPropagation());
 
         /* =============================================================================
-            Funções de Navegação e Renderização Principal
-            ============================================================================= */
+           Funções de Navegação e Renderização Principal
+           ============================================================================= */
         
         // Router Principal
         const render = () => {
@@ -242,25 +241,13 @@
                 return;
             }
 
-            // MODIFICADO: Só mostra botões do cabeçalho se não estiver na tela de login
-            if (appState.currentView !== 'auth') {
-                renderHeaderButtons();
-            } else {
-                headerButtons.innerHTML = ''; // Limpa botões na tela de login
-            }
-            
-            // NOVO: Mostra/esconde o botão de logout
-            if (appState.isAdmin) {
-                logoutBtn.classList.remove('hidden');
-            } else {
-                logoutBtn.classList.add('hidden');
-            }
+            // Renderiza os botões do cabeçalho
+            renderHeaderButtons();
 
             // Renderiza o conteúdo principal baseado na view
             switch (appState.currentView) {
-                // NOVO: Case para a tela de autenticação
-                case 'auth':
-                    renderAuthScreen();
+                case 'login': // NOVO
+                    renderLogin();
                     break;
                 case 'championshipList':
                     renderChampionshipList();
@@ -269,6 +256,7 @@
                     renderGlobalRanking();
                     break;
                 case 'championshipView':
+                    // A tela 'championshipView' tem seus próprios sub-estados
                     renderChampionshipView();
                     break;
                 default:
@@ -279,6 +267,11 @@
         };
 
         const navigateTo = (view, champId = null) => {
+            // NOVO: Se sair do modo admin, reseta o estado
+            if (view === 'login') {
+                appState.isAdmin = false;
+            }
+
             appState.currentView = view;
             appState.currentChampionshipId = champId;
 
@@ -296,9 +289,12 @@
         };
 
         const renderHeaderButtons = () => {
-            let html = '';
+            let navHtml = ''; // Botões de Navegação (Voltar/Ranking)
+            let authHtml = ''; // Botões de Autenticação (Login/Sair)
+            
+            // Lógica de Navegação
             if (appState.currentView === 'championshipList') {
-                html = `
+                navHtml = `
                 <button
                     id="nav-to-ranking"
                     class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 text-sm">
@@ -307,7 +303,7 @@
                 </button>
                 `;
             } else if (appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') {
-                html = `
+                navHtml = `
                 <button
                     id="nav-to-list"
                     class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 text-sm">
@@ -316,7 +312,31 @@
                 </button>
                 `;
             }
-            headerButtons.innerHTML = html;
+
+            // Lógica de Autenticação
+            if (appState.currentView !== 'login') {
+                if (appState.isAdmin) {
+                    authHtml = `
+                    <button
+                        id="nav-to-login"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 text-sm">
+                        ${icons.logOut}
+                        Sair (Admin)
+                    </button>
+                    `;
+                } else {
+                    authHtml = `
+                    <button
+                        id="nav-to-login"
+                        class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 text-sm">
+                        ${icons.logIn}
+                        Login (Admin)
+                    </button>
+                    `;
+                }
+            }
+
+            headerButtons.innerHTML = navHtml + authHtml; // Concatena os botões
 
             // Adiciona listeners aos botões
             const rankingBtn = document.getElementById('nav-to-ranking');
@@ -324,79 +344,58 @@
 
             const listBtn = document.getElementById('nav-to-list');
             if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
+            
+            const loginBtn = document.getElementById('nav-to-login');
+            if (loginBtn) loginBtn.addEventListener('click', () => navigateTo('login'));
         };
 
         /* =============================================================================
-            NOVA TELA: Autenticação (Login)
-            ============================================================================= */
+           TELA 0: Login (NOVA TELA)
+           ============================================================================= */
         
-        const renderAuthScreen = () => {
+        const renderLogin = () => {
             mainContent.innerHTML = `
-                <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 max-w-md mx-auto animate-fade-in">
-                    <h2 class="text-2xl font-bold text-cyan-400 mb-6 text-center">Acessar Painel</h2>
+                <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
+                    <h2 class="text-3xl font-bold text-center text-cyan-400 mb-8">Bem-vindo(a)</h2>
                     
-                    <form id="login-form">
-                        <div class="mb-4">
-                            <label for="password-input" class="block text-sm font-medium text-gray-300 mb-1">Senha de Administrador</label>
-                            <input
-                                type="password"
-                                id="password-input"
-                                class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                                required
-                            />
-                        </div>
+                    <div class="space-y-4">
                         <button
-                            type="submit"
-                            id="login-btn"
-                            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 mb-4">
-                            Entrar como Admin
+                            id="visitor-login-btn"
+                            class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
+                            ${icons.eye}
+                            Modo Visitante
                         </button>
-                    </form>
-                    
-                    <button
-                        id="visitor-btn"
-                        type="button"
-                        class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2">
-                        ${icons.eye} Ver como Visitante
-                    </button>
+                        
+                        <button
+                            id="admin-login-btn"
+                            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
+                            ${icons.logIn}
+                            Modo Administrador
+                        </button>
+                    </div>
                 </div>
             `;
 
             // Listeners
-            document.getElementById('login-form').addEventListener('submit', handleLogin);
-            document.getElementById('visitor-btn').addEventListener('click', () => {
+            document.getElementById('visitor-login-btn').addEventListener('click', () => {
                 appState.isAdmin = false;
                 navigateTo('championshipList');
             });
+            
+            document.getElementById('admin-login-btn').addEventListener('click', () => {
+                const password = prompt("Digite a senha de administrador:");
+                if (password === ADMIN_PASSWORD) {
+                    appState.isAdmin = true;
+                    navigateTo('championshipList');
+                } else if (password !== null) { // Só mostra erro se o usuário não clicou em "Cancelar"
+                    showModal("Acesso Negado", "Senha incorreta.");
+                }
+            });
         };
-
-        const handleLogin = (e) => {
-            e.preventDefault();
-            const input = document.getElementById('password-input');
-            const password = input.value;
-
-            if (password === ADMIN_PASSWORD) {
-                appState.isAdmin = true;
-                navigateTo('championshipList');
-            } else {
-                showModal("Erro", "Senha incorreta.");
-                input.value = '';
-            }
-        };
-
-        // NOVO: Função de Logout
-        const handleLogout = () => {
-            if (confirm("Deseja sair do modo Administrador?")) {
-                appState.isAdmin = false;
-                navigateTo('auth'); // Volta para a tela de login
-            }
-        };
-        logoutBtn.addEventListener('click', handleLogout);
-
 
         /* =============================================================================
-            TELA 1: Lista de Campeonatos (Histórico)
-            ============================================================================= */
+           TELA 1: Lista de Campeonatos (Histórico)
+           ============================================================================= */
         
         const renderChampionshipList = () => {
             const sortedChampionships = [...championships].sort((a, b) => b.createdAt - a.createdAt);
@@ -408,6 +407,14 @@
                     let statusText = 'Em andamento';
                     if (champ.status === 'registration') { statusColor = 'text-cyan-400'; statusText = 'Em Inscrição'; }
                     if (champ.status === 'finished') { statusColor = 'text-green-400'; statusText = 'Finalizado'; }
+
+                    // NOVO: Botão de deletar só aparece para Admins
+                    const deleteButtonHtml = (appState.isAdmin && champ.status !== 'finished') ? `
+                    <button
+                        class="delete-champ-btn text-red-400 hover:text-red-300 transition-colors p-2 rounded-lg bg-gray-800"
+                        data-id="${champ.id}">
+                        ${icons.trash}
+                    </button>` : '';
 
                     return `
                     <div class="flex flex-col sm:flex-row justify-between items-center bg-gray-700 p-4 rounded-lg animate-fade-in-sm gap-3">
@@ -422,71 +429,66 @@
                                 data-id="${champ.id}">
                                 ${icons.eye} Ver
                             </button>
-                            ${appState.isAdmin && champ.status !== 'finished' ? `
-                            <button
-                                class="delete-champ-btn text-red-400 hover:text-red-300 transition-colors p-2 rounded-lg bg-gray-800"
-                                data-id="${champ.id}">
-                                ${icons.trash}
-                            </button>` : ''}
+                            ${deleteButtonHtml}
                         </div>
                     </div>
                     `}).join('');
 
-            // MODIFICADO: Só renderiza o formulário de "Novo Campeonato" se for admin
+            // NOVO: Formulário de "Novo Campeonato" só aparece para Admins
             const newChampionshipFormHtml = appState.isAdmin ? `
-                <form id="add-championship-form">
-                    <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8">
-                        <h2 class="text-2xl font-bold text-cyan-400 mb-4">Novo Campeonato</h2>
-                        
-                        <div class="mb-4">
-                            <label for="championship-name-input" class="block text-sm font-medium text-gray-300 mb-1">Nome do Campeonato</label>
-                            <input
-                                type="text"
-                                id="championship-name-input"
-                                placeholder="ex: Torneio de Verão"
-                                class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                                required
-                            />
-                        </div>
-
-                        <h3 class="text-lg font-semibold text-gray-200 mb-3">Configuração de Pontos</h3>
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                            <div>
-                                <label for="points-gold-winner" class="block text-xs font-medium text-green-300 mb-1">Campeão Ouro</label>
-                                <input type="number" id="points-gold-winner" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_WINNER}"
-                                       class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
-                            </div>
-                            <div>
-                                <label for="points-gold-runnerup" class="block text-xs font-medium text-green-400 mb-1">Vice Ouro</label>
-                                <input type="number" id="points-gold-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_RUNNERUP}"
-                                       class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
-                            </div>
-                            <div>
-                                <label for="points-silver-winner" class="block text-xs font-medium text-yellow-300 mb-1">Campeão Prata</label>
-                                <input type="number" id="points-silver-winner" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_WINNER}"
-                                       class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
-                            </div>
-                            <div>
-                                <label for="points-silver-runnerup" class="block text-xs font-medium text-yellow-400 mb-1">Vice Prata</label>
-                                <input type="number" id="points-silver-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_RUNNERUP}"
-                                       class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
-                            </div>
-                            <div>
-                                <label for="points-participation" class="block text-xs font-medium text-gray-400 mb-1">Participação</label>
-                                <input type="number" id="points-participation" min="0" value="${DEFAULT_RANKING_POINTS.PARTICIPATION}"
-                                       class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
-                            </div>
-                        </div>
-
-                        <button
-                            type="submit"
-                            id="add-championship-btn"
-                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                            ${icons.plus}
-                            <span>Criar Campeonato</span>
-                        </button>
+            <form id="add-championship-form">
+                <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8">
+                    <h2 class="text-2xl font-bold text-cyan-400 mb-4">Novo Campeonato</h2>
+                    
+                    <div class="mb-4">
+                        <label for="championship-name-input" class="block text-sm font-medium text-gray-300 mb-1">Nome do Campeonato</label>
+                        <input
+                            type="text"
+                            id="championship-name-input"
+                            placeholder="ex: Torneio de Verão"
+                            class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            required
+                        />
                     </div>
-                </form>
+
+                    <h3 class="text-lg font-semibold text-gray-200 mb-3">Configuração de Pontos</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                        <div>
+                            <label for="points-gold-winner" class="block text-xs font-medium text-green-300 mb-1">Campeão Ouro</label>
+                            <input type="number" id="points-gold-winner" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_WINNER}"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                        </div>
+                        <div>
+                            <label for="points-gold-runnerup" class="block text-xs font-medium text-green-400 mb-1">Vice Ouro</label>
+                            <input type="number" id="points-gold-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_RUNNERUP}"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                        </div>
+                        <div>
+                            <label for="points-silver-winner" class="block text-xs font-medium text-yellow-300 mb-1">Campeão Prata</label>
+                            <input type="number" id="points-silver-winner" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_WINNER}"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                        </div>
+                        <div>
+                            <label for="points-silver-runnerup" class="block text-xs font-medium text-yellow-400 mb-1">Vice Prata</label>
+                            <input type="number" id="points-silver-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_RUNNERUP}"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                        </div>
+                        <div>
+                            <label for="points-participation" class="block text-xs font-medium text-gray-400 mb-1">Participação</label>
+                            <input type="number" id="points-participation" min="0" value="${DEFAULT_RANKING_POINTS.PARTICIPATION}"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-center text-white">
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="add-championship-btn"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        ${icons.plus}
+                        <span>Criar Campeonato</span>
+                    </button>
+                </div>
+            </form>
             ` : ''; // Se não for admin, não mostra nada
 
             mainContent.innerHTML = `
@@ -502,27 +504,24 @@
                 </div>
             `;
 
-            // Listeners
-            // MODIFICADO: Só adiciona o listener se o formulário existir (se for admin)
+            // Listeners (só adiciona se o elemento existir)
             if (appState.isAdmin) {
-                document.getElementById('add-championship-form').addEventListener('submit', handleAddChampionship);
-            }
-            document.querySelectorAll('.open-champ-btn').forEach(btn => {
-                btn.addEventListener('click', () => navigateTo('championshipView', btn.dataset.id));
-            });
-            // MODIFICADO: Só adiciona listeners de delete se for admin
-            if (appState.isAdmin) {
+                const addForm = document.getElementById('add-championship-form');
+                if (addForm) addForm.addEventListener('submit', handleAddChampionship);
+                
                 document.querySelectorAll('.delete-champ-btn').forEach(btn => {
                     btn.addEventListener('click', () => handleDeleteChampionship(btn.dataset.id));
                 });
             }
+
+            document.querySelectorAll('.open-champ-btn').forEach(btn => {
+                btn.addEventListener('click', () => navigateTo('championshipView', btn.dataset.id));
+            });
         };
 
         const handleAddChampionship = async (e) => {
-            // NOVO: Trava de segurança
-            if (!appState.isAdmin) return;
-            
             e.preventDefault();
+            // Esta função só é chamada se o formulário existir (isAdmin = true)
             const input = document.getElementById('championship-name-input');
             const button = document.getElementById('add-championship-btn');
             const champName = input.value.trim();
@@ -542,17 +541,22 @@
 
             try {
                 const batch = writeBatch(db);
+
+                // 1. Cria a referência para o NOVO doc de campeonato
                 const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
                 const newChampRef = doc(champCollectionRef);
+
+                // 2. Cria a referência para o doc de dados aninhado
                 const champDataRef = doc(db, 'users', appState.userId, 'championships', newChampRef.id, 'data', 'main');
 
+                // 3. Adiciona os dados ao batch
                 batch.set(newChampRef, {
                     name: champName,
                     createdAt: Timestamp.now(),
                     status: 'registration',
                     winnerGold: null,
                     winnerSilver: null,
-                    pointsConfig: pointsConfig
+                    pointsConfig: pointsConfig // Salva os pontos personalizados
                 });
 
                 batch.set(champDataRef, {
@@ -563,6 +567,7 @@
                     status: 'registration'
                 });
 
+                // 4. Executa o batch
                 await batch.commit();
 
                 input.value = '';
@@ -577,9 +582,7 @@
         };
 
         const handleDeleteChampionship = async (champId) => {
-            // NOVO: Trava de segurança
-            if (!appState.isAdmin) return;
-
+            // Esta função só é chamada se o botão existir (isAdmin = true)
             const champ = championships.find(c => c.id === champId);
             if (window.prompt(`Para confirmar, digite o nome do campeonato: "${champ.name}"`) !== champ.name) {
                 showModal("Cancelado", "A exclusão foi cancelada.");
@@ -587,7 +590,9 @@
             }
             
             try {
+                // Deleta o documento de dados
                 await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main'));
+                // Deleta o documento principal
                 await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId));
             } catch (error) {
                 console.error("Erro ao excluir campeonato:", error);
@@ -596,11 +601,10 @@
         };
 
         /* =============================================================================
-            TELA 2: Ranking Global
-            ============================================================================= */
+           TELA 2: Ranking Global
+           ============================================================================= */
 
         const renderGlobalRanking = () => {
-            // Esta tela é somente leitura, então não precisa de travas.
             const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
 
             const rankingsHtml = sortedPlayers.length === 0
@@ -641,12 +645,13 @@
         };
 
         /* =============================================================================
-            TELA 3: Visão do Campeonato
-            ============================================================================= */
+           TELA 3: Visão do Campeonato (O App Antigo, agora "Modular")
+           ============================================================================= */
         
         // Função "Router" da tela do campeonato
         const renderChampionshipView = () => {
             if (!activeChampionship) {
+                // Se activeChampionship ainda não carregou, mostra um spinner local
                 mainContent.innerHTML = `
                 <div class="text-center py-20 animate-fade-in">
                     <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-400 mx-auto"></div>
@@ -657,21 +662,19 @@
             }
 
             const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
-            
-            // MODIFICADO: Passa `!appState.isAdmin` para o renderKnockoutView
-            // Se o torneio terminou OU se for visitante, renderiza no modo "finalizado" (somente leitura)
             if (champInfo?.status === 'finished') {
-                renderKnockoutView(true); // 'true' para modo finalizado/leitura
+                // Se finalizado, mostra a tela de finalizado
+                renderKnockoutView(true); // 'true' para modo finalizado
                 return;
             }
 
+            // Se em andamento, renderiza a fase atual (baseado no status do doc de DADOS)
             switch (activeChampionship.status) {
                 case 'groups':
                     renderGroupStage();
                     break;
                 case 'knockout':
-                    // MODIFICADO: Se for visitante, renderiza a chave em modo leitura
-                    renderKnockoutView(!appState.isAdmin);
+                    renderKnockoutView(false);
                     break;
                 case 'registration':
                 default:
@@ -682,10 +685,12 @@
 
         // Salva os dados DO CAMPEONATO ATIVO
         const saveActiveChampionship = async (newChampData) => {
-            // NOVO: Trava de segurança
-            if (!appState.isAdmin) return;
-
             if (!appState.userId || !appState.currentChampionshipId) return;
+            // NOVO: Só salva se for admin
+            if (!appState.isAdmin) {
+                console.warn("Modo Visitante: Alterações não foram salvas.");
+                return;
+            }
             try {
                 const champDataRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId, 'data', 'main');
                 await setDoc(champDataRef, newChampData);
@@ -699,23 +704,26 @@
         const renderPlayerRegistration = () => {
             const playersListHtml = activeChampionship.players.length === 0
                 ? `<p class="text-gray-400 text-center py-4">Nenhum jogador cadastrado neste torneio.</p>`
-                : activeChampionship.players.map(player => `
+                : activeChampionship.players.map(player => {
+                    // NOVO: Botão de deletar só para admin
+                    const deleteButton = appState.isAdmin ? `
+                    <button class="delete-player-btn text-red-400 hover:text-red-300 transition-colors" data-id="${player.id}">
+                        ${icons.trash}
+                    </button>` : '';
+                    
+                    return `
                     <div class="flex justify-between items-center bg-gray-700 p-3 rounded-lg animate-fade-in-sm">
                         <span class="text-white font-medium">${player.name}</span>
-                        ${appState.isAdmin ? `
-                        <button class="delete-player-btn text-red-400 hover:text-red-300 transition-colors" data-id="${player.id}">
-                            ${icons.trash}
-                        </button>
-                        ` : ''}
+                        ${deleteButton}
                     </div>
-                `).join('');
+                    `
+                }).join('');
 
             const validPlayerCounts = [4, 8, 16, 32];
             const playerCount = activeChampionship.players.length;
             const canGenerate = validPlayerCounts.includes(playerCount);
 
-            // MODIFICADO: Só mostra o botão de gerar se for admin
-            const generateButtonHtml = appState.isAdmin && playerCount >= 4
+            const generateButtonHtml = playerCount >= 4
                 ? `
                 <div class="mt-8 text-center">
                     <button
@@ -730,27 +738,28 @@
                 </div>
                 ` : '';
             
-            // MODIFICADO: Só mostra o formulário de adicionar se for admin
+            // NOVO: Formulário de adicionar jogador só para admin
             const addPlayerFormHtml = appState.isAdmin ? `
-                <form id="add-player-form" class="mb-6 flex flex-col sm:flex-row gap-3">
-                    <input
-                        type="text"
-                        id="player-name-input"
-                        placeholder="Nome do Jogador"
-                        class="flex-grow bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    />
-                    <button
-                        type="submit"
-                        id="add-player-btn"
-                        class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                        ${icons.plus}
-                        <span>Adicionar</span>
-                    </button>
-                </form>
+            <form id="add-player-form" class="mb-6 flex flex-col sm:flex-row gap-3">
+                <input
+                    type="text"
+                    id="player-name-input"
+                    placeholder="Nome do Jogador"
+                    class="flex-grow bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+                <button
+                    type="submit"
+                    id="add-player-btn"
+                    class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                    ${icons.plus}
+                    <span>Adicionar</span>
+                </button>
+            </form>
             ` : '';
 
             mainContent.innerHTML = `
                 <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in">
+                    
                     ${addPlayerFormHtml}
 
                     <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6">
@@ -763,18 +772,22 @@
                         </div>
                     </div>
                     
-                    ${generateButtonHtml}
+                    ${appState.isAdmin ? generateButtonHtml : ''}
                 </div>
             `;
 
-            // MODIFICADO: Só adiciona listeners de admin
+            // NOVO: Listeners só são adicionados se os botões existirem (isAdmin)
             if (appState.isAdmin) {
-                document.getElementById('add-player-form').addEventListener('submit', handleAddPlayerToChampionship);
+                const addPlayerForm = document.getElementById('add-player-form');
+                if (addPlayerForm) addPlayerForm.addEventListener('submit', handleAddPlayerToChampionship);
+                
                 document.querySelectorAll('.delete-player-btn').forEach(btn => {
                     btn.addEventListener('click', () => handleDeletePlayerFromChampionship(btn.dataset.id));
                 });
+                
                 if (canGenerate) {
-                    document.getElementById('generate-champ-btn').addEventListener('click', handleGenerateChampionship);
+                    const generateBtn = document.getElementById('generate-champ-btn');
+                    if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship);
                 }
             }
         };
@@ -782,6 +795,9 @@
         // -- Sub-tela: Fase de Grupos --
         const renderGroupStage = () => {
             let allScoresFilled = true;
+            // NOVO: Define se os inputs estão desabilitados
+            const isDisabled = !appState.isAdmin ? 'disabled' : '';
+
             const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
                 const rankings = getRankings(group);
                 
@@ -802,21 +818,23 @@
                                 type="number"
                                 min="0"
                                 value="${score1 === null ? '' : score1}"
-                                class="score-input w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                class="score-input w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 data-group-index="${groupIndex}"
                                 data-match-index="${matchIndex}"
                                 data-score-index="0"
-                                ${!appState.isAdmin ? 'disabled' : ''} />
+                                ${isDisabled}
+                            />
                             <span class="text-gray-400">-</span>
                             <input
                                 type="number"
                                 min="0"
                                 value="${score2 === null ? '' : score2}"
-                                class="score-input w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                class="score-input w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 data-group-index="${groupIndex}"
                                 data-match-index="${matchIndex}"
                                 data-score-index="1"
-                                ${!appState.isAdmin ? 'disabled' : ''} />
+                                ${isDisabled}
+                            />
                         </div>
                     </div>
                     `;
@@ -855,18 +873,18 @@
                 `;
             }).join('');
 
-            // MODIFICADO: Só mostra o botão de finalizar se for admin
+            // NOVO: Botão de finalizar grupos só para admin
             const finalizeButtonHtml = appState.isAdmin ? `
-                <div class="mt-8 text-center">
-                    <button
-                        id="finalize-groups-btn"
-                        type="button"
-                        ${!allScoresFilled ? 'disabled' : ''}
-                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
-                        ${icons.trophy}
-                        ${allScoresFilled ? "Finalizar Grupos e Gerar Chaves" : "Preencha todos os placares"}
-                    </button>
-                </div>
+            <div class="mt-8 text-center">
+                <button
+                    id="finalize-groups-btn"
+                    type="button"
+                    ${!allScoresFilled ? 'disabled' : ''}
+                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
+                    ${icons.trophy}
+                    ${allScoresFilled ? "Finalizar Grupos e Gerar Chaves" : "Preencha todos os placares"}
+                </button>
+            </div>
             ` : '';
 
             mainContent.innerHTML = `
@@ -875,8 +893,8 @@
                     ${finalizeButtonHtml}
                 </div>
             `;
-
-            // MODIFICADO: Só adiciona listeners de admin
+            
+            // NOVO: Listeners só são adicionados se for admin
             if (appState.isAdmin) {
                 document.querySelectorAll('.score-input').forEach(input => {
                     input.addEventListener('change', (e) => {
@@ -884,22 +902,21 @@
                         handleGroupScoreChange(groupIndex, matchIndex, scoreIndex, e.target.value);
                     });
                 });
-                if (allScoresFilled) { // Só adiciona listener se o botão existir
-                    document.getElementById('finalize-groups-btn').addEventListener('click', handleFinalizeGroups);
-                }
+                
+                const finalizeBtn = document.getElementById('finalize-groups-btn');
+                if (finalizeBtn) finalizeBtn.addEventListener('click', handleFinalizeGroups);
             }
         };
         
         // -- Sub-tela: Chaves (Mata-Mata) --
-        // MODIFICADO: `isFinished` agora significa "Somente Leitura" (seja por ter acabado ou por ser visitante)
-        const renderKnockoutView = (isReadOnly) => {
-            const goldHtml = renderBracket('Série Ouro', activeChampionship.goldBracket, 'goldBracket', icons.shield, isReadOnly);
-            const silverHtml = renderBracket('Série Prata', activeChampionship.silverBracket, 'silverBracket', icons.shieldOff, isReadOnly);
+        const renderKnockoutView = (isFinished) => {
+            const goldHtml = renderBracket('Série Ouro', activeChampionship.goldBracket, 'goldBracket', icons.shield, isFinished);
+            const silverHtml = renderBracket('Série Prata', activeChampionship.silverBracket, 'silverBracket', icons.shieldOff, isFinished);
             
             mainContent.innerHTML = `<div class="animate-fade-in">${goldHtml}${silverHtml}</div>`;
             
-            // MODIFICADO: Só adiciona listeners se NÃO for Somente Leitura
-            if (!isReadOnly) {
+            // NOVO: Listeners só são adicionados se NÃO estiver finalizado E for admin
+            if (!isFinished && appState.isAdmin) {
                 document.querySelectorAll('.knockout-score-input').forEach(input => {
                     input.addEventListener('change', (e) => {
                         const { bracketType, matchId, scoreIndex } = e.target.dataset;
@@ -909,7 +926,8 @@
             }
         };
 
-        const renderBracket = (title, bracket, bracketType, iconSvg, isReadOnly) => {
+        // Esta função agora renderiza DUPLAS (pairs)
+        const renderBracket = (title, bracket, bracketType, iconSvg, isFinished) => {
             const rounds = {};
             if (!bracket || bracket.length === 0) {
                  return `<div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8">
@@ -917,7 +935,7 @@
                          ${iconSvg} ${title}
                      </h3>
                      <p class="text-gray-400">Chave ainda não gerada.</p>
-                 </div>`;
+                  </div>`;
             }
 
             bracket.forEach(match => {
@@ -928,14 +946,14 @@
             const maxRound = Math.max(...bracket.map(m => m.round));
 
             const final = bracket.find(m => m.round === maxRound);
-            const champion = final?.winner;
+            const champion = final?.winner; // 'champion' é um objeto DUPLA
 
             const championHtml = champion ? `
-                <div class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-gray-900 p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
-                    ${icons.medal}
-                    <h4 class="text-2xl font-black uppercase tracking-wider">Campeões</h4>
-                    <p class="text-3xl font-bold">${champion.name}</p>
-                </div>
+            <div class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-gray-900 p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
+                ${icons.medal}
+                <h4 class="text-2xl font-black uppercase tracking-wider">Campeões</h4>
+                <p class="text-3xl font-bold">${champion.name}</p>
+            </div>
             ` : '';
 
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
@@ -945,16 +963,15 @@
                     : `Rodada ${roundNum}`;
                 
                 const matchesHtml = rounds[roundNum].map(match => {
-                    const pair1 = match.pairs[0];
-                    const pair2 = match.pairs[1];
+                    const pair1 = match.pairs[0]; // A 'dupla' 1
+                    const pair2 = match.pairs[1]; // A 'dupla' 2
                     const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
                     const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     
-                    // MODIFICADO: A lógica de desabilitar agora inclui `isReadOnly`
-                    const isDisabled = `disabled`;
-                    const inputDisabledLogic = (!pair1 || !pair2 || isReadOnly || match.winner) ? isDisabled : '';
+                    // NOVO: Lógica de desabilitar o input
+                    const isDisabled = (!pair1 || !pair2 || isFinished || match.winner || !appState.isAdmin) ? 'disabled' : '';
 
                     return `
                     <div class="bg-gray-700 rounded-lg shadow-md p-4">
@@ -966,11 +983,11 @@
                                 type="number"
                                 min="0"
                                 value="${score1 === null ? '' : score1}"
-                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabledLogic ? 'opacity-70' : ''}"
+                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
                                 data-score-index="0"
-                                ${inputDisabledLogic}
+                                ${isDisabled}
                             />
                         </div>
                         
@@ -988,11 +1005,11 @@
                                 type="number"
                                 min="0"
                                 value="${score2 === null ? '' : score2}"
-                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabledLogic ? 'opacity-70' : ''}"
+                                class="knockout-score-input w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
                                 data-score-index="1"
-                                ${inputDisabledLogic}
+                                ${isDisabled}
                             />
                         </div>
                     </div>
@@ -1022,14 +1039,12 @@
         };
 
         /* =============================================================================
-            Lógica do Campeonato Ativo
-            ============================================================================= */
+           Lógica do Campeonato Ativo (Ações de Admin)
+           ============================================================================= */
         
         const handleAddPlayerToChampionship = async (e) => {
-            // NOVO: Trava de segurança
-            if (!appState.isAdmin) return;
-
             e.preventDefault();
+            // Esta função só é chamada pelo listener do admin
             const input = document.getElementById('player-name-input');
             const button = document.getElementById('add-player-btn');
             const playerName = input.value.trim();
@@ -1056,9 +1071,7 @@
         };
 
         const handleDeletePlayerFromChampionship = async (playerId) => {
-            // NOVO: Trava de segurança
-            if (!appState.isAdmin) return;
-
+            // Esta função só é chamada pelo listener do admin
             if (!confirm("Tem certeza que deseja remover este jogador DO TORNEIO?")) return;
             
             const newChampData = {
@@ -1069,9 +1082,7 @@
         };
 
         const handleGenerateChampionship = async () => {
-            // NOVO: Trava de segurança
-            if (!appState.isAdmin) return;
-
+            // Esta função só é chamada pelo listener do admin
             const playerCount = activeChampionship.players.length;
             const validPlayerCounts = [4, 8, 16, 32];
             if (!validPlayerCounts.includes(playerCount)) {
@@ -1108,6 +1119,7 @@
                 };
                 await saveActiveChampionship(newChampData);
                 
+                // Atualiza o status principal do campeonato (para a lista)
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
                 await setDoc(champRef, { status: 'groups' }, { merge: true });
 
@@ -1118,19 +1130,16 @@
         };
 
         const handleGroupScoreChange = (groupIndex, matchIndex, scoreIndex, value) => {
-            // NOVO: Trava de segurança
-            if (!appState.isAdmin) return;
-
+            // Esta função só é chamada pelo listener do admin
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const score = value === '' ? null : parseInt(value, 10);
             newChampData.groups[groupIndex].matches[matchIndex].score[scoreIndex] = isNaN(score) ? null : score;
             saveActiveChampionship(newChampData); // Salva sem esperar
         };
 
+        // Esta função agora cria DUPLAS
         const handleFinalizeGroups = async () => {
-            // NOVO: Trava de segurança
-            if (!appState.isAdmin) return;
-
+            // Esta função só é chamada pelo listener do admin
             if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata e bloquear os grupos.")) return;
 
             try {
@@ -1140,13 +1149,15 @@
                 activeChampionship.groups.forEach(group => {
                     const rankings = getRankings(group); // [p1, p2, p3, p4]
                     
+                    // Cria a Dupla Ouro (1º e 2º)
                     const goldPair = {
                         id: `${rankings[0].id}_${rankings[1].id}`,
                         name: `${rankings[0].name} / ${rankings[1].name}`,
-                        players: [rankings[0], rankings[1]]
+                        players: [rankings[0], rankings[1]] // Armazena os jogadores individuais
                     };
                     goldSeriesPairs.push(goldPair);
 
+                    // Cria a Dupla Prata (3º e 4º)
                     const silverPair = {
                         id: `${rankings[2].id}_${rankings[3].id}`,
                         name: `${rankings[2].name} / ${rankings[3].name}`,
@@ -1167,6 +1178,7 @@
                 
                 await saveActiveChampionship(newChampData);
 
+                // Atualiza o status principal do campeonato (para a lista)
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
                 await setDoc(champRef, { status: 'knockout' }, { merge: true });
                 
@@ -1176,10 +1188,9 @@
             }
         };
 
+        // Esta função agora avança DUPLAS
         const handleKnockoutScoreChange = async (bracketType, matchId, scoreIndex, value) => {
-            // NOVO: Trava de segurança
-            if (!appState.isAdmin) return;
-
+            // Esta função só é chamada pelo listener do admin
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
             const match = bracketToUpdate.find(m => m.id === matchId);
@@ -1191,16 +1202,19 @@
                 const s0 = match.score[0];
                 const s1 = match.score[1];
                 
+                // Define o vencedor da partida
                 if (s0 !== null && s1 !== null) {
-                    if (s0 > s1) match.winner = match.pairs[0];
-                    else if (s1 > s0) match.winner = match.pairs[1];
-                    else match.winner = null; 
+                    if (s0 > s1) match.winner = match.pairs[0]; // Vencedor é a Dupla 1
+                    else if (s1 > s0) match.winner = match.pairs[1]; // Vencedor é a Dupla 2
+                    else match.winner = null; // Empate não define vencedor
                     
+                    // Avança a dupla vencedora para a próxima chave
                     if (match.winner && match.nextMatchId) {
                         const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
                         if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
                     }
                 } else {
+                    // Se um placar for apagado, remove o vencedor e a dupla da próxima fase
                     const oldWinner = match.winner;
                     match.winner = null;
                     if (oldWinner && match.nextMatchId) {
@@ -1211,20 +1225,21 @@
                     }
                 }
                 
-                await saveActiveChampionship(newChampData);
+                await saveActiveChampionship(newChampData); // Salva o estado do torneio
 
+                // Verifica se o torneio acabou para calcular o ranking
                 await checkAndFinalizeChampionship(newChampData);
             }
         };
 
         /* =============================================================================
-            Lógica de Cálculo de Ranking
-            ============================================================================= */
+           Lógica de Cálculo de Ranking
+           ============================================================================= */
 
+        // Esta função agora lê DUPLAS
         const checkAndFinalizeChampionship = async (champData) => {
-            // Esta função é chamada por uma função de admin, então a trava já foi verificada
             if (!champData.goldBracket || !champData.silverBracket || champData.goldBracket.length === 0 || champData.silverBracket.length === 0) {
-                return; 
+                return; // Chaves ainda não foram geradas
             }
 
             const maxRoundGold = Math.max(...champData.goldBracket.map(m => m.round));
@@ -1233,30 +1248,41 @@
             const goldFinal = champData.goldBracket.find(m => m.round === maxRoundGold);
             const silverFinal = champData.silverBracket.find(m => m.round === maxRoundSilver);
 
-            const goldWinner = goldFinal?.winner;
-            const silverWinner = silverFinal?.winner;
+            const goldWinner = goldFinal?.winner; // 'goldWinner' é um objeto Dupla
+            const silverWinner = silverFinal?.winner; // 'silverWinner' é um objeto Dupla
 
+            // Se ambos os campeões (Ouro e Prata) estiverem definidos, o torneio acabou!
             if (goldWinner && silverWinner) {
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
                 const champDoc = await getDoc(champRef);
 
+                // Evita rodar a finalização duas vezes
                 if (champDoc.exists() && champDoc.data().status === 'finished') {
                     return;
                 }
+
+                // **BUG FIX**: Remove a confirmação (confirm()).
+                // O ranking será aplicado automaticamente.
                 
                 showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
                 
                 try {
+                    // 1. Define os vencedores e vices (que também são Duplas)
                     const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
                     const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
+
+                    // **NOVA FUNCIONALIDADE**: Pega os pontos do doc principal, ou usa o padrão
                     const effectivePoints = champDoc.data().pointsConfig || DEFAULT_RANKING_POINTS;
 
+                    // 2. Atualiza o documento principal do campeonato
                     await setDoc(champRef, {
                         status: 'finished',
-                        winnerGold: goldWinner.name,
-                        winnerSilver: silverWinner.name
+                        winnerGold: goldWinner.name, // Salva o nome da dupla
+                        winnerSilver: silverWinner.name // Salva o nome da dupla
                     }, { merge: true });
 
+                    // 3. Atualiza o Ranking Global (operação complexa)
+                    // Passa a configuração de pontos para a função
                     await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp }, effectivePoints);
 
                     hideModal();
@@ -1269,25 +1295,31 @@
             }
         };
 
+        // **NOVA FUNCIONALIDADE**: Esta função agora recebe a configuração de pontos
         const updateGlobalRanking = async (champData, winners, pointsConfig) => {
-            // Esta função é chamada por uma função de admin, então a trava já foi verificada
+            // 'winners' contém { goldWinner: Dupla, goldRunnerUp: Dupla, ... }
+            // 'pointsConfig' contém os pontos personalizados (ex: { goldWinner: 100, ... })
+
             await runTransaction(db, async (transaction) => {
                 const playerPointsMap = new Map();
 
+                // 1. Adiciona pontos de participação para todos os *jogadores individuais*
                 for (const player of champData.players) {
                     playerPointsMap.set(player.id, {
                         name: player.name,
-                        points: pointsConfig.participation,
+                        points: pointsConfig.participation, // Usa pontos personalizados
                         goldWins: 0,
                         silverWins: 0
                     });
                 }
 
+                // 2. Adiciona pontos de performance para as *duplas*
                 if (winners.goldWinner) {
+                    // Itera sobre os 2 jogadores da dupla campeã
                     for (const player of winners.goldWinner.players) {
                         const p = playerPointsMap.get(player.id);
-                        if (p) {
-                            p.points += pointsConfig.goldWinner;
+                        if (p) { // Garante que o jogador ainda existe no mapa
+                            p.points += pointsConfig.goldWinner; // Usa pontos personalizados
                             p.goldWins = 1;
                         }
                     }
@@ -1295,14 +1327,14 @@
                 if (winners.goldRunnerUp) {
                     for (const player of winners.goldRunnerUp.players) {
                         const p = playerPointsMap.get(player.id);
-                         if (p) p.points += pointsConfig.goldRunnerUp;
+                         if (p) p.points += pointsConfig.goldRunnerUp; // Usa pontos personalizados
                     }
                 }
                 if (winners.silverWinner) {
                     for (const player of winners.silverWinner.players) {
                         const p = playerPointsMap.get(player.id);
                          if (p) {
-                            p.points += pointsConfig.silverWinner;
+                            p.points += pointsConfig.silverWinner; // Usa pontos personalizados
                             p.silverWins = 1;
                          }
                     }
@@ -1310,15 +1342,17 @@
                 if (winners.silverRunnerUp) {
                      for (const player of winners.silverRunnerUp.players) {
                         const p = playerPointsMap.get(player.id);
-                         if (p) p.points += pointsConfig.silverRunnerUp;
+                         if (p) p.points += pointsConfig.silverRunnerUp; // Usa pontos personalizados
                     }
                 }
 
+                // 3. Lê e atualiza os documentos no 'global_players' (esta parte não muda)
                 for (const [playerId, data] of playerPointsMap.entries()) {
                     const playerRef = doc(db, 'users', appState.userId, 'global_players', playerId);
                     const playerDoc = await transaction.get(playerRef);
 
                     if (!playerDoc.exists()) {
+                        // Se é a primeira vez do jogador, cria o documento
                         transaction.set(playerRef, {
                             name: data.name,
                             points: data.points,
@@ -1326,9 +1360,10 @@
                             silverWins: data.silverWins
                         });
                     } else {
+                        // Se já existe, atualiza os pontos
                         const oldData = playerDoc.data();
                         transaction.update(playerRef, {
-                            name: data.name,
+                            name: data.name, // Atualiza o nome caso tenha mudado
                             points: (oldData.points || 0) + data.points,
                             goldWins: (oldData.goldWins || 0) + data.goldWins,
                             silverWins: (oldData.silverWins || 0) + data.silverWins
@@ -1339,8 +1374,8 @@
         };
 
         /* =============================================================================
-            Funções Utilitárias (Cálculos de Grupos e Chaves)
-            ============================================================================= */
+           Funções Utilitárias (Cálculos de Grupos e Chaves)
+           ============================================================================= */
         
         const getRankings = (group) => {
             const playerStats = {};
@@ -1365,34 +1400,38 @@
             return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
         };
 
+        // CORRIGIDO: Esta função agora recebe DUPLAS e faz o sorteio (embaralha)
         const createBracket = (bracketPairs) => {
+            // Sorteio aleatório das duplas (cumprindo requisito)
             const shuffledPairs = [...bracketPairs].sort(() => 0.5 - Math.random());
             const bracket = [];
-            const numPairs = bracketPairs.length; 
+            const numPairs = bracketPairs.length; // 4 duplas
             
             if (numPairs < 2) return [];
 
-            const numRounds = Math.log2(numPairs); 
+            const numRounds = Math.log2(numPairs); // log2(4) = 2 rodadas
 
-            for (let r = 1; r <= numRounds; r++) { 
+            // Loop crescente (Rodada 1, Rodada 2, ...)
+            for (let r = 1; r <= numRounds; r++) { // r=1 (Semi), r=2 (Final)
                 
-                const matchesInRound = numPairs / Math.pow(2, r); 
+                // CORREÇÃO DA FÓRMULA:
+                const matchesInRound = numPairs / Math.pow(2, r); // r=1 -> 4/2=2. r=2 -> 4/4=1.
                 
                 for (let m = 0; m < matchesInRound; m++) { 
                     const matchId = `R${r}_M${m+1}`;
                     let nextMatchId = null;
                     let nextMatchSlot = null; 
 
-                    if (r < numRounds) { 
-                        const nextRoundMatchIndex = Math.floor(m / 2); 
-                        nextMatchId = `R${r+1}_M${nextRoundMatchIndex+1}`; 
-                        nextMatchSlot = m % 2; 
+                    if (r < numRounds) { // Se r=1 (Semi)
+                        const nextRoundMatchIndex = Math.floor(m / 2); // m=0 -> 0. m=1 -> 0.
+                        nextMatchId = `R${r+1}_M${nextRoundMatchIndex+1}`; // R2_M1, R2_M1
+                        nextMatchSlot = m % 2; // m=0 -> 0. m=1 -> 1.
                     }
                     
                     bracket.push({
                         id: matchId,
                         round: r, 
-                        pairs: [null, null],
+                        pairs: [null, null], // ALTERADO de 'players' para 'pairs'
                         score: [null, null],
                         winner: null,
                         nextMatchId: nextMatchId,
@@ -1401,21 +1440,23 @@
                 }
             }
             
+            // Preenche a Rodada 1 com as duplas sorteadas
             const round1Matches = bracket.filter(m => m.round === 1);
             round1Matches.forEach((match, index) => {
                 match.pairs = [shuffledPairs[index * 2] || null, shuffledPairs[index * 2 + 1] || null];
             });
 
-            return bracket;
+            return bracket; // O sort não é mais necessário
         };
 
 
         /* =============================================================================
-            Inicialização do App (Autenticação e Listeners Globais)
-            ============================================================================= */
+           Inicialização do App (Autenticação e Listeners Globais)
+           ============================================================================= */
 
         const listenToGlobalPlayers = () => {
             unsubscribeGlobalPlayers(); 
+            // Usa o appState.userId (que será o MESTRE_USER_ID)
             const playersCollectionRef = collection(db, 'users', appState.userId, 'global_players');
             const q = query(playersCollectionRef);
             
@@ -1432,6 +1473,7 @@
 
         const listenToChampionships = () => {
             unsubscribeChampionships();
+            // Usa o appState.userId (que será o MESTRE_USER_ID)
             const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
             const q = query(champCollectionRef);
             
@@ -1448,11 +1490,13 @@
 
         const listenToActiveChampionship = (champId) => {
             unsubscribeActiveChampionship();
+            // Usa o appState.userId (que será o MESTRE_USER_ID)
             const champDataRef = doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main');
             
             unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
                 if (docSnap.exists()) {
                     activeChampionship = { id: docSnap.id, ...docSnap.data() };
+                    // Se o status mudou (ex: de 'registration' para 'groups'), atualiza a view
                     const oldStatus = appState.currentStatus;
                     appState.currentStatus = activeChampionship.status;
                     if (oldStatus !== activeChampionship.status) {
@@ -1472,9 +1516,11 @@
         
         // Ponto de entrada da aplicação
         onAuthStateChanged(auth, async (user) => {
+            // O login anônimo ainda é NECESSÁRIO para ter a "permissão" de falar com o Firebase.
             if (!user) {
                 try {
                     await signInAnonymously(auth);
+                    // Não precisamos do userCredential.user.uid aleatório
                 } catch (error) {
                     console.error("Erro na autenticação anônima:", error);
                     let errorMessage = "Não foi possível conectar ao Firebase. Verifique sua conexão.";
@@ -1486,19 +1532,23 @@
                 }
             }
             
+            // Esta verificação garante que a inicialização só ocorra uma vez.
             if (user && !appState.isAuthReady) {
                 
+                // MUDANÇA PRINCIPAL:
+                // Ignoramos o 'user.uid' aleatório e forçamos o ID Mestre
                 const effectiveUserId = MESTRE_USER_ID; 
                 
                 appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
-                userIdFooter.textContent = effectiveUserId;
+                userIdFooter.textContent = effectiveUserId; // Mostra o ID Mestre no rodapé
                 
+                // Inicia os listeners globais (que agora usarão o ID Mestre)
                 listenToGlobalPlayers();
                 listenToChampionships();
                 
-                // MODIFICADO: A tela inicial agora é 'auth' (login), que já está definida no appState.
-                // A navegação para 'championshipList' ocorrerá *após* o login.
-                render(); // Renderiza a tela de login ('auth')
+                // Define a tela inicial
+                // MODIFICADO: Navega para a tela de LOGIN primeiro
+                navigateTo('login');
             }
         });
 
