@@ -73,7 +73,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v4.0.1 (Tema Claro/Sem Duplicidade)</p>
+            <p>App de Ranking v4.0.2 (Tema Claro/Limpo)</p>
         </footer>
 
     </div>
@@ -211,7 +211,7 @@
             shieldOff: '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block text-gray-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>',
             medal: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-gray-900"><path d="M12 16.5l4-2.3 4 2.3-1.5-4.6 3.5-3.4-4.6-.7-2-4.2-2 4.2-4.6.7 3.5 3.4L8 16.5z"></path><path d="M12 15l-4-2.3V7.9l4 2.3 4-2.3v4.8L12 15z"></path></svg>',
             award: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>',
-            arrowLeft: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></polyline><polyline points="12 19 5 12 12 5"></polyline></svg>',
+            arrowLeft: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
             eye: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
             logIn: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>',
             logOut: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>',
@@ -1231,8 +1231,9 @@
         
         // (ADMIN) -- Sub-tela: Chaves (Mata-Mata) --
         const renderKnockoutView = (isFinished) => {
-            const goldHtml = renderBracket('Série Ouro', activeChampionship.goldBracket, 'goldBracket', icons.shield, isFinished);
-            const silverHtml = renderBracket('Série Prata', activeChampionship.silverBracket, 'silverBracket', icons.shieldOff, isFinished);
+            // Chamadas de renderBracket sem o ícone nos parâmetros (apenas o título)
+            const goldHtml = renderBracket('Série Ouro', activeChampionship.goldBracket, 'goldBracket', isFinished);
+            const silverHtml = renderBracket('Série Prata', activeChampionship.silverBracket, 'silverBracket', isFinished);
             
             // Lógica do Coveiro
             let coveiroHtml = '';
@@ -1246,9 +1247,8 @@
                     
                     coveiroHtml = `
                     <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl mt-8 text-center animate-fade-in border border-gray-200">
-                        ${icons.shovel}
-                        <h4 class="text-2xl font-black uppercase tracking-wider">Prêmio Coveiro</h4>
-                        <p class="text-3xl font-bold">${coveiroNames}</p>
+                        <h4 class="text-2xl font-black uppercase tracking-wider text-red-600">Prêmio Coveiro</h4>
+                        <p class="text-4xl font-extrabold text-red-800 mt-2">${coveiroNames}</p>
                         <p class="text-sm text-gray-500">Com apenas ${minGames} games marcados no torneio.</p>
                     </div>
                     `;
@@ -1258,12 +1258,13 @@
         };
 
         // (ADMIN) -- Helper: Renderiza uma Chave (Bracket) --
-        const renderBracket = (title, bracket, bracketType, iconSvg, isFinished) => {
+        // Removido o parâmetro iconSvg
+        const renderBracket = (title, bracket, bracketType, isFinished) => {
             const rounds = {};
             if (!bracket || bracket.length === 0) {
                  return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
                      <h3 class="text-3xl font-bold mb-6 text-blue-600 flex items-center gap-3">
-                         ${iconSvg} ${title}
+                         ${title}
                      </h3>
                      <p class="text-gray-500">Chave ainda não gerada. É necessário 4, 8, 16 ou 32 duplas.</p>
                   </div>`;
@@ -1283,11 +1284,14 @@
                 ? 'bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 text-gray-900' // Gold Style
                 : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900'; // Silver Style
             
+            // Destaque do Nome do Campeão
+            const championNameStyle = isGold ? 'text-4xl font-extrabold text-gray-900' : 'text-4xl font-extrabold text-gray-800';
+            
             const championHtml = champion ? `
             <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
                 ${icons.medal}
-                <h4 class="text-2xl font-black uppercase tracking-wider">Campeões</h4>
-                <p class="text-3xl font-bold">${champion.name}</p>
+                <h4 class="text-xl font-black uppercase tracking-wider">Campeões</h4>
+                <p class="${championNameStyle}">${champion.name}</p>
             </div>
             ` : '';
 
@@ -1364,10 +1368,10 @@
                 `;
             }).join('');
 
+            // Removido o ícone do título principal
             return `
             <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
-                <h3 class="text-3xl font-bold mb-6 text-blue-600 flex items-center gap-3">
-                    ${iconSvg}
+                <h3 class="text-3xl font-bold mb-6 text-blue-600">
                     ${title}
                 </h3>
                 ${championHtml}
@@ -1526,8 +1530,9 @@
         
         // (TELÃO) -- Sub-tela: Chaves (Mata-Mata) (Read-Only) --
         const renderKnockoutView_ReadOnly = (isFinished) => {
-            const goldHtml = renderBracket_ReadOnly('Série Ouro', activeChampionship.goldBracket, 'goldBracket', icons.shield, isFinished);
-            const silverHtml = renderBracket_ReadOnly('Série Prata', activeChampionship.silverBracket, 'silverBracket', icons.shieldOff, isFinished);
+            // Chamadas de renderBracket_ReadOnly sem o ícone nos parâmetros (apenas o título)
+            const goldHtml = renderBracket_ReadOnly('Série Ouro', activeChampionship.goldBracket, 'goldBracket', isFinished);
+            const silverHtml = renderBracket_ReadOnly('Série Prata', activeChampionship.silverBracket, 'silverBracket', isFinished);
             
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
@@ -1540,9 +1545,8 @@
                     
                     coveiroHtml = `
                     <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl text-center animate-fade-in w-full sm:max-w-sm border border-gray-200">
-                        ${icons.shovel}
-                        <h4 class="text-2xl font-black uppercase tracking-wider">Prêmio Coveiro</h4>
-                        <p class="text-3xl font-bold">${coveiroNames}</p>
+                        <h4 class="text-2xl font-black uppercase tracking-wider text-red-600">Prêmio Coveiro</h4>
+                        <p class="text-4xl font-extrabold text-red-800 mt-2">${coveiroNames}</p>
                         <p class="text-sm text-gray-500">Com apenas ${minGames} games marcados no torneio.</p>
                     </div>
                     `;
@@ -1553,12 +1557,13 @@
         };
 
         // (TELÃO) -- Helper: Renderiza uma Chave (Bracket) (Read-Only) --
-        const renderBracket_ReadOnly = (title, bracket, bracketType, iconSvg, isFinished) => {
+        // Removido o parâmetro iconSvg
+        const renderBracket_ReadOnly = (title, bracket, bracketType, isFinished) => {
             const rounds = {};
             if (!bracket || bracket.length === 0) {
                  return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
-                     <h3 class="text-3xl font-bold mb-6 text-blue-600 flex items-center gap-3">
-                         ${iconSvg} ${title}
+                     <h3 class="text-3xl font-bold mb-6 text-blue-600">
+                         ${title}
                      </h3>
                      <p class="text-gray-500">Chave ainda não gerada.</p>
                   </div>`;
@@ -1578,11 +1583,14 @@
                 ? 'bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 text-gray-900' // Gold Style
                 : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900'; // Silver Style
             
+            // Destaque do Nome do Campeão
+            const championNameStyle = isGold ? 'text-4xl font-extrabold text-gray-900' : 'text-4xl font-extrabold text-gray-800';
+
             const championHtml = champion ? `
             <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
                 ${icons.medal}
-                <h4 class="text-2xl font-black uppercase tracking-wider">Campeões</h4>
-                <p class="text-3xl font-bold">${champion.name}</p>
+                <h4 class="text-xl font-black uppercase tracking-wider">Campeões</h4>
+                <p class="${championNameStyle}">${champion.name}</p>
             </div>
             ` : '';
 
@@ -1640,10 +1648,10 @@
                 `;
             }).join('');
 
+            // Removido o ícone do título principal
             return `
             <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
-                <h3 class="text-3xl font-bold mb-6 text-blue-600 flex items-center gap-3">
-                    ${iconSvg}
+                <h3 class="text-3xl font-bold mb-6 text-blue-600">
                     ${title}
                 </h3>
                 ${championHtml}
