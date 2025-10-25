@@ -72,7 +72,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.9.9 (Telão Flexível)</p>
+            <p>App de Ranking v3.0.0 (Telão Compacto)</p>
         </footer>
 
     </div>
@@ -1407,7 +1407,7 @@
             }
 
             // =================================================================
-            // === MUDANÇA (v2.9.9): Troca Grid por Flexbox
+            // === MUDANÇA (v2.9.9 -> v3.0.0): Mantém Flexbox
             // =================================================================
             if (activeChampionship.status !== 'registration') {
                 // `flex-wrap` permite que os itens quebrem a linha
@@ -1422,7 +1422,6 @@
                 // A tela de registro já tem seu próprio container centralizado
                 html += contentHtml;
             }
-            // === FIM DA MUDANÇA ===
 
             mainContent.innerHTML = html;
         };
@@ -1467,9 +1466,9 @@
                     return `
                     <div class="bg-gray-700 p-3 sm:p-4 rounded-lg">
                         <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
-                            <span class="text-base sm:text-lg text-gray-200 text-center sm:text-left">${match.names[0]}</span>
+                            <span class="text-base text-gray-200 text-center sm:text-left">${match.names[0]}</span>
                             <span class="font-bold text-cyan-300">vs</span>
-                            <span class="text-base sm:text-lg text-gray-200 text-center sm:text-right">${match.names[1]}</span>
+                            <span class="text-base text-gray-200 text-center sm:text-right">${match.names[1]}</span>
                         </div>
                         <div class="flex justify-center items-center gap-3 mt-3">
                             <span class="w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-2xl font-bold opacity-70">
@@ -1493,15 +1492,13 @@
                 `).join('');
 
                 // =================================================================
-                // === MUDANÇA (v2.9.9): Adiciona classes Flexbox ao card
+                // === MUDANÇA (v3.0.0): Card compacto
                 // =================================================================
-                // `flex-1`: Permite crescer
-                // `basis-full`: Em telas pequenas, ocupa 100%
-                // `md:basis-[480px]`: Em telas médias, "tenta" ter 480px
-                // `min-w-[380px]`: Não encolhe menos que 380px
-                // `2xl:basis-[550px]`: Em telas gigantes, "tenta" ser um pouco maior
+                // `w-full`: Em telas pequenas, ocupa 100%
+                // `sm:max-w-sm`: Em telas `sm` (640px) ou mais, define a largura MÁXIMA
+                // para `24rem` (384px). O card não vai mais crescer.
                 return `
-                <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in flex-1 basis-full md:basis-[480px] 2xl:basis-[550px] min-w-[380px]">
+                <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:max-w-sm">
                     <div class="flex justify-between items-center mb-5">
                         <h3 class="text-3xl font-bold text-cyan-400">Grupo ${groupIndex + 1}</h3>
                     </div>
@@ -1546,10 +1543,10 @@
                     const coveiroNames = coveiros.map(c => c.name).join(' / ');
                     
                     // =================================================================
-                    // === MUDANÇA (v2.9.9): Adiciona classes Flexbox ao card
+                    // === MUDANÇA (v3.0.0): Card compacto
                     // =================================================================
                     coveiroHtml = `
-                    <div class="bg-gray-700 text-white p-6 rounded-lg shadow-2xl text-center animate-fade-in flex-1 basis-full md:basis-[480px] 2xl:basis-[550px] min-w-[380px]">
+                    <div class="bg-gray-700 text-white p-6 rounded-lg shadow-2xl text-center animate-fade-in w-full sm:max-w-sm">
                         ${icons.shovel}
                         <h4 class="text-2xl font-black uppercase tracking-wider">Prêmio Coveiro</h4>
                         <p class="text-3xl font-bold">${coveiroNames}</p>
@@ -1566,7 +1563,10 @@
         const renderBracket_ReadOnly = (title, bracket, bracketType, iconSvg, isFinished) => {
             const rounds = {};
             if (!bracket || bracket.length === 0) {
-                 return `<div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8 flex-1 basis-full md:basis-[480px] 2xl:basis-[550px] min-w-[380px]">
+                 // =================================================================
+                 // === MUDANÇA (v3.0.0): Card compacto
+                 // =================================================================
+                 return `<div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm">
                      <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
                          ${iconSvg} ${title}
                      </h3>
@@ -1639,8 +1639,11 @@
                     `;
                 }).join('');
 
+                // =================================================================
+                // === MUDANÇA (v3.0.0): Reduz a largura dos cards de rodada
+                // =================================================================
                 return `
-                <div class="flex flex-col space-y-6 w-72 sm:w-80">
+                <div class="flex flex-col space-y-6 w-full max-w-xs">
                     <h4 class="text-xl font-semibold text-white">${roundTitle}</h4>
                     ${matchesHtml}
                 </div>
@@ -1648,16 +1651,16 @@
             }).join('');
 
             // =================================================================
-            // === MUDANÇA (v2.9.9): Adiciona classes Flexbox ao card
+            // === MUDANÇA (v3.0.0): Card compacto
             // =================================================================
             return `
-            <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8 flex-1 basis-full md:basis-[480px] 2xl:basis-[550px] min-w-[380px]">
+            <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm">
                 <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
                     ${iconSvg}
                     ${title}
                 </h3>
                 ${championHtml}
-                <div class="flex flex-wrap gap-4 sm:gap-6 pb-4">
+                <div class="flex flex-wrap justify-center gap-4 sm:gap-6 pb-4">
                     ${roundsHtml}
                 </div>
             </div>
