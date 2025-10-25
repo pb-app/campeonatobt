@@ -6,6 +6,9 @@
     <title>Ranking Beach Tennis</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         /* Estilos personalizados */
         body {
@@ -69,7 +72,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.9.5 (Ficha de Impressão)</p>
+            <p>App de Ranking v2.9.6 (Relatórios PDF)</p>
         </footer>
 
     </div>
@@ -213,10 +216,11 @@
             settings: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
             shovel: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-white"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>',
             shovelSmall: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>',
+            printer: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
             // =================================================================
-            // === NOVO ÍCONE: Impressora
+            // === NOVO ÍCONE: PDF/Download
             // =================================================================
-            printer: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>'
+            fileDown: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>'
         };
 
         /* =============================================================================
@@ -695,9 +699,6 @@
         const renderGlobalRanking = () => {
             const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
 
-            // =================================================================
-            // === MUDANÇA: Adiciona "Coveiro" à tabela
-            // =================================================================
             const rankingsHtml = sortedPlayers.length === 0
                 ? `<tr><td colspan="6" class="p-4 text-center text-gray-400">Nenhum jogador neste ranking.</td></tr>`
                 : sortedPlayers.map((player, index) => `
@@ -718,10 +719,19 @@
             ).join('');
             
             const manageButtonHtml = appState.isAdmin ? `
-                <button id="manage-rankings-btn" class="flex-shrink-0 bg-gray-600 hover:bg-gray-700 text-white font-bold p-3 rounded-lg shadow-lg transition-all">
+                <button id="manage-rankings-btn" class="flex-shrink-0 bg-gray-600 hover:bg-gray-700 text-white font-bold p-3 rounded-lg shadow-lg transition-all" title="Gerenciar Rankings">
                     ${icons.settings}
                 </button>
             ` : '';
+            
+            // =================================================================
+            // === NOVO: Botão Gerar PDF
+            // =================================================================
+            const printButtonHtml = `
+                <button id="print-ranking-pdf-btn" class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg shadow-lg transition-all" title="Gerar PDF do Ranking">
+                    ${icons.fileDown}
+                </button>
+            `;
 
             const rankingSelectorHtml = `
                 <div class="mb-6">
@@ -731,6 +741,7 @@
                             ${rankingsOptions.length > 0 ? rankingsOptions : '<option disabled>Nenhum ranking...</option>'}
                         </select>
                         ${manageButtonHtml}
+                        ${printButtonHtml}
                     </div>
                 </div>
             `;
@@ -768,6 +779,12 @@
             
             const manageRankingsBtn = document.getElementById('manage-rankings-btn');
             if (manageRankingsBtn) manageRankingsBtn.addEventListener('click', renderRankingManagementModal);
+
+            // =================================================================
+            // === NOVO: Listener do Botão PDF
+            // =================================================================
+            const printRankingBtn = document.getElementById('print-ranking-pdf-btn');
+            if (printRankingBtn) printRankingBtn.addEventListener('click', handlePrintRankingPDF);
         };
 
         const renderRankingManagementModal = () => {
@@ -854,8 +871,24 @@
             let html = '';
             const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
 
+            // =================================================================
+            // === NOVO: Botão de PDF do Campeonato
+            // =================================================================
+            let pdfButtonHtml = '';
             if (champInfo?.status === 'finished') {
-                html = renderGroupStage() + renderKnockoutView(true);
+                pdfButtonHtml = `
+                <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8 animate-fade-in text-center">
+                    <button id="print-champ-pdf-btn" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 mx-auto">
+                        ${icons.fileDown}
+                        Gerar PDF com Resultados Finais
+                    </button>
+                </div>
+                `;
+            }
+
+
+            if (champInfo?.status === 'finished') {
+                html = pdfButtonHtml + renderGroupStage() + renderKnockoutView(true);
             } else if (activeChampionship.status === 'knockout') {
                 html = renderGroupStage() + renderKnockoutView(false);
             } else if (activeChampionship.status === 'groups') {
@@ -890,9 +923,7 @@
             // Listeners da Fase de Grupos
             if (activeChampionship.status === 'groups' || activeChampionship.status === 'knockout' || champInfo?.status === 'finished') {
                 
-                // =================================================================
-                // === NOVO: Listener de Impressão (para todos)
-                // =================================================================
+                // Listener de Impressão (para todos)
                 document.querySelectorAll('.print-group-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const groupIndex = e.currentTarget.dataset.groupIndex;
@@ -925,6 +956,14 @@
                         handleConfirmKnockoutScore(bracketType, matchId);
                     });
                 });
+            }
+            
+            // =================================================================
+            // === NOVO: Listener do Botão PDF do Campeonato
+            // =================================================================
+            if (champInfo?.status === 'finished') {
+                const printChampBtn = document.getElementById('print-champ-pdf-btn');
+                if (printChampBtn) printChampBtn.addEventListener('click', handlePrintChampionshipPDF);
             }
         };
 
@@ -1107,9 +1146,7 @@
                     </tr>
                 `).join('');
 
-                // =================================================================
-                // === NOVO: Botão de Impressão
-                // =================================================================
+                // Botão de Impressão
                 const printButton = `
                     <button class="print-group-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded-lg shadow-md transition-all flex items-center gap-2 text-sm" data-group-index="${groupIndex}">
                         ${icons.printer}
@@ -1402,7 +1439,7 @@
             const playerCount = activeChampionship.players.length;
             const validPlayerCounts = [4, 8, 16, 32];
             if (!validPlayerCounts.includes(playerCount)) {
-                showModal("Número de Jogadores Inválido", `Você precisa de 4, 8, 16 ou 32 jogadores. Você tem ${playerCount}.`);
+                showModal("Número de Jogadores InválID", `Você precisa de 4, 8, 16 ou 32 jogadores. Você tem ${playerCount}.`);
                 return;
             }
             if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Isso criará ${playerCount / 4} grupos.`)) {
@@ -1464,9 +1501,6 @@
             saveActiveChampionship(newChampData); 
         };
 
-        // =================================================================
-        // === NOVA FUNÇÃO: handlePrintGroup
-        // =================================================================
         const handlePrintGroup = (groupIndex) => {
             const group = activeChampionship.groups[groupIndex];
             const champ = championships.find(c => c.id === appState.currentChampionshipId);
@@ -1893,6 +1927,245 @@
             });
 
             return bracket; // O sort não é mais necessário
+        };
+
+        /* =============================================================================
+           NOVAS FUNÇÕES: Geradores de PDF
+           ============================================================================= */
+
+        const handlePrintRankingPDF = () => {
+            // Pega a instância global do jsPDF carregada no <head>
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
+                return;
+            }
+
+            try {
+                const doc = new jsPDF();
+                
+                const currentRanking = allRankings.find(r => r.id === appState.currentRankingId);
+                const rankingName = currentRanking ? currentRanking.name : "Ranking";
+                const title = `Ranking Geral: ${rankingName}`;
+                
+                doc.setFontSize(18);
+                doc.text(title, 105, 22, { align: 'center' }); // Centraliza o título
+
+                const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
+                
+                const head = [['Pos.', 'Jogador', 'Pontos', 'Ouro', 'Prata', 'Coveiro']];
+                const body = sortedPlayers.map((p, index) => [
+                    `${index + 1}º`,
+                    p.name,
+                    p.points || 0,
+                    p.goldWins || 0,
+                    p.silverWins || 0,
+                    p.coveiroWins || 0
+                ]);
+
+                // Usa o plugin autoTable
+                doc.autoTable({
+                    startY: 30,
+                    head: head,
+                    body: body,
+                    headStyles: { fillColor: [22, 160, 133] }, // Cor Ciano
+                    styles: { halign: 'center' },
+                    columnStyles: {
+                        1: { halign: 'left' } // Alinha o nome do jogador à esquerda
+                    }
+                });
+
+                doc.save(`ranking_${rankingName.toLowerCase().replace(/\s/g, '_')}.pdf`);
+            
+            } catch (error) {
+                console.error("Erro ao gerar PDF do ranking:", error);
+                showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
+            }
+        };
+
+        const handlePrintChampionshipPDF = () => {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
+                return;
+            }
+            
+            const champ = championships.find(c => c.id === appState.currentChampionshipId);
+            if (!champ || !activeChampionship) {
+                showModal("Erro", "Dados do campeonato não carregados.");
+                return;
+            }
+
+            try {
+                const doc = new jsPDF();
+                let yPos = 22; // Posição vertical inicial
+
+                // 1. Título
+                doc.setFontSize(18);
+                doc.text(champ.name, 105, yPos, { align: 'center' });
+                yPos += 10;
+
+                // 2. Tabela de Resultados Finais
+                doc.setFontSize(14);
+                doc.text("Resultados Finais", 14, yPos);
+                yPos += 7;
+
+                const finalResults = [];
+                // Ouro
+                const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
+                const goldFinal = activeChampionship.goldBracket.find(m => m.round === maxRoundGold);
+                if (goldFinal?.winner) {
+                    finalResults.push(['Campeões Ouro', goldFinal.winner.name]);
+                    const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldFinal.winner.id);
+                    if (goldRunnerUp) finalResults.push(['Vice Ouro', goldRunnerUp.name]);
+                }
+                // Prata
+                const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
+                const silverFinal = activeChampionship.silverBracket.find(m => m.round === maxRoundSilver);
+                if (silverFinal?.winner) {
+                    finalResults.push(['Campeões Prata', silverFinal.winner.name]);
+                    const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverFinal.winner.id);
+                    if (silverRunnerUp) finalResults.push(['Vice Prata', silverRunnerUp.name]);
+                }
+                // Coveiro
+                const stats = getGlobalGroupStageStats(activeChampionship.groups);
+                if (stats.length > 0) {
+                    const minGames = stats[0].gamesWon;
+                    const coveiros = stats.filter(p => p.gamesWon === minGames);
+                    finalResults.push(['Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
+                }
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Prêmio', 'Dupla/Jogador']],
+                    body: finalResults,
+                    headStyles: { fillColor: [52, 73, 94] },
+                    theme: 'striped',
+                });
+                yPos = doc.autoTable.previous.finalY + 10; // Atualiza a posição Y
+
+                // 3. Fase de Grupos (em nova página)
+                doc.addPage();
+                yPos = 22;
+                doc.setFontSize(18);
+                doc.text("Resultados da Fase de Grupos", 105, yPos, { align: 'center' });
+                yPos += 10;
+                
+                activeChampionship.groups.forEach((group, index) => {
+                    // Verifica se precisa de uma nova página
+                    if (yPos > 240) {
+                        doc.addPage();
+                        yPos = 22;
+                    }
+                    
+                    doc.setFontSize(14);
+                    doc.text(`Grupo ${index + 1}`, 14, yPos);
+                    yPos += 7;
+
+                    // Tabela de Jogos do Grupo
+                    const matchesBody = group.matches.map(m => [
+                        m.names[0],
+                        `${m.score[0] === null ? '-' : m.score[0]} vs ${m.score[1] === null ? '-' : m.score[1]}`,
+                        m.names[1]
+                    ]);
+                    
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Dupla 1', 'Placar', 'Dupla 2']],
+                        body: matchesBody,
+                        headStyles: { fillColor: [22, 160, 133] },
+                        styles: { halign: 'center' },
+                        columnStyles: { 0: { halign: 'left' }, 2: { halign: 'right' } }
+                    });
+                    yPos = doc.autoTable.previous.finalY + 5;
+
+                    // Tabela de Ranking do Grupo
+                    const rankings = getRankings(group);
+                    const rankingsBody = rankings.map((p, rIndex) => [
+                        `${rIndex + 1}º`,
+                        p.name,
+                        p.gamesWon
+                    ]);
+
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Pos.', 'Jogador', 'Games Vencidos']],
+                        body: rankingsBody,
+                        theme: 'grid',
+                        styles: { halign: 'center', fontSize: 9 },
+                        headStyles: { fillColor: [127, 140, 141], fontSize: 10 },
+                    });
+                    yPos = doc.autoTable.previous.finalY + 12;
+                });
+
+                // 4. Chaves (Mata-Mata)
+                if (yPos > 180) { // Se não houver muito espaço
+                    doc.addPage();
+                    yPos = 22;
+                } else {
+                    yPos += 5; // Espaçamento
+                }
+                
+                doc.setFontSize(18);
+                doc.text("Resultados do Mata-Mata", 105, yPos, { align: 'center' });
+                yPos += 10;
+                
+                // Tabela Série Ouro
+                doc.setFontSize(16);
+                doc.text("Série Ouro", 14, yPos);
+                yPos += 7;
+                const goldBody = activeChampionship.goldBracket.map(m => {
+                    const roundTitle = m.round === maxRoundGold ? 'Final'
+                        : m.round === maxRoundGold - 1 ? 'Semi-Final'
+                        : m.round === maxRoundGold - 2 ? 'Quartas' : `Rodada ${m.round}`;
+                    return [
+                        roundTitle,
+                        m.pairs[0]?.name || '-',
+                        `${m.score[0] === null ? '-' : m.score[0]} vs ${m.score[1] === null ? '-' : m.score[1]}`,
+                        m.pairs[1]?.name || '-'
+                    ];
+                });
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Rodada', 'Dupla 1', 'Placar', 'Dupla 2']],
+                    body: goldBody,
+                    headStyles: { fillColor: [241, 196, 15] }, // Dourado
+                    styles: { halign: 'center' },
+                    columnStyles: { 1: { halign: 'left' }, 3: { halign: 'right' } }
+                });
+                yPos = doc.autoTable.previous.finalY + 10;
+
+                // Tabela Série Prata
+                doc.setFontSize(16);
+                doc.text("Série Prata", 14, yPos);
+                yPos += 7;
+                const silverBody = activeChampionship.silverBracket.map(m => {
+                    const roundTitle = m.round === maxRoundSilver ? 'Final'
+                        : m.round === maxRoundSilver - 1 ? 'Semi-Final'
+                        : m.round === maxRoundSilver - 2 ? 'Quartas' : `Rodada ${m.round}`;
+                    return [
+                        roundTitle,
+                        m.pairs[0]?.name || '-',
+                        `${m.score[0] === null ? '-' : m.score[0]} vs ${m.score[1] === null ? '-' : m.score[1]}`,
+                        m.pairs[1]?.name || '-'
+                    ];
+                });
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Rodada', 'Dupla 1', 'Placar', 'Dupla 2']],
+                    body: silverBody,
+                    headStyles: { fillColor: [149, 165, 166] }, // Prata
+                    styles: { halign: 'center' },
+                    columnStyles: { 1: { halign: 'left' }, 3: { halign: 'right' } }
+                });
+
+                // 5. Salvar
+                doc.save(`resultados_${champ.name.toLowerCase().replace(/\s/g, '_')}.pdf`);
+            
+            } catch (error) {
+                 console.error("Erro ao gerar PDF do campeonato:", error);
+                showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
+            }
         };
 
 
