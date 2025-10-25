@@ -72,7 +72,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v3.0.1 (Cálculo Total do Coveiro)</p>
+            <p>App de Ranking v3.0.2 (Suporte a Byes)</p>
         </footer>
 
     </div>
@@ -220,7 +220,8 @@
             shovelSmall: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>',
             printer: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
             fileDown: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
-            tv: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>'
+            tv: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>',
+            star: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>'
         };
 
         /* =============================================================================
@@ -1022,24 +1023,27 @@
                     `
                 }).join('');
 
-            const validPlayerCounts = [4, 8, 16, 32];
+            // Removida a restrição de 4, 8, 16, 32. 
+            // Agora, o único requisito é que seja múltiplo de 4 para a distribuição em grupos.
+            const minPlayersForGroups = 4;
+            const isMultypleOfFour = activeChampionship.players.length % 4 === 0;
+            const canGenerate = activeChampionship.players.length >= minPlayersForGroups && isMultypleOfFour;
             const playerCount = activeChampionship.players.length;
-            const canGenerate = validPlayerCounts.includes(playerCount);
 
-            const generateButtonHtml = playerCount >= 4
+            const generateButtonHtml = playerCount >= minPlayersForGroups
                 ? `
                 <div class="mt-8 text-center">
                     <button
                         id="generate-champ-btn"
                         type="button"
                         ${!canGenerate ? 'disabled' : ''}
-                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto ${!canGenerate ? 'opacity-50 cursor-not-allowed' : ''}">
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
                         ${icons.swords}
                         Gerar Grupos
                     </button>
-                    ${!canGenerate ? `<p class="text-yellow-400 text-sm mt-3">O campeonato requer 4, 8, 16 ou 32 jogadores. Você tem ${playerCount}.</p>` : ''}
+                    ${!canGenerate ? `<p class="text-yellow-400 text-sm mt-3">O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.</p>` : ''}
                 </div>
-                ` : '';
+                ` : `<p class="text-yellow-400 text-sm mt-3 text-center">Mínimo de ${minPlayersForGroups} jogadores para começar.</p>`;
             
             const playersInTournamentIds = new Set(activeChampionship.players.map(p => p.id));
             const availablePlayersFromRanking = globalPlayers.filter(p => !playersInTournamentIds.has(p.id));
@@ -1232,11 +1236,7 @@
             // Lógica do Coveiro
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
-                // =================================================================
-                // === MUDANÇA (v3.0.1): Usa a nova função de cálculo total
-                // =================================================================
                 const stats = getGlobalTournamentStats(activeChampionship);
-                // === FIM DA MUDANÇA ===
 
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
@@ -1304,13 +1304,28 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     
-                    const isDisabled = (!pair1 || !pair2 || !appState.isAdmin) ? 'disabled' : '';
+                    const isBye = !pair1 || !pair2;
+                    const isDisabled = (isBye || !appState.isAdmin) ? 'disabled' : '';
+
+                    // Lógica para o texto do jogador e folga
+                    let pair1Name = pair1 ? pair1.name : 'BYE (Folga)';
+                    let pair2Name = pair2 ? pair2.name : 'BYE (Folga)';
+
+                    if (isBye) {
+                        pair1Name = pair1 ? pair1.name : `<span class="text-yellow-400">${icons.star} BYE (Folga)</span>`;
+                        pair2Name = pair2 ? pair2.name : `<span class="text-yellow-400">${icons.star} BYE (Folga)</span>`;
+                    }
                     
+                    // Se for um jogo de Bye, o vencedor é automaticamente a dupla que NÃO é Bye
+                    const autoWinnerId = (pair1 && !pair2) ? pair1.id : (pair2 && !pair1) ? pair2.id : null;
+                    const isAutoWon = (isBye && match.winner);
+
+
                     return `
                     <div class="bg-gray-700 rounded-lg shadow-md p-4">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="font-medium ${isPair1Winner ? 'text-green-400 font-bold' : isPair2Winner ? 'text-gray-400' : 'text-white'}">
-                                ${pair1 ? pair1.name : 'Aguardando...'}
+                            <span class="font-medium text-sm ${isPair1Winner || (isAutoWon && autoWinnerId === pair1?.id) ? 'text-green-400 font-bold' : 'text-white'}">
+                                ${pair1Name}
                             </span>
                             <input
                                 type="number"
@@ -1329,8 +1344,8 @@
                         </div>
 
                         <div class="flex justify-between items-center">
-                            <span class="font-medium ${isPair2Winner ? 'text-green-400 font-bold' : isPair1Winner ? 'text-gray-400' : 'text-white'}">
-                                ${pair2 ? pair2.name : 'Aguardando...'}
+                            <span class="font-medium text-sm ${isPair2Winner || (isAutoWon && autoWinnerId === pair2?.id) ? 'text-green-400 font-bold' : 'text-white'}">
+                                ${pair2Name}
                             </span>
                             <input
                                 type="number"
@@ -1342,7 +1357,7 @@
                             />
                         </div>
                         
-                        <div class="text-center mt-3 ${isDisabled ? 'hidden' : ''}">
+                        <div class="text-center mt-3 ${!appState.isAdmin || isAutoWon ? 'hidden' : ''}">
                             <button 
                                 class="confirm-knockout-score-btn p-2 w-full bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all"
                                 data-bracket-type="${bracketType}"
@@ -1525,11 +1540,7 @@
             
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
-                // =================================================================
-                // === MUDANÇA (v3.0.1): Usa a nova função de cálculo total
-                // =================================================================
                 const stats = getGlobalTournamentStats(activeChampionship);
-                // === FIM DA MUDANÇA ===
 
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
@@ -1598,14 +1609,23 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     
+                    const isBye = !pair1 || !pair2;
+                    const isAutoWon = (isBye && match.winner);
+
+                    let pair1Name = pair1 ? pair1.name : `<span class="text-yellow-400">${icons.star} BYE (Folga)</span>`;
+                    let pair2Name = pair2 ? pair2.name : `<span class="text-yellow-400">${icons.star} BYE (Folga)</span>`;
+
+                    const winnerClass1 = isPair1Winner || (isAutoWon && !pair2) ? 'text-green-400 font-bold' : 'text-white';
+                    const winnerClass2 = isPair2Winner || (isAutoWon && !pair1) ? 'text-green-400 font-bold' : 'text-white';
+
                     return `
                     <div class="bg-gray-700 rounded-lg shadow-md p-4">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="font-medium text-lg ${isPair1Winner ? 'text-green-400 font-bold' : isPair2Winner ? 'text-gray-400' : 'text-white'}">
-                                ${pair1 ? pair1.name : 'Aguardando...'}
+                            <span class="font-medium text-lg ${winnerClass1}">
+                                ${pair1Name}
                             </span>
                             <span class="w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-xl font-bold opacity-70">
-                                ${score1 === null ? '-' : score1}
+                                ${score1 === null ? (isBye && !pair2 ? 'W' : '-') : score1}
                             </span>
                         </div>
                         
@@ -1616,11 +1636,11 @@
                         </div>
 
                         <div class="flex justify-between items-center">
-                            <span class="font-medium text-lg ${isPair2Winner ? 'text-green-400 font-bold' : isPair1Winner ? 'text-gray-400' : 'text-white'}">
-                                ${pair2 ? pair2.name : 'Aguardando...'}
+                            <span class="font-medium text-lg ${winnerClass2}">
+                                ${pair2Name}
                             </span>
                             <span class="w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-xl font-bold opacity-70">
-                                ${score2 === null ? '-' : score2}
+                                ${score2 === null ? (isBye && !pair1 ? 'W' : '-') : score2}
                             </span>
                         </div>
                     </div>
@@ -1741,9 +1761,10 @@
 
         const handleGenerateChampionship = async () => {
             const playerCount = activeChampionship.players.length;
-            const validPlayerCounts = [4, 8, 16, 32];
-            if (!validPlayerCounts.includes(playerCount)) {
-                showModal("Número de Jogadores Inválido", `Você precisa de 4, 8, 16 ou 32 jogadores. Você tem ${playerCount}.`);
+            const isMultypleOfFour = playerCount % 4 === 0;
+
+            if (playerCount < 4 || !isMultypleOfFour) {
+                showModal("Número de Jogadores Inválido", `O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.`);
                 return;
             }
             if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Isso criará ${playerCount / 4} grupos.`)) {
@@ -1915,8 +1936,13 @@
                     silverSeriesPairs.push(silverPair);
                 });
                 
-                const goldBracket = createBracket(goldSeriesPairs);
-                const silverBracket = createBracket(silverSeriesPairs);
+                // =================================================================
+                // === MUDANÇA (v3.0.2): Usa a nova função com Byes
+                // =================================================================
+                const goldBracket = createBracketWithByes(goldSeriesPairs, true);
+                const silverBracket = createBracketWithByes(silverSeriesPairs, false);
+                // === FIM DA MUDANÇA ===
+
                 
                 const newChampData = {
                     ...activeChampionship,
@@ -1943,34 +1969,51 @@
             const score0 = val0 === '' ? null : parseInt(val0, 10);
             const score1 = val1 === '' ? null : parseInt(val1, 10);
 
-            if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
-                showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
-                return;
-            }
-            if (score0 === score1) {
-                showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
-                return;
-            }
-
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
             const match = bracketToUpdate.find(m => m.id === matchId);
             
-            if (match) {
+            if (!match) return;
+            
+            // Lógica para Byes (O vencedor é a única dupla)
+            const isByeMatch = !match.pairs[0] || !match.pairs[1];
+
+            if (isByeMatch) {
+                // Se for um Bye, o vencedor é automaticamente a dupla que está presente
+                const winnerPair = match.pairs[0] || match.pairs[1];
+                if (winnerPair) {
+                    match.winner = winnerPair;
+                    match.score = [0, 0]; // Simula placar 0-0 para indicar "jogo não jogado"
+                } else {
+                    console.warn("Match de Bye inválido: nenhuma dupla presente.");
+                    return;
+                }
+            } else {
+                // Jogo Normal (precisa de placares válidos)
+                if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                    showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                    return;
+                }
+                if (score0 === score1) {
+                    showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
+                    return;
+                }
+
                 match.score[0] = score0;
                 match.score[1] = score1;
                 
                 if (score0 > score1) match.winner = match.pairs[0]; 
                 else if (score1 > score0) match.winner = match.pairs[1];
-                
-                if (match.winner && match.nextMatchId) {
-                    const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
-                    if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
-                }
-                
-                await saveActiveChampionship(newChampData); 
-                await checkAndFinalizeChampionship(newChampData);
             }
+
+            // Atualiza o próximo jogo com o vencedor
+            if (match.winner && match.nextMatchId) {
+                const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
+                if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
+            }
+            
+            await saveActiveChampionship(newChampData); 
+            await checkAndFinalizeChampionship(newChampData);
         };
 
         /* =============================================================================
@@ -2011,11 +2054,7 @@
                     const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
                     const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
 
-                    // =================================================================
-                    // === MUDANÇA (v3.0.1): Usa a nova função de cálculo total
-                    // =================================================================
                     const stats = getGlobalTournamentStats(champData);
-                    // === FIM DA MUDANÇA ===
                     
                     const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
                     const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
@@ -2154,45 +2193,8 @@
             return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
         };
 
-        // Esta função calcula APENAS os games da fase de grupos
-        const getGlobalGroupStageStats = (groups) => {
-            const playerStats = {};
-            
-            if (!groups) return [];
-            
-            // 1. Inicializa todos os jogadores
-            groups.forEach(group => {
-                group.players.forEach(p => {
-                    if (!playerStats[p.id]) {
-                        playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
-                    }
-                });
-            });
 
-            // 2. Soma os games de todas as partidas
-            groups.forEach(group => {
-                group.matches.forEach(match => {
-                    const [p1, p2, p3, p4] = match.p;
-                    const [s1, s2] = match.score;
-                    
-                    if (s1 !== null && !isNaN(s1)) {
-                        if (playerStats[p1]) playerStats[p1].gamesWon += s1;
-                        if (playerStats[p2]) playerStats[p2].gamesWon += s1;
-                    }
-                    if (s2 !== null && !isNaN(s2)) {
-                        if (playerStats[p3]) playerStats[p3].gamesWon += s2;
-                        if (playerStats[p4]) playerStats[p4].gamesWon += s2;
-                    }
-                });
-            });
-
-            // 3. Retorna a lista ordenada por games (do menor para o maior)
-            return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
-        };
-
-        // =================================================================
-        // === NOVA FUNÇÃO (v3.0.1): Calcula o total de games do TORNEIO
-        // =================================================================
+        // Calcula o total de games do TORNEIO (Grupos + Mata-Mata)
         const getGlobalTournamentStats = (champData) => {
             const playerStats = {};
             
@@ -2227,7 +2229,7 @@
                 const [pair1, pair2] = match.pairs;
                 const [s0, s1] = match.score;
 
-                // Soma placar 0 para jogadores da dupla 1
+                // Não conta jogos de Bye no placar, mas conta a folga como vitória
                 if (s0 !== null && !isNaN(s0) && pair1 && pair1.players) {
                     pair1.players.forEach(player => {
                         if (playerStats[player.id]) {
@@ -2236,7 +2238,6 @@
                     });
                 }
                 
-                // Soma placar 1 para jogadores da dupla 2
                 if (s1 !== null && !isNaN(s1) && pair2 && pair2.players) {
                     pair2.players.forEach(player => {
                         if (playerStats[player.id]) {
@@ -2251,19 +2252,62 @@
         };
 
 
-        const createBracket = (bracketPairs) => {
-            // Sorteio aleatório das duplas (cumprindo requisito)
-            const shuffledPairs = [...bracketPairs].sort(() => 0.5 - Math.random());
-            const bracket = [];
-            const numPairs = bracketPairs.length;
+        // =================================================================
+        // === NOVAS FUNÇÕES (v3.0.2): Lógica para BYE
+        // =================================================================
+        
+        // Retorna a próxima potência de 2
+        const nextPowerOfTwo = (n) => {
+            if (n <= 1) return 1;
+            let power = 1;
+            while (power < n) {
+                power *= 2;
+            }
+            return power;
+        };
+
+        const calculateByes = (numParticipants) => {
+            const nextP2 = nextPowerOfTwo(numParticipants);
+            return nextP2 - numParticipants;
+        };
+
+        const createBracketWithByes = (pairs, isGold) => {
+            const numPairs = pairs.length;
+            const numByes = calculateByes(numPairs);
             
-            if (numPairs < 2) return [];
+            if (numPairs < 2 && numByes === 0) return [];
+            
+            const bracket = [];
+            
+            // 1. Separa as duplas que recebem BYE (as de melhor ranking)
+            const sortedPairs = [...pairs].sort((a, b) => {
+                // A lógica de ranking no seu sistema é implícita: a ordem em que chegam é o ranking
+                // Aqui, usamos a ordem original (que vem do ranking do grupo)
+                // Se a chave for Ouro, as duplas [0] e [1] de cada grupo são melhores.
+                // Se o número de duplas for 5, a dupla 1 (melhor) recebe o BYE.
+                return 0; // Mantém a ordem original do array
+            });
+            
+            const pairsReceivingBye = sortedPairs.slice(0, numByes);
+            const pairsPlayingInR1 = sortedPairs.slice(numByes);
 
-            const numRounds = Math.log2(numPairs);
+            // 2. Embaralha apenas as duplas que VÃO JOGAR na Rodada 1
+            const shuffledPairsPlayingR1 = [...pairsPlayingInR1].sort(() => 0.5 - Math.random());
+            
+            const effectiveParticipants = numPairs - numByes; // Número de jogos na rodada 1
+            const numMatchesR1 = effectiveParticipants / 2;
+            
+            // O número total de participantes a partir da Rodada 2 é a próxima potência de 2
+            const finalNumParticipants = nextPowerOfTwo(numPairs);
+            const numRounds = Math.log2(finalNumParticipants);
+            
+            
+            // 3. Cria a estrutura do Bracket vazia (com Byes na Rodada 1)
+            let pairsIndex = 0;
+            let nextMatchIndex = 0;
 
-            // Loop crescente (Rodada 1, Rodada 2, ...)
-            for (let r = 1; r <= numRounds; r++) {
-                const matchesInRound = numPairs / Math.pow(2, r);
+            for (let r = 1; r <= numRounds; r++) { 
+                const matchesInRound = finalNumParticipants / Math.pow(2, r);
                 
                 for (let m = 0; m < matchesInRound; m++) { 
                     const matchId = `R${r}_M${m+1}`;
@@ -2276,26 +2320,78 @@
                         nextMatchSlot = m % 2;
                     }
                     
-                    bracket.push({
+                    const match = {
                         id: matchId,
                         round: r, 
-                        pairs: [null, null],
+                        pairs: [null, null], 
                         score: [null, null],
                         winner: null,
                         nextMatchId: nextMatchId,
                         nextMatchSlot: nextMatchSlot,
-                    });
+                    };
+
+                    // Preenche a Rodada 1
+                    if (r === 1) {
+                        // Se m < numMatchesR1, é um jogo normal de Rodada 1
+                        if (m < numMatchesR1) {
+                            match.pairs[0] = shuffledPairsPlayingR1[pairsIndex++];
+                            match.pairs[1] = shuffledPairsPlayingR1[pairsIndex++];
+                        } else {
+                            // Este é o slot onde duplas com BYE entram na Rodada 2. 
+                            // Ignoramos a criação do jogo aqui.
+                            // Mas se o total de jogos na rodada 1 for 0, as duplas de BYE entram aqui.
+                        }
+                    } 
+                    
+                    bracket.push(match);
+                }
+            }
+
+            // 4. Injeta os vencedores do BYE na Rodada 2
+            const round2Matches = bracket.filter(m => m.round === 2);
+            let byeIndex = 0;
+            
+            // As duplas com BYE avançam automaticamente.
+            // Distribuir as duplas com Bye de forma justa nos jogos da R2.
+            for(let i = 0; i < finalNumParticipants; i++) {
+                // Se o índice for um slot de BYE:
+                // Slots de BYE são os primeiros 'numByes' slots no layout de 2^n
+                if (i < numByes) {
+                    const byePair = pairsReceivingBye[byeIndex++];
+                    const matchToUpdateIndex = Math.floor(i / 2); // O jogo da R2 que o BYE vai alimentar
+                    const slot = i % 2; // Qual slot (0 ou 1) no jogo da R2
+
+                    if (round2Matches[matchToUpdateIndex]) {
+                        round2Matches[matchToUpdateIndex].pairs[slot] = byePair;
+                    }
                 }
             }
             
-            // Preenche a Rodada 1 com as duplas sorteadas
-            const round1Matches = bracket.filter(m => m.round === 1);
-            round1Matches.forEach((match, index) => {
-                match.pairs = [shuffledPairs[index * 2] || null, shuffledPairs[index * 2 + 1] || null];
+            // 5. Marca os jogos de BYE da Rodada 1 como VENCIDOS (para que não mostre o botão de placar)
+            // Um jogo de BYE é um jogo da R1 onde um dos lados está nulo, e o vencedor deve ser a dupla que joga
+            bracket.filter(m => m.round === 1).forEach(match => {
+                if (!match.pairs[0] || !match.pairs[1]) {
+                    if (match.pairs[0] && !match.pairs[1]) {
+                        // Pair 1 vence por WO
+                        match.winner = match.pairs[0];
+                        match.score = [1, 0]; 
+                    } else if (match.pairs[1] && !match.pairs[0]) {
+                        // Pair 2 vence por WO
+                        match.winner = match.pairs[1];
+                        match.score = [0, 1]; 
+                    }
+
+                    // Avança o vencedor para a próxima rodada (Slot na R2)
+                    if (match.winner && match.nextMatchId) {
+                        const nextMatch = bracket.find(m => m.id === match.nextMatchId);
+                        if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
+                    }
+                }
             });
 
             return bracket;
         };
+
 
         /* =============================================================================
            Funções de PDF
@@ -2397,11 +2493,7 @@
                 }
                 
                 // Coveiro
-                // =================================================================
-                // === MUDANÇA (v3.0.1): Usa a nova função de cálculo total
-                // =================================================================
                 const stats = getGlobalTournamentStats(activeChampionship);
-                // === FIM DA MUDANÇA ===
                 
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
@@ -2492,11 +2584,18 @@
                     const roundTitle = m.round === maxRoundGold ? 'Final'
                         : m.round === maxRoundGold - 1 ? 'Semi-Final'
                         : m.round === maxRoundGold - 2 ? 'Quartas' : `Rodada ${m.round}`;
+                    
+                    const pair1Name = m.pairs[0]?.name || 'BYE (Folga)';
+                    const pair2Name = m.pairs[1]?.name || 'BYE (Folga)';
+                    const score = m.score[0] === null || m.score[1] === null 
+                        ? (m.winner ? 'W.O.' : ' - ')
+                        : `${m.score[0]} vs ${m.score[1]}`;
+
                     return [
                         roundTitle,
-                        m.pairs[0]?.name || '-',
-                        `${m.score[0] === null ? '-' : m.score[0]} vs ${m.score[1] === null ? '-' : m.score[1]}`,
-                        m.pairs[1]?.name || '-'
+                        pair1Name,
+                        score,
+                        pair2Name
                     ];
                 });
                 doc.autoTable({
@@ -2517,11 +2616,18 @@
                     const roundTitle = m.round === maxRoundSilver ? 'Final'
                         : m.round === maxRoundSilver - 1 ? 'Semi-Final'
                         : m.round === maxRoundSilver - 2 ? 'Quartas' : `Rodada ${m.round}`;
+                    
+                    const pair1Name = m.pairs[0]?.name || 'BYE (Folga)';
+                    const pair2Name = m.pairs[1]?.name || 'BYE (Folga)';
+                    const score = m.score[0] === null || m.score[1] === null 
+                        ? (m.winner ? 'W.O.' : ' - ')
+                        : `${m.score[0]} vs ${m.score[1]}`;
+
                     return [
                         roundTitle,
-                        m.pairs[0]?.name || '-',
-                        `${m.score[0] === null ? '-' : m.score[0]} vs ${m.score[1] === null ? '-' : m.score[1]}`,
-                        m.pairs[1]?.name || '-'
+                        pair1Name,
+                        score,
+                        pair2Name
                     ];
                 });
                 doc.autoTable({
