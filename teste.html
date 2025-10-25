@@ -72,7 +72,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v2.9.6 (Relatórios PDF)</p>
+            <p>App de Ranking v2.9.7 (Modo Telão)</p>
         </footer>
 
     </div>
@@ -152,7 +152,11 @@
             userId: null, // Será preenchido com o MESTRE_USER_ID
             isAuthReady: false,
             isAdmin: false, 
-            currentView: 'loading', // 'loading', 'login', 'championshipList', 'championshipView', 'globalRanking'
+            // =================================================================
+            // === NOVO: Estado de Telão
+            // =================================================================
+            isTelaoMode: false,
+            currentView: 'loading', // 'loading', 'login', 'championshipList', 'championshipView', 'globalRanking', 'telaoView'
             currentChampionshipId: null,
             currentRankingId: null, // ID do ranking sendo visualizado/editado
         };
@@ -171,6 +175,7 @@
         /* =============================================================================
            Referências do DOM
            ============================================================================= */
+        const appContainer = document.getElementById('app-container');
         const mainContent = document.getElementById('main-content');
         const loadingSpinner = document.getElementById('loading-spinner');
         const headerButtons = document.getElementById('header-buttons');
@@ -217,10 +222,11 @@
             shovel: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-white"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>',
             shovelSmall: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>',
             printer: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
+            fileDown: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
             // =================================================================
-            // === NOVO ÍCONE: PDF/Download
+            // === NOVO ÍCONE: TV/Telão
             // =================================================================
-            fileDown: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>'
+            tv: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>'
         };
 
         /* =============================================================================
@@ -254,8 +260,12 @@
                 return;
             }
 
-            // Renderiza os botões do cabeçalho
-            renderHeaderButtons();
+            // =================================================================
+            // === NOVO: Não renderiza cabeçalho no Modo Telão
+            // =================================================================
+            if (!appState.isTelaoMode) {
+                renderHeaderButtons();
+            }
 
             // Renderiza o conteúdo principal baseado na view
             switch (appState.currentView) {
@@ -269,8 +279,13 @@
                     renderGlobalRanking();
                     break;
                 case 'championshipView':
-                    // A tela 'championshipView' tem seus próprios sub-estados
                     renderChampionshipView();
+                    break;
+                // =================================================================
+                // === NOVO: View do Telão
+                // =================================================================
+                case 'telaoView':
+                    renderTelaoView();
                     break;
                 default:
                     mainContent.innerHTML = `<p>Estado desconhecido: ${appState.currentView}</p>`;
@@ -289,9 +304,12 @@
             unsubscribeActiveChampionship();
             activeChampionship = null;
 
-            // Se estamos abrindo um campeonato, precisamos garantir
+            // Se estamos abrindo um campeonato OU um telão, precisamos garantir
             // que o listener global de players esteja olhando o ranking *correto*.
-            if (view === 'championshipView' && champId) {
+            // =================================================================
+            // === NOVO: `telaoView` se comporta como `championshipView`
+            // =================================================================
+            if ((view === 'championshipView' || view === 'telaoView') && champId) {
                 const champ = championships.find(c => c.id === champId);
                 if (champ && champ.rankingId) {
                     // Se o ranking do app não for o do camp, troca e re-escuta
@@ -299,6 +317,10 @@
                         appState.currentRankingId = champ.rankingId;
                         listenToGlobalPlayers(); // Isso vai carregar globalPlayers com a lista certa
                     }
+                } else if (championships.length > 0 && !champ) {
+                    // Pode acontecer se os listeners não estiverem prontos
+                    console.warn("Navegando para o telão, mas a lista de campeonatos ainda não tem o ID:", champId);
+                    // Tentaremos carregar mesmo assim.
                 }
                 listenToActiveChampionship(champId); // Isso vai carregar o camp e chamar o render()
             
@@ -724,9 +746,7 @@
                 </button>
             ` : '';
             
-            // =================================================================
-            // === NOVO: Botão Gerar PDF
-            // =================================================================
+            // Botão Gerar PDF
             const printButtonHtml = `
                 <button id="print-ranking-pdf-btn" class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg shadow-lg transition-all" title="Gerar PDF do Ranking">
                     ${icons.fileDown}
@@ -780,9 +800,6 @@
             const manageRankingsBtn = document.getElementById('manage-rankings-btn');
             if (manageRankingsBtn) manageRankingsBtn.addEventListener('click', renderRankingManagementModal);
 
-            // =================================================================
-            // === NOVO: Listener do Botão PDF
-            // =================================================================
             const printRankingBtn = document.getElementById('print-ranking-pdf-btn');
             if (printRankingBtn) printRankingBtn.addEventListener('click', handlePrintRankingPDF);
         };
@@ -853,10 +870,10 @@
         };
 
         /* =============================================================================
-           TELA 3: Visão do Campeonato (O App Antigo, agora "Modular")
+           TELA 3: Visão do Campeonato (ADMIN)
            ============================================================================= */
 
-        // Função "Router" da tela do campeonato
+        // Função "Router" da tela do campeonato (ADMIN)
         const renderChampionshipView = () => {
             if (!activeChampionship) {
                 mainContent.innerHTML = `
@@ -872,39 +889,56 @@
             const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
 
             // =================================================================
-            // === NOVO: Botão de PDF do Campeonato
+            // === NOVOS BOTÕES: PDF (se finalizado) e Telão (sempre)
             // =================================================================
-            let pdfButtonHtml = '';
-            if (champInfo?.status === 'finished') {
-                pdfButtonHtml = `
-                <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8 animate-fade-in text-center">
-                    <button id="print-champ-pdf-btn" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 mx-auto">
-                        ${icons.fileDown}
-                        Gerar PDF com Resultados Finais
+            let topButtonsHtml = '';
+            if (appState.isAdmin) { // Só admin vê esses botões
+                let pdfButtonHtml = '';
+                if (champInfo?.status === 'finished') {
+                    pdfButtonHtml = `
+                        <button id="print-champ-pdf-btn" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2">
+                            ${icons.fileDown}
+                            Gerar PDF
+                        </button>
+                    `;
+                }
+
+                const telaoButtonHtml = `
+                    <button id="launch-telao-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2">
+                        ${icons.tv}
+                        Abrir Telão
                     </button>
+                `;
+
+                topButtonsHtml = `
+                <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 mb-8 animate-fade-in">
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        ${telaoButtonHtml}
+                        ${pdfButtonHtml}
+                    </div>
                 </div>
                 `;
             }
 
-
+            // Define o conteúdo baseado no status
             if (champInfo?.status === 'finished') {
-                html = pdfButtonHtml + renderGroupStage() + renderKnockoutView(true);
+                html = topButtonsHtml + renderGroupStage() + renderKnockoutView(true);
             } else if (activeChampionship.status === 'knockout') {
-                html = renderGroupStage() + renderKnockoutView(false);
+                html = topButtonsHtml + renderGroupStage() + renderKnockoutView(false);
             } else if (activeChampionship.status === 'groups') {
-                html = renderGroupStage();
+                html = topButtonsHtml + renderGroupStage();
             } else { // 'registration'
-                html = renderPlayerRegistration();
+                html = topButtonsHtml + renderPlayerRegistration();
             }
 
             // Injeta o HTML de todas as seções de uma vez
             mainContent.innerHTML = html;
 
             // ===========================================
-            // === RE-ATTACH ALL LISTENERS ===
+            // === RE-ATTACH ALL LISTENERS (ADMIN) ===
             // ===========================================
             
-            // Listeners de Registro (se existirem)
+            // Listeners de Registro
             if (appState.isAdmin && activeChampionship.status === 'registration') {
                 const addExistingForm = document.getElementById('add-existing-player-form');
                 if (addExistingForm) addExistingForm.addEventListener('submit', handleAddExistingPlayerToChampionship);
@@ -948,7 +982,7 @@
             }
 
 
-            // Listeners do Mata-Mata (se existirem e for admin)
+            // Listeners do Mata-Mata
             if (appState.isAdmin && (activeChampionship.status === 'knockout' || champInfo?.status === 'finished')) {
                  document.querySelectorAll('.confirm-knockout-score-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
@@ -958,12 +992,15 @@
                 });
             }
             
-            // =================================================================
-            // === NOVO: Listener do Botão PDF do Campeonato
-            // =================================================================
-            if (champInfo?.status === 'finished') {
-                const printChampBtn = document.getElementById('print-champ-pdf-btn');
-                if (printChampBtn) printChampBtn.addEventListener('click', handlePrintChampionshipPDF);
+            // Listeners dos Botões do Topo (PDF e Telão)
+            if (appState.isAdmin) {
+                const launchTelaoBtn = document.getElementById('launch-telao-btn');
+                if (launchTelaoBtn) launchTelaoBtn.addEventListener('click', handleLaunchTelao);
+
+                if (champInfo?.status === 'finished') {
+                    const printChampBtn = document.getElementById('print-champ-pdf-btn');
+                    if (printChampBtn) printChampBtn.addEventListener('click', handlePrintChampionshipPDF);
+                }
             }
         };
 
@@ -983,6 +1020,7 @@
             }
         };
 
+        // (ADMIN) -- Sub-tela: Registro de Jogadores --
         const renderPlayerRegistration = () => {
             const playersListHtml = activeChampionship.players.length === 0
                 ? `<p class="text-gray-400 text-center py-4">Nenhum jogador cadastrado neste torneio.</p>`
@@ -1027,7 +1065,7 @@
                 : '<option disabled>Nenhum jogador disponível no ranking</option>';
 
 
-            // Formulário de adicionar jogador (só para admin) - AGORA DIVIDIDO
+            // Formulário de adicionar jogador (só para admin)
             const addPlayerFormHtml = appState.isAdmin ? `
             <div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 
@@ -1067,7 +1105,6 @@
             </div>
             ` : '';
 
-            // Agora retorna o HTML em vez de injetar
             return `
                 <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in">
                     
@@ -1088,7 +1125,7 @@
             `;
         };
         
-        // -- Sub-tela: Fase de Grupos --
+        // (ADMIN) -- Sub-tela: Fase de Grupos --
         const renderGroupStage = () => {
             let allScoresFilled = true;
             const isDisabled = !appState.isAdmin ? 'disabled' : '';
@@ -1146,7 +1183,7 @@
                     </tr>
                 `).join('');
 
-                // Botão de Impressão
+                // Botão de Impressão (para ficha)
                 const printButton = `
                     <button class="print-group-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded-lg shadow-md transition-all flex items-center gap-2 text-sm" data-group-index="${groupIndex}">
                         ${icons.printer}
@@ -1195,7 +1232,6 @@
             </div>
             ` : '';
 
-            // Agora retorna o HTML
             return `
                 <div class="space-y-8 animate-fade-in">
                     ${groupsHtml}
@@ -1204,14 +1240,13 @@
             `;
         };
         
-        // -- Sub-tela: Chaves (Mata-Mata) --
+        // (ADMIN) -- Sub-tela: Chaves (Mata-Mata) --
         const renderKnockoutView = (isFinished) => {
             const goldHtml = renderBracket('Série Ouro', activeChampionship.goldBracket, 'goldBracket', icons.shield, isFinished);
             const silverHtml = renderBracket('Série Prata', activeChampionship.silverBracket, 'silverBracket', icons.shieldOff, isFinished);
             
             // Lógica do Coveiro
             let coveiroHtml = '';
-            // Só calcula se os grupos existirem
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
                 const stats = getGlobalGroupStageStats(activeChampionship.groups);
                 if (stats.length > 0) {
@@ -1229,12 +1264,10 @@
                     `;
                 }
             }
-
-            // Agora retorna o HTML
             return `<div class="animate-fade-in">${goldHtml}${silverHtml}${coveiroHtml}</div>`;
         };
 
-        // Esta função agora renderiza DUPLAS (pairs)
+        // (ADMIN) -- Helper: Renderiza uma Chave (Bracket) --
         const renderBracket = (title, bracket, bracketType, iconSvg, isFinished) => {
             const rounds = {};
             if (!bracket || bracket.length === 0) {
@@ -1252,13 +1285,9 @@
             });
             
             const maxRound = Math.max(...bracket.map(m => m.round));
-
             const final = bracket.find(m => m.round === maxRound);
-            const champion = final?.winner; // 'champion' é um objeto DUPLA
+            const champion = final?.winner; 
 
-            // =================================================================
-            // === MUDANÇA (REQUEST 5): Estilo do card de campeão
-            // =================================================================
             const isGold = bracketType === 'goldBracket';
             const cardStyle = isGold 
                 ? 'bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-gray-900' // Gold Style
@@ -1271,8 +1300,6 @@
                 <p class="text-3xl font-bold">${champion.name}</p>
             </div>
             ` : '';
-            // === Fim da Mudança ===
-
 
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
                 const roundTitle = Number(roundNum) === maxRound ? 'Final'
@@ -1281,8 +1308,8 @@
                     : `Rodada ${roundNum}`;
                 
                 const matchesHtml = rounds[roundNum].map(match => {
-                    const pair1 = match.pairs[0]; // A 'dupla' 1
-                    const pair2 = match.pairs[1]; // A 'dupla' 2
+                    const pair1 = match.pairs[0]; 
+                    const pair2 = match.pairs[1]; 
                     const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
                     const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
                     const score1 = match.score[0];
@@ -1362,9 +1389,300 @@
         };
 
         /* =============================================================================
+           TELA 4: Visão do Telão (READ-ONLY)
+           ============================================================================= */
+
+        // Função "Router" da tela do TELÃO (READ-ONLY)
+        const renderTelaoView = () => {
+             if (!activeChampionship) {
+                mainContent.innerHTML = `
+                <div class="text-center py-20 animate-fade-in">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-400 mx-auto"></div>
+                    <p class="mt-4 text-gray-300">Aguardando dados do torneio...</p>
+                </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+            const champName = champInfo ? champInfo.name : "Campeonato";
+
+            // Título do Telão
+            html += `<h1 class="text-4xl sm:text-6xl font-bold text-center text-cyan-400 my-8 animate-fade-in">${champName}</h1>`;
+
+            // Define o conteúdo baseado no status
+            if (champInfo?.status === 'finished') {
+                html += renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(true);
+            } else if (activeChampionship.status === 'knockout') {
+                html += renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(false);
+            } else if (activeChampionship.status === 'groups') {
+                html += renderGroupStage_ReadOnly();
+            } else { // 'registration'
+                html += renderPlayerRegistration_ReadOnly();
+            }
+
+            mainContent.innerHTML = html;
+        };
+        
+        // (TELÃO) -- Sub-tela: Registro de Jogadores (Read-Only) --
+        const renderPlayerRegistration_ReadOnly = () => {
+            const playerCount = activeChampionship.players.length;
+            
+            const playersListHtml = playerCount === 0
+                ? `<p class="text-gray-400 text-center py-4 text-2xl">Aguardando inscrição dos jogadores...</p>`
+                // =================================================================
+                // === MUDANÇA: Lista mais limpa e maior para o telão
+                // =================================================================
+                : activeChampionship.players.map(player => `
+                    <div class="bg-gray-700 p-4 rounded-lg animate-fade-in-sm">
+                        <span class="text-white font-medium text-2xl">${player.name}</span>
+                    </div>
+                `).join('');
+
+            return `
+                <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12 animate-fade-in max-w-4xl mx-auto">
+                    <div class="bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
+                        <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-cyan-400 flex items-center gap-3">
+                            ${icons.users}
+                            Jogadores Inscritos (${playerCount})
+                        </h3>
+                        <div class="max-h-[70vh] overflow-y-auto pr-2 space-y-3">
+                            ${playersListHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        // (TELÃO) -- Sub-tela: Fase de Grupos (Read-Only) --
+        const renderGroupStage_ReadOnly = () => {
+            const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
+                const rankings = getRankings(group);
+                
+                const matchesHtml = group.matches.map((match, matchIndex) => {
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
+                    
+                    // =================================================================
+                    // === MUDANÇA: Remove inputs, usa spans
+                    // =================================================================
+                    return `
+                    <div class="bg-gray-700 p-3 sm:p-4 rounded-lg">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+                            <span class="text-base sm:text-lg text-gray-200 text-center sm:text-left">${match.names[0]}</span>
+                            <span class="font-bold text-cyan-300">vs</span>
+                            <span class="text-base sm:text-lg text-gray-200 text-center sm:text-right">${match.names[1]}</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-3 mt-3">
+                            <span class="w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-2xl font-bold opacity-70">
+                                ${score1 === null ? '-' : score1}
+                            </span>
+                            <span class="text-gray-400 text-xl">-</span>
+                             <span class="w-20 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-2xl font-bold opacity-70">
+                                ${score2 === null ? '-' : score2}
+                            </span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+                const rankingsHtml = rankings.map((player, rankIndex) => `
+                    <tr class="border-b border-gray-700 ${rankIndex < 2 ? 'text-green-300' : 'text-yellow-300'}">
+                        <td class="p-3 font-bold text-lg">${rankIndex + 1}º</td>
+                        <td class="p-3 text-lg">${player.name}</td>
+                        <td class="p-3 font-bold text-lg">${player.gamesWon}</td>
+                    </tr>
+                `).join('');
+
+                return `
+                <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in">
+                    <div class="flex justify-between items-center mb-5">
+                        <h3 class="text-3xl font-bold text-cyan-400">Grupo ${groupIndex + 1}</h3>
+                    </div>
+                    <div class="space-y-4 mb-6">${matchesHtml}</div>
+                    <div>
+                        <h4 class="text-xl font-semibold mb-3 text-white">Ranking do Grupo</h4>
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-gray-700">
+                                    <th class="p-3 rounded-l-lg text-base">Pos.</th>
+                                    <th class="p-3 text-base">Jogador</th>
+                                    <th class="p-3 rounded-r-lg text-base">Games Vencidos</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rankingsHtml}</tbody>
+                        </table>
+                        <div class="flex justify-between mt-2 text-base">
+                            <span class="text-green-300">▲ Dupla Ouro</span>
+                            <span class="text-yellow-300">▼ Dupla Prata</span>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="space-y-8 animate-fade-in">
+                    ${groupsHtml}
+                </div>
+            `;
+        };
+        
+        // (TELÃO) -- Sub-tela: Chaves (Mata-Mata) (Read-Only) --
+        const renderKnockoutView_ReadOnly = (isFinished) => {
+            // Reutiliza as funções read-only
+            const goldHtml = renderBracket_ReadOnly('Série Ouro', activeChampionship.goldBracket, 'goldBracket', icons.shield, isFinished);
+            const silverHtml = renderBracket_ReadOnly('Série Prata', activeChampionship.silverBracket, 'silverBracket', icons.shieldOff, isFinished);
+            
+            // Lógica do Coveiro (já é read-only por natureza)
+            let coveiroHtml = '';
+            if (activeChampionship.groups && activeChampionship.groups.length > 0) {
+                const stats = getGlobalGroupStageStats(activeChampionship.groups);
+                if (stats.length > 0) {
+                    const minGames = stats[0].gamesWon;
+                    const coveiros = stats.filter(p => p.gamesWon === minGames);
+                    const coveiroNames = coveiros.map(c => c.name).join(' / ');
+                    
+                    coveiroHtml = `
+                    <div class="bg-gray-700 text-white p-6 rounded-lg shadow-2xl mt-8 text-center animate-fade-in">
+                        ${icons.shovel}
+                        <h4 class="text-2xl font-black uppercase tracking-wider">Prêmio Coveiro</h4>
+                        <p class="text-3xl font-bold">${coveiroNames}</p>
+                        <p class="text-sm text-gray-300">Com apenas ${minGames} games marcados na Fase de Grupos.</p>
+                    </div>
+                    `;
+                }
+            }
+            return `<div class="animate-fade-in">${goldHtml}${silverHtml}${coveiroHtml}</div>`;
+        };
+
+        // (TELÃO) -- Helper: Renderiza uma Chave (Bracket) (Read-Only) --
+        const renderBracket_ReadOnly = (title, bracket, bracketType, iconSvg, isFinished) => {
+            const rounds = {};
+            if (!bracket || bracket.length === 0) {
+                 return `<div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8">
+                     <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
+                         ${iconSvg} ${title}
+                     </h3>
+                     <p class="text-gray-400">Chave ainda não gerada.</p>
+                  </div>`;
+            }
+
+            bracket.forEach(match => {
+                if (!rounds[match.round]) rounds[match.round] = [];
+                rounds[match.round].push(match);
+            });
+            
+            const maxRound = Math.max(...bracket.map(m => m.round));
+            const final = bracket.find(m => m.round === maxRound);
+            const champion = final?.winner; 
+
+            const isGold = bracketType === 'goldBracket';
+            const cardStyle = isGold 
+                ? 'bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-gray-900' // Gold Style
+                : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900'; // Silver Style
+            
+            const championHtml = champion ? `
+            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
+                ${icons.medal}
+                <h4 class="text-2xl font-black uppercase tracking-wider">Campeões</h4>
+                <p class="text-3xl font-bold">${champion.name}</p>
+            </div>
+            ` : '';
+
+            const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
+                const roundTitle = Number(roundNum) === maxRound ? 'Final'
+                    : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
+                    : Number(roundNum) === maxRound - 2 ? 'Quartas de Final'
+                    : `Rodada ${roundNum}`;
+                
+                const matchesHtml = rounds[roundNum].map(match => {
+                    const pair1 = match.pairs[0]; 
+                    const pair2 = match.pairs[1]; 
+                    const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
+                    const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
+                    
+                    // =================================================================
+                    // === MUDANÇA: Remove inputs, usa spans
+                    // =================================================================
+                    return `
+                    <div class="bg-gray-700 rounded-lg shadow-md p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-lg ${isPair1Winner ? 'text-green-400 font-bold' : isPair2Winner ? 'text-gray-400' : 'text-white'}">
+                                ${pair1 ? pair1.name : 'Aguardando...'}
+                            </span>
+                            <span class="w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-xl font-bold opacity-70">
+                                ${score1 === null ? '-' : score1}
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center my-2">
+                            <div class="flex-grow border-t border-gray-600"></div>
+                            <span class="mx-2 text-sm text-gray-400">vs</span>
+                            <div class="flex-grow border-t border-gray-600"></div>
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-lg ${isPair2Winner ? 'text-green-400 font-bold' : isPair1Winner ? 'text-gray-400' : 'text-white'}">
+                                ${pair2 ? pair2.name : 'Aguardando...'}
+                            </span>
+                            <span class="w-16 bg-gray-800 border border-gray-600 text-white rounded-lg p-2 text-center text-xl font-bold opacity-70">
+                                ${score2 === null ? '-' : score2}
+                            </span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+                return `
+                <div class="flex flex-col space-y-6 flex-shrink-0 w-72 sm:w-80">
+                    <h4 class="text-xl font-semibold text-white">${roundTitle}</h4>
+                    ${matchesHtml}
+                </div>
+                `;
+            }).join('');
+
+            return `
+            <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8">
+                <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
+                    ${iconSvg}
+                    ${title}
+                </h3>
+                ${championHtml}
+                <div class="flex gap-4 sm:gap-6 pb-4 overflow-x-auto">
+                    ${roundsHtml}
+                </div>
+            </div>
+            `;
+        };
+
+
+        /* =============================================================================
            Lógica do Campeonato Ativo (Ações de Admin)
            ============================================================================= */
         
+        // =================================================================
+        // === NOVA FUNÇÃO: Abrir o Telão
+        // =================================================================
+        const handleLaunchTelao = () => {
+            const champId = appState.currentChampionshipId;
+            if (!champId) {
+                showModal("Erro", "ID do campeonato não encontrado.");
+                return;
+            }
+            
+            // Constrói a URL para o modo telão
+            // window.location.origin -> "http://seusite.com"
+            // window.location.pathname -> "/index.html" ou "/"
+            const url = `${window.location.origin}${window.location.pathname}?telao=true&champId=${champId}`;
+            
+            // Abre em uma nova aba
+            window.open(url, '_blank');
+        };
+
         const handleAddNewPlayerToChampionship = async (e) => {
             e.preventDefault();
             const input = document.getElementById('new-player-name-input');
@@ -1439,7 +1757,7 @@
             const playerCount = activeChampionship.players.length;
             const validPlayerCounts = [4, 8, 16, 32];
             if (!validPlayerCounts.includes(playerCount)) {
-                showModal("Número de Jogadores InválID", `Você precisa de 4, 8, 16 ou 32 jogadores. Você tem ${playerCount}.`);
+                showModal("Número de Jogadores Inválido", `Você precisa de 4, 8, 16 ou 32 jogadores. Você tem ${playerCount}.`);
                 return;
             }
             if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Isso criará ${playerCount / 4} grupos.`)) {
@@ -1583,7 +1901,6 @@
             // Um pequeno delay para garantir que o DOM esteja pronto antes de imprimir
             setTimeout(() => {
                 printWindow.print();
-                // Não fechamos a janela, permitindo que o usuário a feche ou imprima novamente
             }, 250);
         };
 
@@ -1930,7 +2247,7 @@
         };
 
         /* =============================================================================
-           NOVAS FUNÇÕES: Geradores de PDF
+           Funções de PDF
            ============================================================================= */
 
         const handlePrintRankingPDF = () => {
@@ -2194,10 +2511,12 @@
                 if (appState.currentView === 'globalRanking') {
                     render();
                 }
-                // Se estamos na tela do camp, E na fase de registro, renderiza para atualizar o dropdown
+                // Se estamos na tela do camp (admin), E na fase de registro, renderiza para atualizar o dropdown
                 if (appState.currentView === 'championshipView' && activeChampionship?.status === 'registration') {
                     render();
                 }
+                // Se estamos no telão, não precisamos fazer nada aqui,
+                // pois o listener do 'activeChampionship' é quem manda.
 
             }, (error) => {
                 console.error(`Erro ao carregar ranking ${appState.currentRankingId}:`, error);
@@ -2215,9 +2534,18 @@
             
             unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
                 championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Se estamos na lista de camps, renderiza
                 if (appState.currentView === 'championshipList') {
                     render();
                 }
+                // Se estamos no telão, e o nome do torneio mudou,
+                // o listener do 'activeChampionship' vai pegar.
+                // Mas se o *status* mudar (ex: finished), precisamos renderizar.
+                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
+                    render();
+                }
+
             }, (error) => {
                 console.error("Erro ao carregar campeonatos:", error);
                 showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
@@ -2232,15 +2560,17 @@
             unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
                 if (docSnap.exists()) {
                     activeChampionship = { id: docSnap.id, ...docSnap.data() };
-                    render(); 
+                    render(); // Renderiza a tela atual (seja 'championshipView' ou 'telaoView')
                 } else {
                     showModal("Erro", "Não foi possível carregar os dados deste campeonato. (O doc 'data/main' não foi encontrado).");
-                    navigateTo('championshipList');
+                    if (!appState.isTelaoMode) navigateTo('championshipList');
+                    else mainContent.innerHTML = `<h1 class="text-4xl text-red-500 text-center p-10">Erro: Campeonato não encontrado.</h1>`;
                 }
             }, (error) => {
                 console.error("Erro ao carregar campeonato ativo:", error);
                 showModal("Erro", "Não foi possível carregar este campeonato. Verifique as regras do Firestore.");
-                navigateTo('championshipList');
+                if (!appState.isTelaoMode) navigateTo('championshipList');
+                else mainContent.innerHTML = `<h1 class="text-4xl text-red-500 text-center p-10">Erro de conexão.</h1>`;
             });
         };
 
@@ -2279,12 +2609,14 @@
                     appState.currentRankingId = null; // Nenhum ranking existe
                 }
 
-                // Agora que temos certeza que um ranking está (ou não) selecionado, busca os players
                 // Esta chamada é crucial para que o `globalPlayers` seja preenchido na primeira carga
                 listenToGlobalPlayers();
                 
                 // Re-renderiza a tela atual (pode ser a 'championshipList' ou 'globalRanking' que dependem dessa lista)
-                render();
+                // Não chama o render() se estivermos no modo Telão, pois o 'navigateTo' cuidará disso.
+                if (!appState.isTelaoMode) {
+                    render();
+                }
 
             }, (error) => {
                 console.error("Erro ao carregar lista de rankings:", error);
@@ -2315,16 +2647,43 @@
                 appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
                 userIdFooter.textContent = effectiveUserId; // Mostra o ID Mestre no rodapé
                 
-                // 1. Ouve a lista de campeonatos (não depende de mais nada)
+                // =================================================================
+                // === NOVO: Lógica de Roteamento (Normal vs Telão)
+                // =================================================================
+                
+                // 1. Verifica os parâmetros da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const telaoChampId = urlParams.get('champId');
+
+                // 2. Inicia os listeners globais (necessários para ambos os modos)
                 listenToChampionships();
-                
-                // 2. Ouve a lista de rankings. Esta função, ao terminar,
-                //    irá (a) selecionar um ranking padrão e (b) chamar listenToGlobalPlayers()
-                listenToRankingsList(); 
-                
-                // 3. Navega para a tela de LOGIN
-                // O listenToRankingsList vai chamar o render() quando terminar
-                navigateTo('login');
+                listenToRankingsList(); // Esta função vai chamar listenToGlobalPlayers()
+
+                if (urlParams.has('telao') && telaoChampId) {
+                    // --- MODO TELÃO ---
+                    appState.isTelaoMode = true;
+                    appState.isAdmin = false; // Telão é sempre visitante
+                    
+                    // Adiciona estilos para a view limpa
+                    const telaoStyles = document.createElement('style');
+                    telaoStyles.innerHTML = `
+                        body { background-color: #000; } /* Fundo preto para TV */
+                        #app-container { max-width: 100%; padding: 1rem 2rem; }
+                        header, footer { display: none !important; }
+                    `;
+                    document.head.appendChild(telaoStyles);
+
+                    // Navega direto para o telão
+                    // Os listeners acima vão popular 'championships' e 'allRankings'
+                    // A função navigateTo vai garantir que 'activeChampionship' seja carregado
+                    navigateTo('telaoView', telaoChampId);
+                    
+                } else {
+                    // --- MODO NORMAL ---
+                    appState.isTelaoMode = false;
+                    // O listenToRankingsList vai chamar o render() quando terminar
+                    navigateTo('login');
+                }
             }
         });
 
