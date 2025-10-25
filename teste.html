@@ -72,7 +72,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v3.0.0 (Telão Compacto)</p>
+            <p>App de Ranking v3.0.1 (Cálculo Total do Coveiro)</p>
         </footer>
 
     </div>
@@ -1232,7 +1232,12 @@
             // Lógica do Coveiro
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
-                const stats = getGlobalGroupStageStats(activeChampionship.groups);
+                // =================================================================
+                // === MUDANÇA (v3.0.1): Usa a nova função de cálculo total
+                // =================================================================
+                const stats = getGlobalTournamentStats(activeChampionship);
+                // === FIM DA MUDANÇA ===
+
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
                     const coveiros = stats.filter(p => p.gamesWon === minGames); // Pega todos que empataram em último
@@ -1243,7 +1248,7 @@
                         ${icons.shovel}
                         <h4 class="text-2xl font-black uppercase tracking-wider">Prêmio Coveiro</h4>
                         <p class="text-3xl font-bold">${coveiroNames}</p>
-                        <p class="text-sm text-gray-300">Com apenas ${minGames} games marcados na Fase de Grupos.</p>
+                        <p class="text-sm text-gray-300">Com apenas ${minGames} games marcados no torneio.</p>
                     </div>
                     `;
                 }
@@ -1406,20 +1411,13 @@
                 contentHtml = renderPlayerRegistration_ReadOnly();
             }
 
-            // =================================================================
-            // === MUDANÇA (v2.9.9 -> v3.0.0): Mantém Flexbox
-            // =================================================================
             if (activeChampionship.status !== 'registration') {
-                // `flex-wrap` permite que os itens quebrem a linha
-                // `justify-center` centraliza os itens na linha
-                // `gap-6` adiciona espaço entre eles
                 html += `
                 <div class="flex flex-wrap justify-center gap-6 animate-fade-in">
                     ${contentHtml}
                 </div>
                 `;
             } else {
-                // A tela de registro já tem seu próprio container centralizado
                 html += contentHtml;
             }
 
@@ -1438,7 +1436,6 @@
                     </div>
                 `).join('');
 
-            // Container centralizado para a tela de registro
             return `
                 <div class="bg-gray-800 bg-opacity-50 rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12 animate-fade-in max-w-4xl mx-auto">
                     <div class="bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
@@ -1491,12 +1488,6 @@
                     </tr>
                 `).join('');
 
-                // =================================================================
-                // === MUDANÇA (v3.0.0): Card compacto
-                // =================================================================
-                // `w-full`: Em telas pequenas, ocupa 100%
-                // `sm:max-w-sm`: Em telas `sm` (640px) ou mais, define a largura MÁXIMA
-                // para `24rem` (384px). O card não vai mais crescer.
                 return `
                 <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:max-w-sm">
                     <div class="flex justify-between items-center mb-5">
@@ -1529,28 +1520,28 @@
         
         // (TELÃO) -- Sub-tela: Chaves (Mata-Mata) (Read-Only) --
         const renderKnockoutView_ReadOnly = (isFinished) => {
-            // Reutiliza as funções read-only
             const goldHtml = renderBracket_ReadOnly('Série Ouro', activeChampionship.goldBracket, 'goldBracket', icons.shield, isFinished);
             const silverHtml = renderBracket_ReadOnly('Série Prata', activeChampionship.silverBracket, 'silverBracket', icons.shieldOff, isFinished);
             
-            // Lógica do Coveiro (já é read-only por natureza)
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
-                const stats = getGlobalGroupStageStats(activeChampionship.groups);
+                // =================================================================
+                // === MUDANÇA (v3.0.1): Usa a nova função de cálculo total
+                // =================================================================
+                const stats = getGlobalTournamentStats(activeChampionship);
+                // === FIM DA MUDANÇA ===
+
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
                     const coveiros = stats.filter(p => p.gamesWon === minGames);
                     const coveiroNames = coveiros.map(c => c.name).join(' / ');
                     
-                    // =================================================================
-                    // === MUDANÇA (v3.0.0): Card compacto
-                    // =================================================================
                     coveiroHtml = `
                     <div class="bg-gray-700 text-white p-6 rounded-lg shadow-2xl text-center animate-fade-in w-full sm:max-w-sm">
                         ${icons.shovel}
                         <h4 class="text-2xl font-black uppercase tracking-wider">Prêmio Coveiro</h4>
                         <p class="text-3xl font-bold">${coveiroNames}</p>
-                        <p class="text-sm text-gray-300">Com apenas ${minGames} games marcados na Fase de Grupos.</p>
+                        <p class="text-sm text-gray-300">Com apenas ${minGames} games marcados no torneio.</p>
                     </div>
                     `;
                 }
@@ -1563,9 +1554,6 @@
         const renderBracket_ReadOnly = (title, bracket, bracketType, iconSvg, isFinished) => {
             const rounds = {};
             if (!bracket || bracket.length === 0) {
-                 // =================================================================
-                 // === MUDANÇA (v3.0.0): Card compacto
-                 // =================================================================
                  return `<div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm">
                      <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
                          ${iconSvg} ${title}
@@ -1639,9 +1627,6 @@
                     `;
                 }).join('');
 
-                // =================================================================
-                // === MUDANÇA (v3.0.0): Reduz a largura dos cards de rodada
-                // =================================================================
                 return `
                 <div class="flex flex-col space-y-6 w-full max-w-xs">
                     <h4 class="text-xl font-semibold text-white">${roundTitle}</h4>
@@ -1650,9 +1635,6 @@
                 `;
             }).join('');
 
-            // =================================================================
-            // === MUDANÇA (v3.0.0): Card compacto
-            // =================================================================
             return `
             <div class="bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm">
                 <h3 class="text-3xl font-bold mb-6 text-cyan-400 flex items-center gap-3">
@@ -2029,7 +2011,12 @@
                     const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
                     const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
 
-                    const stats = getGlobalGroupStageStats(champData.groups);
+                    // =================================================================
+                    // === MUDANÇA (v3.0.1): Usa a nova função de cálculo total
+                    // =================================================================
+                    const stats = getGlobalTournamentStats(champData);
+                    // === FIM DA MUDANÇA ===
+                    
                     const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
                     const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
 
@@ -2167,6 +2154,7 @@
             return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
         };
 
+        // Esta função calcula APENAS os games da fase de grupos
         const getGlobalGroupStageStats = (groups) => {
             const playerStats = {};
             
@@ -2202,37 +2190,96 @@
             return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
         };
 
+        // =================================================================
+        // === NOVA FUNÇÃO (v3.0.1): Calcula o total de games do TORNEIO
+        // =================================================================
+        const getGlobalTournamentStats = (champData) => {
+            const playerStats = {};
+            
+            // 1. Inicializa todos os jogadores do torneio
+            champData.players.forEach(p => {
+                playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
+            });
+
+            // 2. Soma os games da Fase de Grupos
+            if (champData.groups) {
+                champData.groups.forEach(group => {
+                    group.matches.forEach(match => {
+                        const [p1, p2, p3, p4] = match.p;
+                        const [s1, s2] = match.score;
+                        
+                        if (s1 !== null && !isNaN(s1)) {
+                            if (playerStats[p1]) playerStats[p1].gamesWon += s1;
+                            if (playerStats[p2]) playerStats[p2].gamesWon += s1;
+                        }
+                        if (s2 !== null && !isNaN(s2)) {
+                            if (playerStats[p3]) playerStats[p3].gamesWon += s2;
+                            if (playerStats[p4]) playerStats[p4].gamesWon += s2;
+                        }
+                    });
+                });
+            }
+            
+            // 3. Soma os games do Mata-Mata (Ouro e Prata)
+            const allKnockoutMatches = (champData.goldBracket || []).concat(champData.silverBracket || []);
+            
+            allKnockoutMatches.forEach(match => {
+                const [pair1, pair2] = match.pairs;
+                const [s0, s1] = match.score;
+
+                // Soma placar 0 para jogadores da dupla 1
+                if (s0 !== null && !isNaN(s0) && pair1 && pair1.players) {
+                    pair1.players.forEach(player => {
+                        if (playerStats[player.id]) {
+                            playerStats[player.id].gamesWon += s0;
+                        }
+                    });
+                }
+                
+                // Soma placar 1 para jogadores da dupla 2
+                if (s1 !== null && !isNaN(s1) && pair2 && pair2.players) {
+                    pair2.players.forEach(player => {
+                        if (playerStats[player.id]) {
+                            playerStats[player.id].gamesWon += s1;
+                        }
+                    });
+                }
+            });
+
+            // 4. Retorna a lista ordenada por games (do menor para o maior)
+            return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
+        };
+
+
         const createBracket = (bracketPairs) => {
             // Sorteio aleatório das duplas (cumprindo requisito)
             const shuffledPairs = [...bracketPairs].sort(() => 0.5 - Math.random());
             const bracket = [];
-            const numPairs = bracketPairs.length; // 4 duplas
+            const numPairs = bracketPairs.length;
             
             if (numPairs < 2) return [];
 
-            const numRounds = Math.log2(numPairs); // log2(4) = 2 rodadas
+            const numRounds = Math.log2(numPairs);
 
             // Loop crescente (Rodada 1, Rodada 2, ...)
-            for (let r = 1; r <= numRounds; r++) { // r=1 (Semi), r=2 (Final)
-                
-                // CORREÇÃO DA FÓRMULA:
-                const matchesInRound = numPairs / Math.pow(2, r); // r=1 -> 4/2=2. r=2 -> 4/4=1.
+            for (let r = 1; r <= numRounds; r++) {
+                const matchesInRound = numPairs / Math.pow(2, r);
                 
                 for (let m = 0; m < matchesInRound; m++) { 
                     const matchId = `R${r}_M${m+1}`;
                     let nextMatchId = null;
                     let nextMatchSlot = null; 
 
-                    if (r < numRounds) { // Se r=1 (Semi)
-                        const nextRoundMatchIndex = Math.floor(m / 2); // m=0 -> 0. m=1 -> 0.
-                        nextMatchId = `R${r+1}_M${nextRoundMatchIndex+1}`; // R2_M1, R2_M1
-                        nextMatchSlot = m % 2; // m=0 -> 0. m=1 -> 1.
+                    if (r < numRounds) {
+                        const nextRoundMatchIndex = Math.floor(m / 2);
+                        nextMatchId = `R${r+1}_M${nextRoundMatchIndex+1}`;
+                        nextMatchSlot = m % 2;
                     }
                     
                     bracket.push({
                         id: matchId,
                         round: r, 
-                        pairs: [null, null], // ALTERADO de 'players' para 'pairs'
+                        pairs: [null, null],
                         score: [null, null],
                         winner: null,
                         nextMatchId: nextMatchId,
@@ -2247,7 +2294,7 @@
                 match.pairs = [shuffledPairs[index * 2] || null, shuffledPairs[index * 2 + 1] || null];
             });
 
-            return bracket; // O sort não é mais necessário
+            return bracket;
         };
 
         /* =============================================================================
@@ -2348,8 +2395,14 @@
                     const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverFinal.winner.id);
                     if (silverRunnerUp) finalResults.push(['Vice Prata', silverRunnerUp.name]);
                 }
+                
                 // Coveiro
-                const stats = getGlobalGroupStageStats(activeChampionship.groups);
+                // =================================================================
+                // === MUDANÇA (v3.0.1): Usa a nova função de cálculo total
+                // =================================================================
+                const stats = getGlobalTournamentStats(activeChampionship);
+                // === FIM DA MUDANÇA ===
+                
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
                     const coveiros = stats.filter(p => p.gamesWon === minGames);
