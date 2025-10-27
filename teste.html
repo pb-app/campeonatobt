@@ -10,20 +10,45 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* (Seus estilos CSS permanecem os mesmos) */
+        /* Estilos personalizados */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #F7F7F7; /* Fundo Quase Branco (Light Gray) */
             color: #1F2937; /* Cor do Texto Principal (Gray-800) */
         }
-        @keyframes fadeIn { /* ... */ }
-        .animate-fade-in { /* ... */ }
-        .animate-fade-in-sm { /* ... */ }
-        .hidden { display: none; }
-        ::-webkit-scrollbar { /* ... */ }
-        ::-webkit-scrollbar-track { /* ... */ }
-        ::-webkit-scrollbar-thumb { /* ... */ }
-        ::-webkit-scrollbar-thumb:hover { /* ... */ }
+
+        /* Animação de fade-in */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        .animate-fade-in-sm {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        /* Para esconder elementos */
+        .hidden {
+            display: none;
+        }
+
+        /* Melhorias no Scrollbar (Opcional - Mantém escuro para contraste) */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #E5E7EB; /* bg-gray-200 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #9CA3AF; /* bg-gray-400 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6B7280; /* bg-gray-500 */
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -131,9 +156,6 @@
         let appState = {
             // MUDANÇA: userId agora é dinâmico, baseado no login.
             userId: null, 
-            
-            // MUDANÇA: isAdmin foi removido. Se você está logado, você é o "admin" dos *seus* dados.
-            // isAuthReady: false, // Simplificado e removido, onAuthStateChanged é o novo "ready"
             isTelaoMode: false,
             
             // MUDANÇA: A view inicial é 'loading', o onAuthStateChanged decide para onde ir.
@@ -142,7 +164,6 @@
             currentRankingId: null,
         };
 
-        // (O resto do estado global permanece o mesmo)
         let allRankings = []; 
         let championships = []; 
         let globalPlayers = []; 
@@ -169,16 +190,51 @@
         const modalCloseIcon = document.getElementById('modal-close-icon');
 
         /* =============================================================================
-            Constantes e Ícones (sem alterações)
+            Constantes e Ícones (CORRIGIDO)
            ============================================================================= */
-        const DEFAULT_RANKING_POINTS = { /* ... (mesmos valores) ... */ };
-        const icons = { /* ... (mesmos ícones) ... */ };
+        
+        // CORREÇÃO: Bloco DEFAULT_RANKING_POINTS restaurado
+        const DEFAULT_RANKING_POINTS = {
+            GOLD_WINNER: 100,
+            GOLD_RUNNERUP: 70,
+            SILVER_WINNER: 40,
+            SILVER_RUNNERUP: 20,
+            PARTICIPATION: 5
+        };
+
+        // CORREÇÃO: Bloco `icons` restaurado
+        const icons = {
+            users: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+            plus: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
+            trash: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
+            swords: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline><line x1="13" y1="19" x2="19" y2="13"></line><line x1="16" y1="16" x2="20" y2="20"></line><line x1="19" y1="21" x2="21" y2="19"></polyline><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline><line x1="11" y1="5" x2="5" y2="11"></line><line x1="8" y1="8" x2="4" y2="4"></line><line x1="3" y1="5" x2="5" y2="3"></line></svg>',
+            trophy: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>',
+            shield: '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block text-yellow-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
+            shieldOff: '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block text-gray-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>',
+            medal: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-white"><path d="M12 16.5l4-2.3 4 2.3-1.5-4.6 3.5-3.4-4.6-.7-2-4.2-2 4.2-4.6.7 3.5 3.4L8 16.5z"></path><path d="M12 15l-4-2.3V7.9l4 2.3 4-2.3v4.8L12 15z"></path></svg>', 
+            award: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>',
+            arrowLeft: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
+            eye: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+            logIn: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>',
+            logOut: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>',
+            check: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+            settings: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
+            shovel: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-red-600"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>', 
+            shovelSmall: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>',
+            printer: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
+            fileDown: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+            tv: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>'
+        };
 
         /* =============================================================================
             Funções do Modal (sem alterações)
            ============================================================================= */
-        const showModal = (title, message) => { /* ... (mesma função) ... */ };
-        const hideModal = () => { /* ... (mesma função) ... */ };
+        const showModal = (title, message) => {
+            modalTitle.textContent = title;
+            modalMessage.innerHTML = message; 
+            modal.classList.remove('hidden');
+        };
+        const hideModal = () => modal.classList.add('hidden');
         modalCloseBtn.addEventListener('click', hideModal);
         modalCloseIcon.addEventListener('click', hideModal);
         modal.addEventListener('click', hideModal);
@@ -233,11 +289,6 @@
                 view = 'auth';
             }
             
-            // MUDANÇA: 'login' agora é 'auth'
-            if (view === 'auth') {
-                appState.isAdmin = false; // Removido, mas mantendo a lógica de reset se houver
-            }
-
             appState.currentView = view;
             appState.currentChampionshipId = champId;
 
@@ -245,14 +296,14 @@
             activeChampionship = null;
 
             if ((view === 'championshipView' || view === 'telaoView') && champId) {
-                // ... (Lógica de `MapsTo` para `championshipView` e `telaoView` permanece a mesma) ...
-                // ... (Ela já usa `appState.userId` dinamicamente, o que é correto) ...
                 const champ = championships.find(c => c.id === champId);
                 if (champ && champ.rankingId) {
                     if (appState.currentRankingId !== champ.rankingId) {
                         appState.currentRankingId = champ.rankingId;
                         listenToGlobalPlayers(); 
                     }
+                } else if (championships.length > 0 && !champ) {
+                    console.warn("Navegando, mas a lista de campeonatos ainda não tem o ID:", champId);
                 }
                 listenToActiveChampionship(champId);
             } else if (view === 'globalRanking') {
@@ -445,7 +496,6 @@
             const championshipsListHtml = sortedChampionships.length === 0
                 ? `<p class="text-gray-500 text-center py-4">Nenhum campeonato cadastrado.</p>`
                 : sortedChampionships.map(champ => {
-                    // ... (lógica de status e cores sem alteração) ...
                     let statusColor = 'text-yellow-600';
                     let statusText = 'Em andamento';
                     if (champ.status === 'registration') { statusColor = 'text-blue-600'; statusText = 'Em Inscrição'; }
@@ -516,9 +566,35 @@
                         </div>
                     </div>
 
+
                     <h3 class="text-lg font-semibold text-gray-700 mb-3">Configuração de Pontos</h3>
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                        <div>
+                            <label for="points-gold-winner" class="block text-xs font-medium text-green-600 mb-1">Campeão Ouro</label>
+                            <input type="number" id="points-gold-winner" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_WINNER}"
+                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
+                        <div>
+                            <label for="points-gold-runnerup" class="block text-xs font-medium text-green-700 mb-1">Vice Ouro</label>
+                            <input type="number" id="points-gold-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_RUNNERUP}"
+                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                        </div>
+                        <div>
+                            <label for="points-silver-winner" class="block text-xs font-medium text-gray-600 mb-1">Campeão Prata</label>
+                            <input type="number" id="points-silver-winner" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_WINNER}"
+                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                        </div>
+                        <div>
+                            <label for="points-silver-runnerup" class="block text-xs font-medium text-gray-700 mb-1">Vice Prata</label>
+                            <input type="number" id="points-silver-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_RUNNERUP}"
+                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                        </div>
+                        <div>
+                            <label for="points-participation" class="block text-xs font-medium text-gray-500 mb-1">Participação</label>
+                            <input type="number" id="points-participation" min="0" value="${DEFAULT_RANKING_POINTS.PARTICIPATION}"
+                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                        </div>
+                    </div>
 
                     <button
                         type="submit"
@@ -562,21 +638,134 @@
             });
         };
 
-        // (handleAddChampionship, handleDeleteChampionship, handleAddNewRanking - sem alterações)
-        // Elas já usam `appState.userId` que agora é dinâmico.
-        const handleAddChampionship = async (e) => { /* ... (mesma função) ... */ };
-        const handleDeleteChampionship = async (champId) => { /* ... (mesma função) ... */ };
-        const handleAddNewRanking = async () => { /* ... (mesma função) ... */ };
+        const handleAddChampionship = async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('championship-name-input');
+            const button = document.getElementById('add-championship-btn');
+            const champName = input.value.trim();
+            if (!champName) return;
+
+            const rankingId = document.getElementById('ranking-select').value;
+            if (!rankingId) {
+                showModal("Erro", "Nenhum ranking foi selecionado. Crie um ranking primeiro.");
+                return;
+            }
+
+            button.disabled = true;
+            button.lastChild.textContent = "Criando...";
+
+            const pointsConfig = {
+                goldWinner: parseInt(document.getElementById('points-gold-winner').value) || 0,
+                goldRunnerUp: parseInt(document.getElementById('points-gold-runnerup').value) || 0,
+                silverWinner: parseInt(document.getElementById('points-silver-winner').value) || 0,
+                silverRunnerUp: parseInt(document.getElementById('points-silver-runnerup').value) || 0,
+                participation: parseInt(document.getElementById('points-participation').value) || 0
+            };
+
+            try {
+                const batch = writeBatch(db);
+
+                const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
+                const newChampRef = doc(champCollectionRef);
+                const champDataRef = doc(db, 'users', appState.userId, 'championships', newChampRef.id, 'data', 'main');
+
+                batch.set(newChampRef, {
+                    name: champName,
+                    createdAt: Timestamp.now(),
+                    status: 'registration',
+                    winnerGold: null,
+                    winnerSilver: null,
+                    pointsConfig: pointsConfig, 
+                    rankingId: rankingId 
+                });
+
+                batch.set(champDataRef, {
+                    players: [],
+                    groups: [],
+                    goldBracket: [],
+                    silverBracket: [],
+                    status: 'registration'
+                });
+
+                await batch.commit();
+
+                input.value = '';
+                showModal("Sucesso!", `Campeonato "${champName}" criado e vinculado ao ranking.`);
+            } catch (error) {
+                console.error("Erro ao criar campeonato:", error);
+                showModal("Erro", "Não foi possível criar o campeonato.");
+            }
+
+            button.disabled = false;
+            button.lastChild.textContent = "Criar Campeonato";
+        };
+
+        const handleDeleteChampionship = async (champId) => {
+            const champ = championships.find(c => c.id === champId);
+            if (window.prompt(`Para confirmar, digite o nome do campeonato: "${champ.name}"`) !== champ.name) {
+                showModal("Cancelado", "A exclusão foi cancelada.");
+                return;
+            }
+
+            try {
+                await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main'));
+                await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId));
+            } catch (error) {
+                console.error("Erro ao excluir campeonato:", error);
+                showModal("Erro", "Não foi possível excluir o campeonato.");
+            }
+        };
+
+        const handleAddNewRanking = async () => {
+            const name = prompt("Nome do novo ranking (ex: Temporada 2025):");
+            if (!name || name.trim() === '') return;
+
+            const id = name.trim().toLowerCase()
+                .replace(/\s+/g, '-') 
+                .replace(/[^a-z0-9-]/g, ''); 
+
+            if (!id) {
+                showModal("Erro", "Nome inválido. Use letras e números.");
+                return;
+            }
+
+            if (allRankings.find(r => r.id === id || r.name.toLowerCase() === name.trim().toLowerCase())) {
+                showModal("Erro", "Um ranking com esse nome ou ID já existe.");
+                return;
+            }
+
+            const newRanking = { id, name: name.trim() };
+            const newList = [...allRankings, newRanking];
+
+            try {
+                await setDoc(doc(db, 'users', appState.userId, 'app_data', 'rankings'), { list: newList });
+                showModal("Sucesso!", `Ranking "${name.trim()}" foi criado.`);
+            } catch (error) {
+                console.error("Erro ao criar ranking:", error);
+                showModal("Erro", "Não foi possível salvar o novo ranking.");
+            }
+        };
 
         /* =============================================================================
             TELA 2: Ranking Global
            ============================================================================= */
 
         const renderGlobalRanking = () => {
-            // ... (lógica de sortedPlayers e rankingsHtml sem alteração) ...
             const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
-            const rankingsHtml = sortedPlayers.length === 0 ? `<tr>...</tr>` : sortedPlayers.map(/*...*/).join('');
-            
+
+            const rankingsHtml = sortedPlayers.length === 0
+                ? `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhum jogador neste ranking.</td></tr>`
+                : sortedPlayers.map((player, index) => `
+                <tr class="border-b border-gray-100 animate-fade-in-sm">
+                    <td class="p-3 sm:p-4 font-bold text-lg text-blue-600">${index + 1}º</td>
+                    <td class="p-3 sm:p-4 font-medium text-gray-800">${player.name}</td>
+                    <td class="p-3 sm:p-4 font-bold text-xl text-yellow-600">${player.points || 0}</td>
+                    <td class="p-3 sm:p-4 text-center text-green-600">${player.goldWins || 0}</td>
+                    <td class="p-3 sm:p-4 text-center text-gray-600">${player.silverWins || 0}</td>
+                    <td class="p-3 sm:p-4 text-center text-red-600">${player.coveiroWins || 0}</td>
+                </tr>
+            `).join('');
+
             const rankingsOptions = allRankings.map(r => 
                 `<option value="${r.id}" ${r.id === appState.currentRankingId ? 'selected' : ''}>
                     ${r.name}
@@ -592,7 +781,6 @@
             </button>
             `;
 
-            // Botão Gerar PDF (sem alteração)
             const printButtonHtml = `
                 <button id="print-ranking-pdf-btn" class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg shadow-sm transition-all" title="Gerar PDF do Ranking">
                     ${icons.fileDown}
@@ -611,17 +799,32 @@
                     </div>
                 </div>
             `;
-            
-            // ... (resto do HTML da tela de Ranking sem alteração) ...
+
             mainContent.innerHTML = `
-                <div class="bg-white rounded-2xl ...">
-                    ...
+                <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200">
+                    <h2 class="text-3xl font-bold mb-6 text-blue-600 flex items-center gap-3">
+                        ${icons.award} Ranking Geral
+                    </h2>
+                    
                     ${rankingSelectorHtml}
-                    ...
-                    <tbody class="divide-y divide-gray-200">
-                        ${rankingsHtml}
-                    </tbody>
-                    ...
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-max text-left">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="p-3 sm:p-4 rounded-tl-lg text-gray-600">Pos.</th>
+                                    <th class="p-3 sm:p-4 text-gray-600">Jogador</th>
+                                    <th class="p-3 sm:p-4 text-gray-600">Pontos</th>
+                                    <th class="p-3 sm:p-4 text-center text-gray-600">${icons.trophy} Ouro</th>
+                                    <th class="p-3 sm:p-4 text-center text-gray-600">${icons.trophy} Prata</th>
+                                    <th class="p-3 sm:p-4 text-center rounded-tr-lg text-gray-600">${icons.shovelSmall} Coveiro</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                ${rankingsHtml}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             `;
 
@@ -637,11 +840,70 @@
             const printRankingBtn = document.getElementById('print-ranking-pdf-btn');
             if (printRankingBtn) printRankingBtn.addEventListener('click', handlePrintRankingPDF);
         };
-        
-        // (renderRankingManagementModal, handleDeleteRanking, handleViewRankingChange - sem alterações)
-        const renderRankingManagementModal = () => { /* ... (mesma função) ... */ };
-        const handleDeleteRanking = async (rankingId, rankingName) => { /* ... (mesma função) ... */ };
-        const handleViewRankingChange = (e) => { /* ... (mesma função) ... */ };
+
+        const renderRankingManagementModal = () => {
+            const rankingsHtml = allRankings.map(r => {
+                const inUse = championships.find(c => c.rankingId === r.id);
+                const deleteBtn = inUse ? 
+                    `<span class="text-xs text-gray-500" title="Em uso pelo camp: ${inUse.name}">Em uso</span>` :
+                    `<button class="delete-ranking-btn text-red-600 hover:text-red-700" data-id="${r.id}" data-name="${r.name}">${icons.trash}</button>`;
+
+                return `
+                <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
+                    <span class="text-gray-800 font-medium">${r.name}</span>
+                    ${deleteBtn}
+                </div>
+                `;
+            }).join('');
+
+            const modalContent = `
+                <p class="text-sm text-gray-500 mb-4">Você só pode excluir rankings que não estão sendo usados por nenhum campeonato.</p>
+                <div class="space-y-2">
+                    ${rankingsHtml.length > 0 ? rankingsHtml : '<p>Nenhum ranking criado.</p>'}
+                </div>
+            `;
+
+            showModal("Gerenciar Rankings", modalContent);
+
+            document.querySelectorAll('.delete-ranking-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const name = e.currentTarget.dataset.name;
+                    handleDeleteRanking(id, name);
+                });
+            });
+        };
+
+        const handleDeleteRanking = async (rankingId, rankingName) => {
+            if (!confirm(`Tem certeza que deseja excluir o ranking "${rankingName}"? Esta ação não pode ser desfeita.`)) {
+                return;
+            }
+
+            const inUse = championships.find(c => c.rankingId === rankingId);
+            if (inUse) {
+                showModal("Erro", `Não é possível excluir. Este ranking está em uso pelo campeonato "${inUse.name}".`);
+                return;
+            }
+
+            const newList = allRankings.filter(r => r.id !== rankingId);
+
+            try {
+                await setDoc(doc(db, 'users', appState.userId, 'app_data', 'rankings'), { list: newList });
+                hideModal();
+            } catch (error) {
+                console.error("Erro ao excluir ranking:", error);
+                showModal("Erro", "Não foi possível excluir o ranking.");
+            }
+        };
+
+        const handleViewRankingChange = (e) => {
+            const newRankingId = e.target.value;
+            appState.currentRankingId = newRankingId;
+            globalPlayers = []; 
+
+            render(); 
+            listenToGlobalPlayers();
+        };
 
         /* =============================================================================
             TELA 3: Visão do Campeonato
@@ -649,7 +911,12 @@
 
         const renderChampionshipView = () => {
             if (!activeChampionship) {
-                // ... (spinner de carregamento, sem mudança) ...
+                mainContent.innerHTML = `
+                <div class="text-center py-20 animate-fade-in">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
+                    <p class="mt-4 text-gray-500">Carregando campeonato...</p>
+                </div>
+                `;
                 return;
             }
 
@@ -688,20 +955,15 @@
             // =================================================================
             // === MUDANÇA: Lógica de renderização simplificada (sem `isAdmin`)
             // =================================================================
-            // Passa `isReadOnly` para as funções
             const isFinished = champInfo?.status === 'finished';
 
             if (isFinished) {
-                // Se finalizado, mostra grupos e chaves, ambos no modo "leitura"
                 html = topButtonsHtml + renderGroupStage(true) + renderKnockoutView(true);
             } else if (activeChampionship.status === 'knockout') {
-                // Se no mata-mata, mostra grupos (leitura) e chaves (edição)
                 html = topButtonsHtml + renderGroupStage(true) + renderKnockoutView(false);
             } else if (activeChampionship.status === 'groups') {
-                // Se nos grupos, mostra grupos (edição)
                 html = topButtonsHtml + renderGroupStage(false);
             } else { // 'registration'
-                // Se no registro, mostra registro (edição)
                 html = topButtonsHtml + renderPlayerRegistration();
             }
 
@@ -711,7 +973,6 @@
             // === MUDANÇA: Re-attach de TODOS os listeners (sem `isAdmin`)
             // =================================================================
 
-            // Listeners de Registro
             if (activeChampionship.status === 'registration') {
                 const addExistingForm = document.getElementById('add-existing-player-form');
                 if (addExistingForm) addExistingForm.addEventListener('submit', handleAddExistingPlayerToChampionship);
@@ -727,15 +988,12 @@
                 if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship);
             }
 
-            // Listeners da Fase de Grupos
             if (activeChampionship.status === 'groups' || activeChampionship.status === 'knockout' || isFinished) {
                 
-                // Listener de Impressão (para todos, mesmo telão se acessado por admin)
                 document.querySelectorAll('.print-group-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => handlePrintGroup(e.currentTarget.dataset.groupIndex));
                 });
 
-                // Listeners de Admin (Confirmação de placar)
                 document.querySelectorAll('.confirm-group-score-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const { groupIndex, matchIndex } = e.currentTarget.dataset;
@@ -749,7 +1007,6 @@
                 }
             }
 
-            // Listeners do Mata-Mata
             if (activeChampionship.status === 'knockout' || isFinished) {
                 document.querySelectorAll('.confirm-knockout-score-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
@@ -759,7 +1016,6 @@
                 });
             }
 
-            // Listeners dos Botões do Topo (PDF e Telão)
             const launchTelaoBtn = document.getElementById('launch-telao-btn');
             if (launchTelaoBtn) launchTelaoBtn.addEventListener('click', handleLaunchTelao);
 
@@ -775,7 +1031,6 @@
             // =================================================================
             // === MUDANÇA: Trava de `isAdmin` REMOVIDA. A segurança é feita nas Regras do Firestore.
             // =================================================================
-            // if (!appState.isAdmin) { ... } // REMOVIDO
             
             try {
                 const champDataRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId, 'data', 'main');
@@ -792,7 +1047,7 @@
             // === MUDANÇA: Lógica de `deleteButton` e `addPlayerFormHtml` simplificada (sem `isAdmin`)
             // =================================================================
             const playersListHtml = activeChampionship.players.length === 0
-                ? `<p ...>Nenhum jogador...</p>`
+                ? `<p class="text-gray-500 text-center py-4">Nenhum jogador cadastrado neste torneio.</p>`
                 : activeChampionship.players.map(player => {
                     const deleteButton = `
                     <button class="delete-player-btn text-red-600 hover:text-red-700 transition-colors" data-id="${player.id}">
@@ -807,7 +1062,6 @@
                     `
                 }).join('');
 
-            // ... (lógica de `canGenerate` e `generateButtonHtml` sem alteração, já não usava `isAdmin`) ...
             const playerCount = activeChampionship.players.length;
             const isMultipleOfFour = playerCount % 4 === 0;
             const minPlayersForGroups = 4;
@@ -816,34 +1070,80 @@
             const generateButtonHtml = playerCount >= minPlayersForGroups
                 ? `
                 <div class="mt-8 text-center">
-                    <button id="generate-champ-btn" ... ${!canGenerate ? 'disabled' : ''}>
-                        ...
+                    <button
+                        id="generate-champ-btn"
+                        type="button"
+                        ${!canGenerate ? 'disabled' : ''}
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
+                        ${icons.swords}
+                        Gerar Grupos
                     </button>
-                    ${!canGenerate ? `<p class="text-red-600 ...">O campeonato requer um número de jogadores múltiplo de 4...</p>` : ''}
+                    ${!canGenerate ? `<p class="text-red-600 text-sm mt-3">O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.</p>` : ''}
                 </div>
-                ` : `<p ...>Mínimo de ${minPlayersForGroups} jogadores...</p>`;
+                ` : `<p class="text-gray-500 text-sm mt-3 text-center">Mínimo de ${minPlayersForGroups} jogadores para começar.</p>`;
 
-            // ... (lógica de `availablePlayersFromRanking` e `existingPlayersOptions` sem alteração) ...
             const playersInTournamentIds = new Set(activeChampionship.players.map(p => p.id));
             const availablePlayersFromRanking = globalPlayers.filter(p => !playersInTournamentIds.has(p.id));
-            const existingPlayersOptions = availablePlayersFromRanking.length > 0 ? /*...*/ : '...';
+
+            const existingPlayersOptions = availablePlayersFromRanking.length > 0
+                ? availablePlayersFromRanking.map(p => `<option value="${p.id}">${p.name}</option>`).join('')
+                : '<option disabled>Nenhum jogador disponível no ranking</option>';
+
 
             const addPlayerFormHtml = `
             <div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                
                 <form id="add-existing-player-form">
-                    </form>
+                    <label for="existing-player-select" class="block text-sm font-medium text-gray-700 mb-1">Adicionar do Ranking</label>
+                    <div class="flex gap-2">
+                        <select id="existing-player-select" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500" ${availablePlayersFromRanking.length === 0 ? 'disabled' : ''}>
+                            ${existingPlayersOptions}
+                        </select>
+                        <button
+                            type="submit"
+                            id="add-existing-player-btn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            ${availablePlayersFromRanking.length === 0 ? 'disabled' : ''}>
+                            ${icons.plus}
+                        </button>
+                    </div>
+                </form>
+
                 <form id="add-new-player-form">
-                    </form>
+                    <label for="new-player-name-input" class="block text-sm font-medium text-gray-700 mb-1">Adicionar Novo Jogador</label>
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            id="new-player-name-input"
+                            placeholder="Nome do Novo Jogador"
+                            class="flex-grow bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                            type="submit"
+                            id="add-new-player-btn"
+                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                            ${icons.plus}
+                        </button>
+                    </div>
+                </form>
             </div>
             `;
 
             return `
                 <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200">
+                    
                     ${addPlayerFormHtml}
+
                     <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200">
-                        <h3 ...>Jogadores Inscritos (${playerCount})</h3>
-                        <div ...>${playersListHtml}</div>
+                        <h3 class="text-xl font-semibold mb-4 text-blue-600 flex items-center gap-2">
+                            ${icons.users}
+                            Jogadores Inscritos (${playerCount})
+                        </h3>
+                        <div class="max-h-96 overflow-y-auto pr-2 space-y-2">
+                            ${playersListHtml}
+                        </div>
                     </div>
+                    
                     ${generateButtonHtml}
                 </div>
             `;
@@ -868,26 +1168,31 @@
 
                     return `
                     <div class="bg-gray-100 p-3 sm:p-4 rounded-lg border border-gray-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+                            <span class="text-sm text-gray-700 text-center sm:text-left">${match.names[0]}</span>
+                            <span class="font-bold text-blue-600">vs</span>
+                            <span class="text-sm text-gray-700 text-center sm:text-right">${match.names[1]}</span>
+                        </div>
                         <div class="flex justify-center items-center gap-3 mt-3">
                             <input
                                 type="number"
-                                ...
+                                min="0"
                                 value="${score1 === null ? '' : score1}"
                                 id="g-${groupIndex}-m-${matchIndex}-s0" 
-                                class="... ${isDisabled ? 'opacity-70' : ''}"
+                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDisabled ? 'opacity-70' : ''}"
                                 ${isDisabled}
                             />
                             <span class="text-gray-500">-</span>
                             <input
                                 type="number"
-                                ...
+                                min="0"
                                 value="${score2 === null ? '' : score2}"
                                 id="g-${groupIndex}-m-${matchIndex}-s1"
-                                class="... ${isDisabled ? 'opacity-70' : ''}"
+                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDisabled ? 'opacity-70' : ''}"
                                 ${isDisabled}
                             />
                             <button 
-                                class="confirm-group-score-btn ... ${isHidden}"
+                                class="confirm-group-score-btn p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all ${isHidden}"
                                 data-group-index="${groupIndex}"
                                 data-match-index="${matchIndex}"
                                 title="Confirmar Placar">
@@ -898,14 +1203,44 @@
                     `;
                 }).join('');
 
-                const rankingsHtml = rankings.map(/* ... */).join('');
-                const printButton = `...`; // (sem alteração)
+                const rankingsHtml = rankings.map((player, rankIndex) => `
+                    <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-green-600' : 'text-yellow-600'}">
+                        <td class="p-3 font-bold">${rankIndex + 1}º</td>
+                        <td class="p-3 text-gray-800">${player.name}</td>
+                        <td class="p-3 font-bold">${player.gamesWon}</td>
+                    </tr>
+                `).join('');
+
+                const printButton = `
+                    <button class="print-group-btn bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm" data-group-index="${groupIndex}">
+                        ${icons.printer}
+                    </button>
+                `;
 
                 return `
                 <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in border border-gray-200">
+                    <div class="flex justify-between items-center mb-5">
+                        <h3 class="text-2xl font-bold text-blue-600">Grupo ${groupIndex + 1}</h3>
+                        ${printButton}
+                    </div>
                     <div class="space-y-4 mb-6">${matchesHtml}</div>
                     <div>
+                        <h4 class="text-lg font-semibold mb-3 text-gray-800">Ranking do Grupo</h4>
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="p-3 rounded-l-lg text-gray-600">Pos.</th>
+                                    <th class="p-3 text-gray-600">Jogador</th>
+                                    <th class="p-3 rounded-r-lg text-gray-600">Games Vencidos</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rankingsHtml}</tbody>
+                        </table>
+                        <div class="flex justify-between mt-2 text-sm">
+                            <span class="text-green-600">▲ Dupla Ouro</span>
+                            <span class="text-yellow-600">▼ Dupla Prata</span>
                         </div>
+                    </div>
                 </div>
                 `;
             }).join('');
@@ -919,7 +1254,7 @@
                     id="finalize-groups-btn"
                     type="button"
                     ${!allScoresFilled ? 'disabled' : ''}
-                    class="bg-green-600 hover:bg-green-700 text-white ... disabled:opacity-50">
+                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
                     ${icons.trophy}
                     ${allScoresFilled ? "Finalizar Grupos e Gerar Chaves" : "Preencha todos os placares"}
                 </button>
@@ -940,64 +1275,124 @@
             const goldHtml = renderBracket('Série Ouro', activeChampionship.goldBracket, 'goldBracket', isFinished);
             const silverHtml = renderBracket('Série Prata', activeChampionship.silverBracket, 'silverBracket', isFinished);
             
-            // ... (lógica do Coveiro sem alteração) ...
-            let coveiroHtml = ''; 
-            // ...
+            let coveiroHtml = '';
+            if (activeChampionship.groups && activeChampionship.groups.length > 0) {
+                const stats = getGlobalTournamentStats(activeChampionship);
+
+                if (stats.length > 0) {
+                    const minGames = stats[0].gamesWon;
+                    const coveiros = stats.filter(p => p.gamesWon === minGames); // Pega todos que empataram em último
+                    const coveiroNames = coveiros.map(c => c.name).join(' / ');
+
+                    coveiroHtml = `
+                    <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl mt-8 text-center animate-fade-in border border-gray-200">
+                        <h4 class="text-2xl font-black uppercase tracking-wider text-red-600">Prêmio Coveiro</h4>
+                        <p class="text-4xl font-extrabold text-red-800 mt-2">${coveiroNames}</p>
+                        <p class="text-sm text-gray-500">Com apenas ${minGames} games marcados no torneio.</p>
+                    </div>
+                    `;
+                }
+            }
             return `<div class="animate-fade-in">${goldHtml}${silverHtml}${coveiroHtml}</div>`;
         };
 
         // (ADMIN) -- Helper: Renderiza uma Chave (Bracket) --
         const renderBracket = (title, bracket, bracketType, isFinished) => {
-            // ... (lógica de `rounds`, `maxRound`, `championHtml` sem alteração) ...
             const rounds = {};
-            if (!bracket || bracket.length === 0) { /* ... (retorna msg 'chave não gerada') ... */ }
-            bracket.forEach(match => { /* ... */ });
+            if (!bracket || bracket.length === 0) {
+                return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
+                        <h3 class="text-3xl font-bold mb-6 text-blue-600 flex items-center gap-3">
+                             ${title}
+                        </h3>
+                        <p class="text-gray-500">Chave ainda não gerada. É necessário 4, 8, 16 ou 32 duplas.</p>
+                     </div>`;
+            }
+
+            bracket.forEach(match => {
+                if (!rounds[match.round]) rounds[match.round] = [];
+                rounds[match.round].push(match);
+            });
+
             const maxRound = Math.max(...bracket.map(m => m.round));
             const final = bracket.find(m => m.round === maxRound);
             const champion = final?.winner; 
-            const championHtml = champion ? `...` : ''; // (HTML do campeão sem alteração)
 
+            const isGold = bracketType === 'goldBracket';
+            const cardStyle = isGold 
+                ? 'bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 text-gray-900' // Gold Style
+                : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900'; // Silver Style
+            const championNameStyle = isGold ? 'text-4xl font-extrabold text-gray-900' : 'text-4xl font-extrabold text-gray-800';
+
+            const championHtml = champion ? `
+            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
+                <h4 class="text-xl font-black uppercase tracking-wider text-white">Campeões</h4>
+                <p class="${championNameStyle}">${champion.name}</p>
+            </div>
+            ` : '';
 
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
-                // ... (lógica de `roundTitle` sem alteração) ...
-                const roundTitle = /* ... */;
+                const roundTitle = Number(roundNum) === maxRound ? 'Final'
+                    : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
+                    : Number(roundNum) === maxRound - 2 ? 'Quartas de Final'
+                    : `Rodada ${roundNum}`;
 
                 const matchesHtml = rounds[roundNum].map(match => {
                     const pair1 = match.pairs[0]; 
                     const pair2 = match.pairs[1]; 
-                    // ... (lógica de `isPair1Winner`, `score1`, etc. sem alteração) ...
+                    const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
+                    const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
                     
                     // =================================================================
                     // === MUDANÇA: Lógica de 'disabled' simplificada (sem `isAdmin`)
                     // =================================================================
+                    // Desabilita se não tiver duplas, se o torneio acabou, ou se a partida já tem vencedor
                     const isDisabled = (!pair1 || !pair2 || isFinished || match.winner) ? 'disabled' : '';
                     const isHidden = (!pair1 || !pair2 || isFinished || match.winner) ? 'hidden' : '';
 
                     return `
                     <div class="bg-gray-100 rounded-lg shadow-sm border border-gray-200 p-4">
                         <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-sm ${isPair1Winner ? 'text-green-600 font-bold' : 'text-gray-800'}">
+                                ${pair1 ? pair1.name : 'Aguardando...'}
+                            </span>
                             <input
-                                type="number" ...
+                                type="number"
+                                min="0"
+                                value="${score1 === null ? '' : score1}"
                                 id="k-${match.id}-s0"
-                                class="... ${isDisabled ? 'opacity-70' : ''}"
+                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDisabled ? 'opacity-70' : ''}"
                                 ${isDisabled}
                             />
                         </div>
                         
+                        <div class="flex items-center my-2">
+                            <div class="flex-grow border-t border-gray-300"></div>
+                            <span class="mx-2 text-xs text-gray-500">vs</span>
+                            <div class="flex-grow border-t border-gray-300"></div>
+                        </div>
+
                         <div class="flex justify-between items-center">
+                            <span class="font-medium text-sm ${isPair2Winner ? 'text-green-600 font-bold' : 'text-gray-800'}">
+                                ${pair2 ? pair2.name : 'Aguardando...'}
+                            </span>
                             <input
-                                type="number" ...
+                                type="number"
+                                min="0"
+                                value="${score2 === null ? '' : score2}"
                                 id="k-${match.id}-s1"
-                                class="... ${isDisabled ? 'opacity-70' : ''}"
+                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDisabled ? 'opacity-70' : ''}"
                                 ${isDisabled}
                             />
                         </div>
                         
                         <div class="text-center mt-3 ${isHidden}">
                             <button 
-                                class="confirm-knockout-score-btn ..."
+                                class="confirm-knockout-score-btn p-2 w-full bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all"
                                 data-bracket-type="${bracketType}"
-                                data-match-id="${match.id}">
+                                data-match-id="${match.id}"
+                                title="Confirmar Placar">
                                 ${icons.check}
                             </button>
                         </div>
@@ -1013,10 +1408,11 @@
                 `;
             }).join('');
             
-            // ... (resto do HTML de `renderBracket` sem alteração) ...
             return `
             <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
-                <h3 ...>${title}</h3>
+                <h3 class="text-3xl font-bold mb-6 text-blue-600">
+                    ${title}
+                </h3>
                 ${championHtml}
                 <div class="flex gap-4 sm:gap-6 pb-4 overflow-x-auto">
                     ${roundsHtml}
@@ -1028,15 +1424,268 @@
         /* =============================================================================
             TELA 4: Visão do Telão (READ-ONLY)
            ============================================================================= */
-        
-        // (Todas as funções `renderTelaoView`, `renderPlayerRegistration_ReadOnly`, 
-        // `renderGroupStage_ReadOnly`, e `renderBracket_ReadOnly` permanecem as mesmas.
-        // Elas já eram "read-only" e não dependiam de `appState.isAdmin`.)
-        const renderTelaoView = () => { /* ... (mesma função) ... */ };
-        const renderPlayerRegistration_ReadOnly = () => { /* ... (mesma função) ... */ };
-        const renderGroupStage_ReadOnly = () => { /* ... (mesma função) ... */ };
-        const renderKnockoutView_ReadOnly = (isFinished) => { /* ... (mesma função) ... */ };
-        const renderBracket_ReadOnly = (title, bracket, bracketType, isFinished) => { /* ... (mesma função) ... */ };
+
+        const renderTelaoView = () => {
+             if (!activeChampionship) {
+                mainContent.innerHTML = `
+                <div class="text-center py-20 animate-fade-in">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
+                    <p class="mt-4 text-gray-500">Aguardando dados do torneio...</p>
+                </div>
+                `;
+                return;
+            }
+
+            const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+            const champName = champInfo ? champInfo.name : "Campeonato";
+
+            let html = `<h1 class="text-4xl sm:text-6xl font-bold text-center text-blue-600 my-8 animate-fade-in">${champName}</h1>`;
+
+            let contentHtml = '';
+            if (champInfo?.status === 'finished') {
+                contentHtml = renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(true);
+            } else if (activeChampionship.status === 'knockout') {
+                contentHtml = renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(false);
+            } else if (activeChampionship.status === 'groups') {
+                contentHtml = renderGroupStage_ReadOnly();
+            } else { // 'registration'
+                contentHtml = renderPlayerRegistration_ReadOnly();
+            }
+
+            if (activeChampionship.status !== 'registration') {
+                html += `
+                <div class="flex flex-wrap justify-center gap-6 animate-fade-in">
+                    ${contentHtml}
+                </div>
+                `;
+            } else {
+                html += contentHtml;
+            }
+
+            mainContent.innerHTML = html;
+
+            if (appState.isTelaoMode) {
+                 document.body.style.backgroundColor = '#F7F7F7';
+            }
+        };
+
+        const renderPlayerRegistration_ReadOnly = () => {
+            const playerCount = activeChampionship.players.length;
+
+            const playersListHtml = playerCount === 0
+                ? `<p class="text-gray-500 text-center py-4 text-2xl">Aguardando inscrição dos jogadores...</p>`
+                : activeChampionship.players.map(player => `
+                <div class="bg-white p-4 rounded-lg animate-fade-in-sm border border-gray-200 shadow-sm">
+                    <span class="text-gray-800 font-medium text-2xl">${player.name}</span>
+                </div>
+            `).join('');
+
+            return `
+                <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12 animate-fade-in max-w-4xl mx-auto border border-gray-200">
+                    <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8 border border-gray-200">
+                        <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-blue-600 flex items-center gap-3">
+                            ${icons.users}
+                            Jogadores Inscritos (${playerCount})
+                        </h3>
+                        <div class="max-h-[70vh] overflow-y-auto pr-2 space-y-3">
+                            ${playersListHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderGroupStage_ReadOnly = () => {
+            const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
+                const rankings = getRankings(group);
+
+                const matchesHtml = group.matches.map((match, matchIndex) => {
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
+
+                    return `
+                    <div class="bg-gray-100 p-3 sm:p-4 rounded-lg border border-gray-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+                            <span class="text-base text-gray-700 text-center sm:text-left">${match.names[0]}</span>
+                            <span class="font-bold text-blue-600">vs</span>
+                            <span class="text-base text-gray-700 text-center sm:text-right">${match.names[1]}</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-3 mt-3">
+                            <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
+                                ${score1 === null ? '-' : score1}
+                            </span>
+                            <span class="text-gray-500 text-xl">-</span>
+                             <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
+                                ${score2 === null ? '-' : score2}
+                            </span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+                const rankingsHtml = rankings.map((player, rankIndex) => `
+                    <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-green-600' : 'text-yellow-600'}">
+                        <td class="p-3 font-bold text-lg">${rankIndex + 1}º</td>
+                        <td class="p-3 text-lg text-gray-800">${player.name}</td>
+                        <td class="p-3 font-bold text-lg">${player.gamesWon}</td>
+                    </tr>
+                `).join('');
+
+                return `
+                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:max-w-sm border border-gray-200">
+                    <div class="flex justify-between items-center mb-5">
+                        <h3 class="text-3xl font-bold text-blue-600">Grupo ${groupIndex + 1}</h3>
+                    </div>
+                    <div class="space-y-4 mb-6">${matchesHtml}</div>
+                    <div>
+                        <h4 class="text-xl font-semibold mb-3 text-gray-800">Ranking do Grupo</h4>
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="p-3 rounded-l-lg text-base text-gray-600">Pos.</th>
+                                    <th class="p-3 text-base text-gray-600">Jogador</th>
+                                    <th class="p-3 rounded-r-lg text-base text-gray-600">Games Vencidos</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rankingsHtml}</tbody>
+                        </table>
+                        <div class="flex justify-between mt-2 text-base">
+                            <span class="text-green-600">▲ Dupla Ouro</span>
+                            <span class="text-yellow-600">▼ Dupla Prata</span>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            return groupsHtml; // Retorna a string de cards diretamente
+        };
+
+        const renderKnockoutView_ReadOnly = (isFinished) => {
+            const goldHtml = renderBracket_ReadOnly('Série Ouro', activeChampionship.goldBracket, 'goldBracket', isFinished);
+            const silverHtml = renderBracket_ReadOnly('Série Prata', activeChampionship.silverBracket, 'silverBracket', isFinished);
+
+            let coveiroHtml = '';
+            if (activeChampionship.groups && activeChampionship.groups.length > 0) {
+                const stats = getGlobalTournamentStats(activeChampionship);
+
+                if (stats.length > 0) {
+                    const minGames = stats[0].gamesWon;
+                    const coveiros = stats.filter(p => p.gamesWon === minGames);
+                    const coveiroNames = coveiros.map(c => c.name).join(' / ');
+
+                    coveiroHtml = `
+                    <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl text-center animate-fade-in w-full sm:max-w-sm border border-gray-200">
+                        <h4 class="text-2xl font-black uppercase tracking-wider text-red-600">Prêmio Coveiro</h4>
+                        <p class="text-4xl font-extrabold text-red-800 mt-2">${coveiroNames}</p>
+                        <p class="text-sm text-gray-500">Com apenas ${minGames} games marcados no torneio.</p>
+                    </div>
+                    `;
+                }
+            }
+
+            return goldHtml + silverHtml + coveiroHtml; // Retorna a string de cards diretamente
+        };
+
+        const renderBracket_ReadOnly = (title, bracket, bracketType, isFinished) => {
+            const rounds = {};
+            if (!bracket || bracket.length === 0) {
+                 return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
+                       <h3 class="text-3xl font-bold mb-6 text-blue-600">
+                             ${title}
+                       </h3>
+                       <p class="text-gray-500">Chave ainda não gerada.</p>
+                     </div>`;
+            }
+
+            bracket.forEach(match => {
+                if (!rounds[match.round]) rounds[match.round] = [];
+                rounds[match.round].push(match);
+            });
+
+            const maxRound = Math.max(...bracket.map(m => m.round));
+            const final = bracket.find(m => m.round === maxRound);
+            const champion = final?.winner; 
+
+            const isGold = bracketType === 'goldBracket';
+            const cardStyle = isGold 
+                ? 'bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 text-gray-900' // Gold Style
+                : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900'; // Silver Style
+            const championNameStyle = isGold ? 'text-4xl font-extrabold text-gray-900' : 'text-4xl font-extrabold text-gray-800';
+
+            const championHtml = champion ? `
+            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
+                <h4 class="text-xl font-black uppercase tracking-wider text-white">Campeões</h4>
+                <p class="${championNameStyle}">${champion.name}</p>
+            </div>
+            ` : '';
+
+            const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
+                const roundTitle = Number(roundNum) === maxRound ? 'Final'
+                    : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
+                    : Number(roundNum) === maxRound - 2 ? 'Quartas de Final'
+                    : `Rodada ${roundNum}`;
+
+                const matchesHtml = rounds[roundNum].map(match => {
+                    const pair1 = match.pairs[0]; 
+                    const pair2 = match.pairs[1]; 
+                    const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
+                    const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
+
+                    const winnerClass1 = isPair1Winner ? 'text-green-600 font-bold' : 'text-gray-800';
+                    const winnerClass2 = isPair2Winner ? 'text-green-600 font-bold' : 'text-gray-800';
+
+                    return `
+                    <div class="bg-gray-100 rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-lg ${winnerClass1}">
+                                ${pair1 ? pair1.name : 'Aguardando...'}
+                            </span>
+                            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
+                                ${score1 === null ? '-' : score1}
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center my-2">
+                            <div class="flex-grow border-t border-gray-300"></div>
+                            <span class="mx-2 text-sm text-gray-500">vs</span>
+                            <div class="flex-grow border-t border-gray-300"></div>
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-lg ${winnerClass2}">
+                                ${pair2 ? pair2.name : 'Aguardando...'}
+                            </span>
+                            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
+                                ${score2 === null ? '-' : score2}
+                            </span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+                return `
+                <div class="flex flex-col space-y-6 w-full max-w-xs">
+                    <h4 class="text-xl font-semibold text-gray-800">${roundTitle}</h4>
+                    ${matchesHtml}
+                </div>
+                `;
+            }).join('');
+
+            return `
+            <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
+                <h3 class="text-3xl font-bold mb-6 text-blue-600">
+                    ${title}
+                </h3>
+                ${championHtml}
+                <div class="flex flex-wrap justify-center gap-4 sm:gap-6 pb-4">
+                    ${roundsHtml}
+                </div>
+            </div>
+            `;
+        };
 
 
         /* =============================================================================
@@ -1060,37 +1709,859 @@
             window.open(url, '_blank');
         };
 
-        // (Todas as funções `handle...` de admin abaixo permanecem as mesmas)
-        // Elas já usam `saveActiveChampionship` ou `setDoc` com `appState.userId`,
-        // que agora é o UID dinâmico do usuário logado. As travas `isAdmin` já
-        // estavam nos `render...` (que removemos) ou em `saveActiveChampionship` (que removemos).
-        const handleAddNewPlayerToChampionship = async (e) => { /* ... (mesma função) ... */ };
-        const handleAddExistingPlayerToChampionship = async (e) => { /* ... (mesma função) ... */ };
-        const handleDeletePlayerFromChampionship = async (playerId) => { /* ... (mesma função) ... */ };
-        const handleGenerateChampionship = async () => { /* ... (mesma função) ... */ };
-        const handleConfirmGroupScore = (groupIndex, matchIndex) => { /* ... (mesma função) ... */ };
-        const handlePrintGroup = (groupIndex) => { /* ... (mesma função) ... */ };
-        const handleFinalizeGroups = async () => { /* ... (mesma função) ... */ };
-        const handleConfirmKnockoutScore = async (bracketType, matchId) => { /* ... (mesma função) ... */ };
+        const handleAddNewPlayerToChampionship = async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('new-player-name-input');
+            const button = document.getElementById('add-new-player-btn');
+            const playerName = input.value.trim();
+            if (!playerName) return;
+
+            const existingPlayerInRanking = globalPlayers.find(p => p.name.toLowerCase() === playerName.toLowerCase());
+            if (existingPlayerInRanking) {
+                showModal("Jogador Já Existe", `Um jogador chamado "${playerName}" já existe no ranking. Use o menu "Adicionar do Ranking" para adicioná-lo.`);
+                return;
+            }
+
+            const alreadyInTournament = activeChampionship.players.some(
+                p => p.name.toLowerCase() === playerName.toLowerCase()
+            );
+            if (alreadyInTournament) {
+                showModal("Duplicidade Detectada", `O jogador "${playerName}" já está inscrito neste torneio.`);
+                return;
+            }
+
+            button.disabled = true;
+
+            const newPlayer = {
+                id: crypto.randomUUID(), 
+                name: playerName
+            };
+
+            const newChampData = {
+                ...activeChampionship,
+                players: [...activeChampionship.players, newPlayer]
+            };
+
+            await saveActiveChampionship(newChampData);
+
+            input.value = '';
+            button.disabled = false;
+        };
+
+        const handleAddExistingPlayerToChampionship = async (e) => {
+            e.preventDefault();
+            const select = document.getElementById('existing-player-select');
+            const button = document.getElementById('add-existing-player-btn');
+            const playerId = select.value;
+
+            if (!playerId) {
+                showModal("Erro", "Nenhum jogador selecionado.");
+                return;
+            }
+
+            const player = globalPlayers.find(p => p.id === playerId);
+            if (!player) {
+                showModal("Erro", "Jogador não encontrado. Tente atualizar a página.");
+                return;
+            }
+
+            const alreadyInTournament = activeChampionship.players.some(
+                p => p.id === playerId
+            );
+            if (alreadyInTournament) {
+                showModal("Duplicidade Detectada", `O jogador "${player.name}" já está inscrito neste torneio.`);
+                return;
+            }
+
+
+            button.disabled = true;
+
+            const newChampData = {
+                ...activeChampionship,
+                players: [...activeChampionship.players, { id: player.id, name: player.name }]
+            };
+
+            await saveActiveChampionship(newChampData);
+
+            button.disabled = false;
+        };
+
+        const handleDeletePlayerFromChampionship = async (playerId) => {
+            if (!confirm("Tem certeza que deseja remover este jogador DO TORNEIO?")) return;
+
+            const newChampData = {
+                ...activeChampionship,
+                players: activeChampionship.players.filter(p => p.id !== playerId)
+            };
+            await saveActiveChampionship(newChampData);
+        };
+
+        const handleGenerateChampionship = async () => {
+            const playerCount = activeChampionship.players.length;
+            const isMultypleOfFour = playerCount % 4 === 0;
+
+            if (playerCount < 4 || !isMultypleOfFour) {
+                showModal("Número de Jogadores Inválido", `O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.`);
+                return;
+            }
+            const numDuplas = (playerCount / 4) * 2; 
+            if (![2, 4, 8, 16, 32].includes(numDuplas)) {
+                 showModal("Regra da Chave", `A regra atual de mata-mata só suporta 2, 4, 8, 16 ou 32 duplas. Você terá ${numDuplas} duplas. Por favor, ajuste o número de jogadores.`);
+                 return;
+            }
+
+
+            if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Isso criará ${playerCount / 4} grupos.`)) {
+                return;
+            }
+
+            try {
+                const shuffledPlayers = [...activeChampionship.players].sort(() => 0.5 - Math.random());
+                const newGroups = [];
+
+                for (let i = 0; i < shuffledPlayers.length; i += 4) {
+                    const groupPlayers = shuffledPlayers.slice(i, i + 4);
+                    const [p1, p2, p3, p4] = groupPlayers;
+
+                    newGroups.push({
+                        id: `group_${i / 4 + 1}`,
+                        players: groupPlayers,
+                        matches: [
+                            { id: 1, p: [p1.id, p2.id, p3.id, p4.id], names: [`${p1.name} / ${p2.name}`, `${p3.name} / ${p4.name}`], score: [null, null] },
+                            { id: 2, p: [p1.id, p3.id, p2.id, p4.id], names: [`${p1.name} / ${p3.name}`, `${p2.name} / ${p4.name}`], score: [null, null] },
+                            { id: 3, p: [p1.id, p4.id, p2.id, p3.id], names: [`${p1.name} / ${p4.name}`, `${p2.name} / ${p3.name}`], score: [null, null] },
+                        ]
+                    });
+                }
+
+                const newChampData = {
+                    ...activeChampionship,
+                    status: 'groups',
+                    groups: newGroups
+                };
+                await saveActiveChampionship(newChampData);
+
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                await setDoc(champRef, { status: 'groups' }, { merge: true });
+
+            } catch (error) {
+                console.error("Erro ao gerar campeonato:", error);
+                showModal("Erro", "Não foi possível gerar os grupos.");
+            }
+        };
+
+        const handleConfirmGroupScore = (groupIndex, matchIndex) => {
+            const val0 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s0`).value;
+            const val1 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s1`).value;
+
+            const score0 = val0 === '' ? null : parseInt(val0, 10);
+            const score1 = val1 === '' ? null : parseInt(val1, 10);
+
+            if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                return;
+            }
+
+            const newChampData = JSON.parse(JSON.stringify(activeChampionship));
+            newChampData.groups[groupIndex].matches[matchIndex].score[0] = score0;
+            newChampData.groups[groupIndex].matches[matchIndex].score[1] = score1;
+
+            saveActiveChampionship(newChampData); 
+        };
+
+        const handlePrintGroup = (groupIndex) => {
+            const group = activeChampionship.groups[groupIndex];
+            const champ = championships.find(c => c.id === appState.currentChampionshipId);
+            const champName = champ ? champ.name : "Torneio";
+
+            let matchesHtml = '';
+            group.matches.forEach((match, index) => {
+                matchesHtml += `
+                    <div class="match">
+                        <div class="team">${match.names[0]}</div>
+                        <div class="score-box"></div>
+                        <div class="vs">vs</div>
+                        <div class="score-box"></div>
+                        <div class="team">${match.names[1]}</div>
+                    </div>
+                `;
+            });
+
+            const playersHtml = group.players.map(p => `<li>${p.name}</li>`).join('');
+
+            const printStyles = `
+                <style>
+                    @page { margin: 20mm; }
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 0; 
+                        color: #000; 
+                        width: 100%;
+                    }
+                    h1 { text-align: center; font-size: 24px; margin-bottom: 5px; }
+                    h2 { text-align: center; font-size: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; margin-top: 0; }
+                    .players { margin-bottom: 20px; }
+                    .players h3 { font-size: 18px; margin-bottom: 5px; }
+                    .players ul { list-style: none; padding-left: 0; margin: 0; }
+                    .players li { font-size: 16px; }
+                    .match { 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: space-between; 
+                        padding: 20px 0; 
+                        border-bottom: 1px dashed #999; 
+                        page-break-inside: avoid;
+                    }
+                    .team { flex: 1; font-size: 18px; font-weight: bold; }
+                    .team:last-of-type { text-align: right; }
+                    .vs { font-size: 14px; font-weight: bold; margin: 0 10px; }
+                    .score-box {
+                        width: 60px;
+                        height: 40px;
+                        border: 2px solid #000;
+                        margin: 0 10px;
+                    }
+                </style>
+            `;
+
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Imprimir - ${champName} - Grupo ${groupIndex + 1}</title>
+                        ${printStyles}
+                    </head>
+                    <body>
+                        <h1>${champName}</h1>
+                        <h2>Grupo ${groupIndex + 1}</h2>
+                        <div class="players">
+                            <h3>Jogadores do Grupo:</h3>
+                            <ul>${playersHtml}</ul>
+                        </div>
+                        <h2>Jogos</h2>
+                        <div class="matches">
+                            ${matchesHtml}
+                        </div>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+
+            setTimeout(() => {
+                printWindow.print();
+            }, 250);
+        };
+
+        const handleFinalizeGroups = async () => {
+            if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata e bloquear os grupos.")) return;
+
+            let goldSeriesPairs = [];
+            let silverSeriesPairs = [];
+
+            activeChampionship.groups.forEach(group => {
+                const rankings = getRankings(group); // [p1, p2, p3, p4]
+
+                const goldPair = {
+                    id: `${rankings[0].id}_${rankings[1].id}`,
+                    name: `${rankings[0].name} / ${rankings[1].name}`,
+                    players: [rankings[0], rankings[1]] 
+                };
+                goldSeriesPairs.push(goldPair);
+
+                const silverPair = {
+                    id: `${rankings[2].id}_${rankings[3].id}`,
+                    name: `${rankings[2].name} / ${rankings[3].name}`,
+                    players: [rankings[2], rankings[3]]
+                };
+                silverSeriesPairs.push(silverPair);
+            });
+
+            if (![2, 4, 8, 16, 32].includes(goldSeriesPairs.length) || ![2, 4, 8, 16, 32].includes(silverSeriesPairs.length)) {
+                 showModal("Erro de Geração", `A regra atual de mata-mata (sem Byes) exige que o número de duplas seja 2, 4, 8, 16 ou 32. Chave Ouro tem ${goldSeriesPairs.length} e Prata tem ${silverSeriesPairs.length}. Ajuste o número de jogadores antes de finalizar.`);
+                 return;
+            }
+
+            try {
+                const goldBracket = createBracket(goldSeriesPairs);
+                const silverBracket = createBracket(silverSeriesPairs);
+
+                const newChampData = {
+                    ...activeChampionship,
+                    status: 'knockout',
+                    goldBracket: goldBracket,
+                    silverBracket: silverBracket,
+                };
+
+                await saveActiveChampionship(newChampData);
+
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                await setDoc(champRef, { status: 'knockout' }, { merge: true });
+
+            } catch (error) {
+                console.error("Erro ao finalizar grupos:", error);
+                showModal("Erro", "Ocorreu um erro ao gerar as chaves.");
+            }
+        };
+
+        const handleConfirmKnockoutScore = async (bracketType, matchId) => {
+            const val0 = document.getElementById(`k-${matchId}-s0`).value;
+            const val1 = document.getElementById(`k-${matchId}-s1`).value;
+
+            const score0 = val0 === '' ? null : parseInt(val0, 10);
+            const score1 = val1 === '' ? null : parseInt(val1, 10);
+
+            if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                return;
+            }
+            if (score0 === score1) {
+                showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
+                return;
+            }
+
+            const newChampData = JSON.parse(JSON.stringify(activeChampionship));
+            const bracketToUpdate = newChampData[bracketType];
+            const match = bracketToUpdate.find(m => m.id === matchId);
+
+            if (match) {
+                match.score[0] = score0;
+                match.score[1] = score1;
+
+                if (score0 > score1) match.winner = match.pairs[0]; 
+                else if (score1 > score0) match.winner = match.pairs[1];
+
+                if (match.winner && match.nextMatchId) {
+                    const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
+                    if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
+                }
+
+                await saveActiveChampionship(newChampData); 
+                await checkAndFinalizeChampionship(newChampData);
+            }
+        };
 
         /* =============================================================================
-            Lógica de Cálculo de Ranking (sem alterações)
+            Lógica de Cálculo de Ranking
            ============================================================================= */
-        // (Funções `checkAndFinalizeChampionship`, `updateGlobalRanking`, `getRankings`, 
-        // `getGlobalTournamentStats`, e `createBracket` permanecem as mesmas.
-        // Elas já estão parametrizadas para usar o `appState.userId` dinâmico.)
-        const checkAndFinalizeChampionship = async (champData) => { /* ... (mesma função) ... */ };
-        const updateGlobalRanking = async (champData, winners, pointsConfig, rankingId) => { /* ... (mesma função) ... */ };
-        const getRankings = (group) => { /* ... (mesma função) ... */ };
-        const getGlobalTournamentStats = (champData) => { /* ... (mesma função) ... */ };
-        const createBracket = (bracketPairs) => { /* ... (mesma função) ... */ };
+
+        const checkAndFinalizeChampionship = async (champData) => {
+            if (!champData.goldBracket || !champData.silverBracket || champData.goldBracket.length === 0 || champData.silverBracket.length === 0) {
+                return; 
+            }
+
+            const maxRoundGold = Math.max(...champData.goldBracket.map(m => m.round));
+            const maxRoundSilver = Math.max(...champData.silverBracket.map(m => m.round));
+
+            const goldFinal = champData.goldBracket.find(m => m.round === maxRoundGold);
+            const silverFinal = champData.silverBracket.find(m => m.round === maxRoundSilver);
+
+            const goldWinner = goldFinal?.winner; 
+            const silverWinner = silverFinal?.winner; 
+
+            if (goldWinner && silverWinner) {
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+
+                const champDoc = await getDoc(champRef);
+                if (!champDoc.exists()) return; 
+
+                const champDocData = champDoc.data();
+                const wasAlreadyFinished = (champDocData.status === 'finished');
+
+                const rankingId = champDocData.rankingId;
+                if (!rankingId) {
+                    showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
+                    console.error("Erro Crítico: Campeonato sem rankingId.");
+                    return;
+                }
+
+                try {
+                    const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
+                    const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
+
+                    const stats = getGlobalTournamentStats(champData);
+
+                    const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
+                    const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
+
+                    const effectivePoints = champDocData.pointsConfig || DEFAULT_RANKING_POINTS;
+
+                    await setDoc(champRef, {
+                        status: 'finished',
+                        winnerGold: goldWinner.name, 
+                        winnerSilver: silverWinner.name
+                    }, { merge: true });
+
+                    if (!wasAlreadyFinished) {
+                        showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+
+                        await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, effectivePoints, rankingId);
+
+                        hideModal();
+                        showModal("Sucesso!", `Ranking global atualizado! Campeões Ouro: ${goldWinner.name}. Campeões Prata: ${silverWinner.name}.`);
+                    } else {
+                         showModal("Placar Atualizado", `O placar final foi alterado. O ranking global NÃO foi recalculado para evitar duplicidade.`);
+                    }
+
+                } catch (error) {
+                    console.error("Erro ao finalizar e aplicar ranking:", error);
+                    showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes.");
+                }
+            }
+        };
+
+        const updateGlobalRanking = async (champData, winners, pointsConfig, rankingId) => {
+            await runTransaction(db, async (transaction) => {
+                const playerPointsMap = new Map();
+
+                // 1. CALCULAR PONTOS (Em memória)
+                for (const player of champData.players) {
+                    playerPointsMap.set(player.id, {
+                        name: player.name,
+                        points: pointsConfig.participation,
+                        goldWins: 0,
+                        silverWins: 0,
+                        coveiroWins: 0 
+                    });
+                }
+                if (winners.goldWinner) {
+                    for (const player of winners.goldWinner.players) {
+                        const p = playerPointsMap.get(player.id);
+                        if (p) { p.points += pointsConfig.goldWinner; p.goldWins = 1; }
+                    }
+                }
+                if (winners.goldRunnerUp) {
+                    for (const player of winners.goldRunnerUp.players) {
+                        const p = playerPointsMap.get(player.id);
+                         if (p) p.points += pointsConfig.goldRunnerUp;
+                    }
+                }
+                if (winners.silverWinner) {
+                    for (const player of winners.silverWinner.players) {
+                        const p = playerPointsMap.get(player.id);
+                         if (p) { p.points += pointsConfig.silverWinner; p.silverWins = 1; }
+                    }
+                }
+                if (winners.silverRunnerUp) {
+                     for (const player of winners.silverRunnerUp.players) {
+                        const p = playerPointsMap.get(player.id);
+                         if (p) p.points += pointsConfig.silverRunnerUp;
+                    }
+                }
+                if (winners.coveiros && winners.coveiros.length > 0) {
+                    for (const coveiro of winners.coveiros) {
+                        const p = playerPointsMap.get(coveiro.id);
+                        if (p) { p.coveiroWins = 1; }
+                    }
+                }
+
+
+                // 2. FASE DE LEITURA (Reads)
+                const playerDocsData = new Map();
+                for (const [playerId, data] of playerPointsMap.entries()) {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                    const playerDoc = await transaction.get(playerRef); 
+                    playerDocsData.set(playerId, playerDoc); 
+                }
+
+                // 3. FASE DE ESCRITA (Writes)
+                for (const [playerId, data] of playerPointsMap.entries()) {
+                    const playerDoc = playerDocsData.get(playerId); 
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
+
+                    if (!playerDoc.exists()) {
+                        transaction.set(playerRef, {
+                            name: data.name,
+                            points: data.points,
+                            goldWins: data.goldWins,
+                            silverWins: data.silverWins,
+                            coveiroWins: data.coveiroWins 
+                        });
+                    } else {
+                        const oldData = playerDoc.data();
+                        transaction.update(playerRef, {
+                            name: data.name, 
+                            points: (oldData.points || 0) + data.points,
+                            goldWins: (oldData.goldWins || 0) + data.goldWins,
+                            silverWins: (oldData.silverWins || 0) + data.silverWins,
+                            coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWins 
+                        });
+                    }
+                }
+            });
+        };
 
         /* =============================================================================
-            Funções de PDF (sem alterações)
+            Funções Utilitárias (Cálculos de Grupos e Chaves)
            ============================================================================= */
-        // (Funções `handlePrintRankingPDF` e `handlePrintChampionshipPDF` permanecem as mesmas)
-        const handlePrintRankingPDF = () => { /* ... (mesma função) ... */ };
-        const handlePrintChampionshipPDF = () => { /* ... (mesma função) ... */ };
+
+        const getRankings = (group) => {
+            const playerStats = {};
+            group.players.forEach(p => {
+                playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
+            });
+
+            group.matches.forEach(match => {
+                const [p1, p2, p3, p4] = match.p;
+                const [s1, s2] = match.score;
+
+                if (s1 !== null && !isNaN(s1)) {
+                    playerStats[p1].gamesWon += s1;
+                    playerStats[p2].gamesWon += s1;
+                }
+                if (s2 !== null && !isNaN(s2)) {
+                    playerStats[p3].gamesWon += s2;
+                    playerStats[p4].gamesWon += s2;
+                }
+            });
+
+            return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
+        };
+
+        const getGlobalTournamentStats = (champData) => {
+            const playerStats = {};
+
+            champData.players.forEach(p => {
+                playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
+            });
+
+            if (champData.groups) {
+                champData.groups.forEach(group => {
+                    group.matches.forEach(match => {
+                        const [p1, p2, p3, p4] = match.p;
+                        const [s1, s2] = match.score;
+
+                        if (s1 !== null && !isNaN(s1)) {
+                            if (playerStats[p1]) playerStats[p1].gamesWon += s1;
+                            if (playerStats[p2]) playerStats[p2].gamesWon += s1;
+                        }
+                        if (s2 !== null && !isNaN(s2)) {
+                            if (playerStats[p3]) playerStats[p3].gamesWon += s2;
+                            if (playerStats[p4]) playerStats[p4].gamesWon += s2;
+                        }
+                    });
+                });
+            }
+
+            const allKnockoutMatches = (champData.goldBracket || []).concat(champData.silverBracket || []);
+
+            allKnockoutMatches.forEach(match => {
+                const [pair1, pair2] = match.pairs;
+                const [s0, s1] = match.score;
+
+                if (s0 !== null && !isNaN(s0) && pair1 && pair1.players) {
+                    pair1.players.forEach(player => {
+                        if (playerStats[player.id]) {
+                            playerStats[player.id].gamesWon += s0;
+                        }
+                    });
+                }
+
+                if (s1 !== null && !isNaN(s1) && pair2 && pair2.players) {
+                    pair2.players.forEach(player => {
+                        if (playerStats[player.id]) {
+                            playerStats[player.id].gamesWon += s1;
+                        }
+                    });
+                }
+            });
+            return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
+        };
+
+
+        const createBracket = (bracketPairs) => {
+            const shuffledPairs = [...bracketPairs].sort(() => 0.5 - Math.random());
+            const bracket = [];
+            const numPairs = bracketPairs.length;
+
+            if (![2, 4, 8, 16, 32].includes(numPairs)) return [];
+
+            const numRounds = Math.log2(numPairs); 
+
+            for (let r = 1; r <= numRounds; r++) { 
+                const matchesInRound = numPairs / Math.pow(2, r); 
+
+                for (let m = 0; m < matchesInRound; m++) { 
+                    const matchId = `R${r}_M${m+1}`;
+                    let nextMatchId = null;
+                    let nextMatchSlot = null; 
+
+                    if (r < numRounds) { 
+                        const nextRoundMatchIndex = Math.floor(m / 2); 
+                        nextMatchId = `R${r+1}_M${nextRoundMatchIndex+1}`;
+                        nextMatchSlot = m % 2; 
+                    }
+
+                    const match = {
+                        id: matchId,
+                        round: r, 
+                        pairs: [null, null], 
+                        score: [null, null],
+                        winner: null,
+                        nextMatchId: nextMatchId,
+                        nextMatchSlot: nextMatchSlot,
+                    };
+
+                    if (r === 1) {
+                        const index1 = m * 2;
+                        const index2 = m * 2 + 1;
+                        match.pairs[0] = shuffledPairs[index1] || null;
+                        match.pairs[1] = shuffledPairs[index2] || null;
+                    }
+
+                    bracket.push(match);
+                }
+            }
+
+            return bracket;
+        };
+
+
+        /* =============================================================================
+            Funções de PDF
+           ============================================================================= */
+
+        const handlePrintRankingPDF = () => {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
+                return;
+            }
+
+            try {
+                const doc = new jsPDF();
+
+                const currentRanking = allRankings.find(r => r.id === appState.currentRankingId);
+                const rankingName = currentRanking ? currentRanking.name : "Ranking";
+                const title = `Ranking Geral: ${rankingName}`;
+
+                doc.setFontSize(18);
+                doc.text(title, 105, 22, { align: 'center' }); 
+
+                const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
+
+                const head = [['Pos.', 'Jogador', 'Pontos', 'Ouro', 'Prata', 'Coveiro']];
+                const body = sortedPlayers.map((p, index) => [
+                    `${index + 1}º`,
+                    p.name,
+                    p.points || 0,
+                    p.goldWins || 0,
+                    p.silverWins || 0,
+                    p.coveiroWins || 0
+                ]);
+
+                doc.autoTable({
+                    startY: 30,
+                    head: head,
+                    body: body,
+                    headStyles: { fillColor: [52, 152, 219] }, 
+                    styles: { halign: 'center', textColor: [31, 41, 55] },
+                    headStyles: { fillColor: [209, 213, 219], textColor: [75, 85, 99] },
+                    columnStyles: {
+                        1: { halign: 'left' } 
+                    }
+                });
+
+                doc.save(`ranking_${rankingName.toLowerCase().replace(/\s/g, '_')}.pdf`);
+
+            } catch (error) {
+                console.error("Erro ao gerar PDF do ranking:", error);
+                showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
+            }
+        };
+
+        const handlePrintChampionshipPDF = () => {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
+                return;
+            }
+
+            const champ = championships.find(c => c.id === appState.currentChampionshipId);
+            if (!champ || !activeChampionship) {
+                showModal("Erro", "Dados do campeonato não carregados.");
+                return;
+            }
+
+            try {
+                const doc = new jsPDF();
+                let yPos = 22; 
+
+                // 1. Título
+                doc.setFontSize(18);
+                doc.text(champ.name, 105, yPos, { align: 'center' });
+                yPos += 10;
+
+                // 2. Tabela de Resultados Finais
+                doc.setFontSize(14);
+                doc.text("Resultados Finais", 14, yPos);
+                yPos += 7;
+
+                const finalResults = [];
+                const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
+                const goldFinal = activeChampionship.goldBracket.find(m => m.round === maxRoundGold);
+                if (goldFinal?.winner) {
+                    finalResults.push(['Campeões Ouro', goldFinal.winner.name]);
+                    const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldFinal.winner.id);
+                    if (goldRunnerUp) finalResults.push(['Vice Ouro', goldRunnerUp.name]);
+                }
+                const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
+                const silverFinal = activeChampionship.silverBracket.find(m => m.round === maxRoundSilver);
+                if (silverFinal?.winner) {
+                    finalResults.push(['Campeões Prata', silverFinal.winner.name]);
+                    const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverFinal.winner.id);
+                    if (silverRunnerUp) finalResults.push(['Vice Prata', silverRunnerUp.name]);
+                }
+
+                const stats = getGlobalTournamentStats(activeChampionship);
+                if (stats.length > 0) {
+                    const minGames = stats[0].gamesWon;
+                    const coveiros = stats.filter(p => p.gamesWon === minGames);
+                    finalResults.push(['Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
+                }
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Prêmio', 'Dupla/Jogador']],
+                    body: finalResults,
+                    headStyles: { fillColor: [52, 73, 94], textColor: [255, 255, 255] },
+                    styles: { textColor: [31, 41, 55] },
+                    theme: 'striped',
+                });
+                yPos = doc.autoTable.previous.finalY + 10; 
+
+                // 3. Fase de Grupos (em nova página)
+                doc.addPage();
+                yPos = 22;
+                doc.setFontSize(18);
+                doc.text("Resultados da Fase de Grupos", 105, yPos, { align: 'center' });
+                yPos += 10;
+
+                activeChampionship.groups.forEach((group, index) => {
+                    if (yPos > 240) {
+                        doc.addPage();
+                        yPos = 22;
+                    }
+
+                    doc.setFontSize(14);
+                    doc.text(`Grupo ${index + 1}`, 14, yPos);
+                    yPos += 7;
+
+                    const matchesBody = group.matches.map(m => [
+                        m.names[0],
+                        `${m.score[0] === null ? '-' : m.score[0]} vs ${m.score[1] === null ? '-' : m.score[1]}`,
+                        m.names[1]
+                    ]);
+
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Dupla 1', 'Placar', 'Dupla 2']],
+                        body: matchesBody,
+                        headStyles: { fillColor: [52, 152, 219], textColor: [255, 255, 255] },
+                        styles: { halign: 'center', textColor: [31, 41, 55] },
+                        columnStyles: { 0: { halign: 'left' }, 2: { halign: 'right' } }
+                    });
+                    yPos = doc.autoTable.previous.finalY + 5;
+
+                    const rankings = getRankings(group);
+                    const rankingsBody = rankings.map((p, rIndex) => [
+                        `${rIndex + 1}º`,
+                        p.name,
+                        p.gamesWon
+                    ]);
+
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Pos.', 'Jogador', 'Games Vencidos']],
+                        body: rankingsBody,
+                        theme: 'grid',
+                        styles: { halign: 'center', fontSize: 9, textColor: [31, 41, 55] },
+                        headStyles: { fillColor: [209, 213, 219], textColor: [75, 85, 99], fontSize: 10 },
+                    });
+                    yPos = doc.autoTable.previous.finalY + 12;
+                });
+
+                // 4. Chaves (Mata-Mata)
+                if (yPos > 180) { 
+                    doc.addPage();
+                    yPos = 22;
+                } else {
+                    yPos += 5; 
+                }
+
+                doc.setFontSize(18);
+                doc.text("Resultados do Mata-Mata", 105, yPos, { align: 'center' });
+                yPos += 10;
+
+                doc.setFontSize(16);
+                doc.text("Série Ouro", 14, yPos);
+                yPos += 7;
+                const goldBody = activeChampionship.goldBracket.map(m => {
+                    const roundTitle = m.round === maxRoundGold ? 'Final'
+                        : m.round === maxRoundGold - 1 ? 'Semi-Final'
+                        : m.round === maxRoundGold - 2 ? 'Quartas' : `Rodada ${m.round}`;
+
+                    const pair1Name = m.pairs[0]?.name || '-';
+                    const pair2Name = m.pairs[1]?.name || '-';
+                    const score = m.score[0] === null || m.score[1] === null 
+                        ? ' - '
+                        : `${m.score[0]} vs ${m.score[1]}`;
+
+                    return [
+                        roundTitle,
+                        pair1Name,
+                        score,
+                        pair2Name
+                    ];
+                });
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Rodada', 'Dupla 1', 'Placar', 'Dupla 2']],
+                    body: goldBody,
+                    headStyles: { fillColor: [251, 191, 36], textColor: [31, 41, 55] }, // Dourado
+                    styles: { halign: 'center', textColor: [31, 41, 55] },
+                    columnStyles: { 1: { halign: 'left' }, 3: { halign: 'right' } }
+                });
+                yPos = doc.autoTable.previous.finalY + 10;
+
+                doc.setFontSize(16);
+                doc.text("Série Prata", 14, yPos);
+                yPos += 7;
+                const silverBody = activeChampionship.silverBracket.map(m => {
+                    const roundTitle = m.round === maxRoundSilver ? 'Final'
+                        : m.round === maxRoundSilver - 1 ? 'Semi-Final'
+                        : m.round === maxRoundSilver - 2 ? 'Quartas' : `Rodada ${m.round}`;
+
+                    const pair1Name = m.pairs[0]?.name || '-';
+                    const pair2Name = m.pairs[1]?.name || '-';
+                    const score = m.score[0] === null || m.score[1] === null 
+                        ? ' - '
+                        : `${m.score[0]} vs ${m.score[1]}`;
+
+                    return [
+                        roundTitle,
+                        pair1Name,
+                        score,
+                        pair2Name
+                    ];
+                });
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Rodada', 'Dupla 1', 'Placar', 'Dupla 2']],
+                    body: silverBody,
+                    headStyles: { fillColor: [156, 163, 175], textColor: [31, 41, 55] }, // Prata
+                    styles: { halign: 'center', textColor: [31, 41, 55] },
+                    columnStyles: { 1: { halign: 'left' }, 3: { halign: 'right' } }
+                });
+
+                // 5. Salvar
+                doc.save(`resultados_${champ.name.toLowerCase().replace(/\s/g, '_')}.pdf`);
+
+            } catch (error) {
+                 console.error("Erro ao gerar PDF do campeonato:", error);
+                showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
+            }
+        };
 
 
         /* =============================================================================
@@ -1098,20 +2569,127 @@
             MUDANÇA RADICAL AQUI
            ============================================================================= */
 
-        // (Os 4 listeners abaixo estão PERFEITOS como estão. Eles já leem
-        // `appState.userId` e `appState.currentRankingId` dinamicamente.
-        // Não precisamos mudar nada neles, apenas QUANDO eles são chamados.)
-        const listenToGlobalPlayers = () => { /* ... (mesma função) ... */ };
-        const listenToChampionships = () => { /* ... (mesma função) ... */ };
-        const listenToActiveChampionship = (champId) => { /* ... (mesma função) ... */ };
-        const listenToRankingsList = () => { /* ... (mesma função) ... */ };
+        const listenToGlobalPlayers = () => {
+            unsubscribeGlobalPlayers(); 
+
+            if (!appState.currentRankingId) {
+                globalPlayers = [];
+                if(appState.currentView === 'globalRanking') render();
+                return;
+            }
+
+            const playersCollectionRef = collection(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players');
+            const q = query(playersCollectionRef);
+
+            unsubscribeGlobalPlayers = onSnapshot(q, (querySnapshot) => {
+                globalPlayers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                if (appState.currentView === 'globalRanking') {
+                    render();
+                }
+                if (appState.currentView === 'championshipView' && activeChampionship?.status === 'registration') {
+                    render();
+                }
+
+            }, (error) => {
+                console.error(`Erro ao carregar ranking ${appState.currentRankingId}:`, error);
+                showModal("Erro", "Não foi possível carregar o ranking selecionado.");
+                globalPlayers = [];
+                if(appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') render();
+            });
+        };
+
+        const listenToChampionships = () => {
+            unsubscribeChampionships();
+            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
+            const q = query(champCollectionRef);
+
+            unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
+                championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                if (appState.currentView === 'championshipList') {
+                    render();
+                }
+                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
+                    render();
+                }
+
+            }, (error) => {
+                console.error("Erro ao carregar campeonatos:", error);
+                showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
+            });
+        };
+
+        const listenToActiveChampionship = (champId) => {
+            unsubscribeActiveChampionship();
+            const champDataRef = doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main');
+
+            unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    activeChampionship = { id: docSnap.id, ...docSnap.data() };
+                    render(); 
+                } else {
+                    showModal("Erro", "Não foi possível carregar os dados deste campeonato. (O doc 'data/main' não foi encontrado).");
+                    if (!appState.isTelaoMode) navigateTo('championshipList');
+                    else mainContent.innerHTML = `<h1 class="text-4xl text-red-500 text-center p-10">Erro: Campeonato não encontrado.</h1>`;
+                }
+            }, (error) => {
+                console.error("Erro ao carregar campeonato ativo:", error);
+                showModal("Erro", "Não foi possível carregar este campeonato. Verifique as regras do Firestore.");
+                if (!appState.isTelaoMode) navigateTo('championshipList');
+                else mainContent.innerHTML = `<h1 class="text-4xl text-red-500 text-center p-10">Erro de conexão.</h1>`;
+            });
+        };
+
+        const listenToRankingsList = () => {
+            unsubscribeRankingsList();
+            const rankingsDocRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
+
+            unsubscribeRankingsList = onSnapshot(rankingsDocRef, async (docSnap) => {
+                let list = [];
+                if (docSnap.exists()) {
+                    list = docSnap.data().list || [];
+                }
+
+                if (list.length === 0) {
+                    try {
+                        const defaultRanking = { id: "ranking_geral", name: "Ranking Geral" };
+                        await setDoc(rankingsDocRef, { list: [defaultRanking] });
+                        allRankings = [defaultRanking];
+                    } catch (error) {
+                        console.error("Erro ao criar ranking padrão:", error);
+                        showModal("Erro Crítico", "Não foi possível inicializar a lista de rankings.");
+                        return;
+                    }
+                } else {
+                    allRankings = list;
+                }
+
+                const selectedRankingExists = allRankings.some(r => r.id === appState.currentRankingId);
+
+                if ((!appState.currentRankingId || !selectedRankingExists) && allRankings.length > 0) {
+                    appState.currentRankingId = allRankings[0].id;
+                } else if (allRankings.length === 0) {
+                    appState.currentRankingId = null; // Nenhum ranking existe
+                }
+
+                listenToGlobalPlayers();
+
+                if (!appState.isTelaoMode) {
+                    render();
+                }
+
+            }, (error) => {
+                console.error("Erro ao carregar lista de rankings:", error);
+                showModal("Erro Crítico", "Não foi possível carregar a lista de rankings.");
+            });
+        };
 
         
         // =================================================================
         // === MUDANÇA: Novo Ponto de Entrada da Aplicação
         // =================================================================
         
-        // 1. Verifica os parâmetros da URL ANTES de tudo
         const urlParams = new URLSearchParams(window.location.search);
         const telaoChampId = urlParams.get('champId');
         const telaoUserId = urlParams.get('userId'); // O ID do dono da liga
@@ -1121,10 +2699,9 @@
             // --- FLUXO 1: MODO TELÃO ---
             
             appState.isTelaoMode = true;
-            appState.isAdmin = false; // Telão nunca é admin
+            appState.isAdmin = false; 
             appState.userId = telaoUserId; // Configura o app para LER os dados deste UserId
             
-            // Ajusta a UI para o modo telão
             const telaoStyles = document.createElement('style');
             telaoStyles.innerHTML = `
                 body { background-color: #F7F7F7; }
@@ -1133,23 +2710,19 @@
             `;
             document.head.appendChild(telaoStyles);
 
-            // Loga anonimamente para ter permissão de LEITURA
             signInAnonymously(auth).catch(error => {
                 console.error("Erro no login anônimo do Telão:", error);
                 showModal("Erro de Conexão", "Não foi possível conectar ao modo Telão.");
             });
             
-            // O listener de auth do Telão
             onAuthStateChanged(auth, (user) => {
-                if (user && user.isAnonymous) { // Espera o login anônimo funcionar
+                if (user && user.isAnonymous) { 
                     console.log("Modo Telão ativado. Lendo dados de:", telaoUserId);
                     userIdFooter.textContent = `Observando Liga: ${telaoUserId}`;
                     
-                    // Inicia os listeners para LER os dados do dono da liga
                     listenToChampionships();
-                    listenToRankingsList(); // Isso vai chamar listenToGlobalPlayers()
+                    listenToRankingsList(); 
                     
-                    // Navega para a tela do telão
                     navigateTo('telaoView', telaoChampId);
                 }
             });
@@ -1167,29 +2740,25 @@
                     appState.userId = user.uid; // ID dinâmico do usuário
                     userIdFooter.textContent = user.email; // Mostra o email
                     
-                    // Inicia os listeners para os dados DESTE usuário
                     listenToChampionships();
-                    listenToRankingsList(); // Isso vai chamar listenToGlobalPlayers()
+                    listenToRankingsList(); 
 
-                    // Navega para o app
                     if (appState.currentView === 'loading' || appState.currentView === 'auth') {
                         navigateTo('championshipList');
                     } else {
-                        render(); // Apenas renderiza (ex: F5 na página)
+                        render(); 
                     }
 
                 } else {
                     // --- Usuário está DESLOGADO ---
                     
-                    // Se o usuário era anônimo (do telão) e saiu, ou se o login falhou
                     if (user && user.isAnonymous) {
-                        signOut(auth); // Desloga o anônimo se ele cair aqui por engano
+                        signOut(auth); 
                     }
                     
                     appState.userId = null;
                     userIdFooter.textContent = "Desconectado";
                     
-                    // Para todos os listeners e limpa dados locais
                     unsubscribeChampionships();
                     unsubscribeGlobalPlayers();
                     unsubscribeActiveChampionship();
@@ -1199,7 +2768,6 @@
                     allRankings = [];
                     activeChampionship = null;
 
-                    // Força a ida para a tela de login/registro
                     navigateTo('auth');
                 }
             });
