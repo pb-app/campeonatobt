@@ -4,38 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ranking Beach Tennis</title>
-    
-    <link rel="manifest" href="manifest.webmanifest">
-    
-    <meta name="theme-color" content="#3B82F6">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Ranking BT">
-    
-    <link rel="apple-touch-icon" href="icon-192.png">
 
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#3B82F6">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* (Estilos CSS - sem alterações significativas) */
+        /* Estilos personalizados */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #F7F7F7;
-            color: #1F2937;
+            background-color: #F7F7F7; /* Fundo Quase Branco (Light Gray) */
+            color: #1F2937; /* Cor do Texto Principal (Gray-800) */
         }
+
+        /* Animação de fade-in */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        .animate-fade-in-sm { animation: fadeIn 0.3s ease-out forwards; }
-        .hidden { display: none; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #E5E7EB; }
-        ::-webkit-scrollbar-thumb { background: #9CA3AF; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6B7280; }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        .animate-fade-in-sm {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        /* Para esconder elementos */
+        .hidden {
+            display: none;
+        }
+
+        /* Melhorias no Scrollbar (Opcional - Mantém escuro para contraste) */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #E5E7EB; /* bg-gray-200 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #9CA3AF; /* bg-gray-400 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6B7280; /* bg-gray-500 */
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -47,7 +65,7 @@
                 Ranking Beach Tennis
             </h1>
             <div id="header-buttons" class="flex gap-3">
-                </div>
+            </div>
         </header>
 
         <div id="loading-spinner" class="text-center py-20">
@@ -56,11 +74,11 @@
         </div>
 
         <main id="main-content" class="hidden">
-            </main>
+        </main>
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
-            <p>Usuário: <span id="user-id-footer">Carregando...</span></p>
-            <p>App de Ranking v6.1 (Público/Global)</p>
+            <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
+            <p>App de Ranking v4.0.4 (Final)</p>
         </footer>
 
     </div>
@@ -85,7 +103,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('service-worker.js')
+          navigator.serviceWorker.register('/campeonatobt/service-worker.js')
             .then(registration => {
               console.log('Service Worker registrado com sucesso:', registration.scope);
             })
@@ -95,91 +113,112 @@
         });
       }
     </script>
-
     <script type="module">
         // Importações do Firebase SDK
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        
+        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
             getAuth, 
-            onAuthStateChanged,
-            createUserWithEmailAndPassword,
-            signInWithEmailAndPassword,
-            signOut,
-            signInAnonymously // MUDANÇA v6.0: Login anônimo para VISITANTES
+            signInAnonymously, 
+            onAuthStateChanged 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        
         import { 
             getFirestore, 
             doc, 
             setDoc, 
             onSnapshot, 
             collection, 
+            addDoc, 
+            deleteDoc, 
             query,
             Timestamp,
             getDoc,
             writeBatch,
-            runTransaction,
-            deleteDoc // Adicionado para deletar
+            runTransaction
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         /* =============================================================================
             Configuração do Firebase (Fornecida pelo usuário)
            ============================================================================= */
         const firebaseConfig = {
-            apiKey: "AIzaSyDeS-rk8OJKhghv1djVucmR3-erOa-ppMY",
-            authDomain: "campeonato-sortudo.firebaseapp.com",
-            projectId: "campeonato-sortudo",
-            storageBucket: "campeonato-sortudo.firebasestorage.app",
-            messagingSenderId: "706083235199",
-            appId: "1:706083235199:web:5eca6041bb817401ee264a"
+          apiKey: "AIzaSyDeS-rk8OJKhghv1djVucmR3-erOa-ppMY",
+          authDomain: "campeonato-sortudo.firebaseapp.com",
+          projectId: "campeonato-sortudo",
+          storageBucket: "campeonato-sortudo.firebasestorage.app",
+          messagingSenderId: "706083235199",
+          appId: "1:706083235199:web:5eca6041bb817401ee264a"
         };
-        
+
         // Inicialização do Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        setLogLevel('debug'); 
+
+        /* =============================================================================
+            ID Mestre e Senha de Admin
+           ============================================================================= */
+        const MESTRE_USER_ID = "campeonato-sortudo-admin";
+
+        // ==========================================
+        // === MUDE SUA SENHA DE ADMIN AQUI ===
+        // ==========================================
+        const ADMIN_PASSWORD = "mudar123"; 
 
         /* =============================================================================
             Estado Global do Aplicativo
            ============================================================================= */
         let appState = {
-            // MUDANÇA v6.0: userId pode ser de um Admin (logado) ou de um Visitante (anônimo)
-            userId: null,
-            isAdmin: false, // Só é 'true' se o login NÃO for anônimo
-            
-            // MUDANÇA v6.0: A view inicial é 'loading', onAuthStateChanged decide
-            currentView: 'loading', // 'loading', 'auth', 'championshipList', 'championshipView', 'globalRanking'
+            userId: null, // Será preenchido com o MESTRE_USER_ID
+            isAuthReady: false,
+            isAdmin: false, 
+            isTelaoMode: false,
+            currentView: 'loading', // 'loading', 'login', 'championshipList', 'championshipView', 'globalRanking', 'telaoView'
             currentChampionshipId: null,
-            currentRankingId: null,
+            currentRankingId: null, // ID do ranking sendo visualizado/editado
         };
 
-        let allRankings = []; 
-        let championships = []; 
-        let globalPlayers = []; 
-        let activeChampionship = null; 
+        let allRankings = []; // Lista de todos os rankings (ex: [{id: 'geral', name: 'Ranking Geral'}])
+        let championships = []; // Lista de todos os campeonatos
+        let globalPlayers = []; // Lista de jogadores DO RANKING ATUALMENTE SELECIONADO (appState.currentRankingId)
+        let activeChampionship = null; // Dados do campeonato selecionado
 
+        // Listeners do Firebase (para poder "desligar" ao trocar de tela)
         let unsubscribeRankingsList = () => {}; 
         let unsubscribeChampionships = () => {}; 
         let unsubscribeGlobalPlayers = () => {}; 
         let unsubscribeActiveChampionship = () => {}; 
 
         /* =============================================================================
-            Referências do DOM e Constantes (Ícones)
+            Referências do DOM
            ============================================================================= */
-        // (Referências do DOM - sem alterações)
+        const appContainer = document.getElementById('app-container');
         const mainContent = document.getElementById('main-content');
         const loadingSpinner = document.getElementById('loading-spinner');
         const headerButtons = document.getElementById('header-buttons');
         const userIdFooter = document.getElementById('user-id-footer');
+
+        // Modal
         const modal = document.getElementById('modal');
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
         const modalCloseBtn = document.getElementById('modal-close-btn');
         const modalCloseIcon = document.getElementById('modal-close-icon');
 
-        // (DEFAULT_RANKING_POINTS e icons - sem alterações)
-        const DEFAULT_RANKING_POINTS = { GOLD_WINNER: 100, GOLD_RUNNERUP: 70, SILVER_WINNER: 40, SILVER_RUNNERUP: 20, PARTICIPATION: 5 };
+        /* =============================================================================
+            Constantes de Pontuação (Padrão)
+           ============================================================================= */
+        // Usado como fallback e valores padrão dos inputs
+        const DEFAULT_RANKING_POINTS = {
+            GOLD_WINNER: 100,
+            GOLD_RUNNERUP: 70,
+            SILVER_WINNER: 40,
+            SILVER_RUNNERUP: 20,
+            PARTICIPATION: 5
+        };
+
+        /* =============================================================================
+            Ícones SVG (Reutilizados)
+           ============================================================================= */
         const icons = {
             users: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
             plus: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
