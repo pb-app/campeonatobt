@@ -623,11 +623,11 @@
                 const batch = writeBatch(db);
 
                 // 1. Cria a referência para o NOVO doc de campeonato
-                const champCollectionRef = collection(db, 'leagues', appState.userId, 'championships');
+                const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
                 const newChampRef = doc(champCollectionRef);
 
                 // 2. Cria a referência para o doc de dados aninhado
-                const champDataRef = doc(db, 'leagues', appState.userId, 'championships', newChampRef.id, 'data', 'main');
+                const champDataRef = doc(db, 'users', appState.userId, 'championships', newChampRef.id, 'data', 'main');
 
                 // 3. Adiciona os dados ao batch
                 batch.set(newChampRef, {
@@ -672,9 +672,9 @@
 
             try {
                 // Deleta o documento de dados
-                await deleteDoc(doc(db, 'leagues', appState.userId, 'championships', champId, 'data', 'main'));
+                await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main'));
                 // Deleta o documento principal
-                await deleteDoc(doc(db, 'leagues', appState.userId, 'championships', champId));
+                await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId));
             } catch (error) {
                 console.error("Erro ao excluir campeonato:", error);
                 showModal("Erro", "Não foi possível excluir o campeonato.");
@@ -709,7 +709,7 @@
 
             try {
                 // Salva a lista atualizada no documento 'rankings'
-                await setDoc(doc(db, 'leagues', appState.userId, 'app_data', 'rankings'), { list: newList });
+                await setDoc(doc(db, 'users', appState.userId, 'app_data', 'rankings'), { list: newList });
                 showModal("Sucesso!", `Ranking "${name.trim()}" foi criado.`);
                 // O listener 'listenToRankingsList' vai atualizar a UI automaticamente
             } catch (error) {
@@ -855,7 +855,7 @@
             const newList = allRankings.filter(r => r.id !== rankingId);
 
             try {
-                await setDoc(doc(db, 'leagues', appState.userId, 'app_data', 'rankings'), { list: newList });
+                await setDoc(doc(db, 'users', appState.userId, 'app_data', 'rankings'), { list: newList });
                 hideModal();
             } catch (error) {
                 console.error("Erro ao excluir ranking:", error);
@@ -1014,7 +1014,7 @@
                 return;
             }
             try {
-                const champDataRef = doc(db, 'leagues', appState.userId, 'championships', appState.currentChampionshipId, 'data', 'main');
+                const champDataRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId, 'data', 'main');
                 await setDoc(champDataRef, newChampData);
             } catch (error) {
                 console.error("Erro ao salvar campeonato:", error);
@@ -1837,7 +1837,7 @@
                 await saveActiveChampionship(newChampData);
 
                 // Atualiza o status principal do campeonato (para a lista)
-                const champRef = doc(db, 'leagues', appState.userId, 'championships', appState.currentChampionshipId);
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
                 await setDoc(champRef, { status: 'groups' }, { merge: true });
 
             } catch (error) {
@@ -1993,7 +1993,7 @@
 
                 await saveActiveChampionship(newChampData);
 
-                const champRef = doc(db, 'leagues', appState.userId, 'championships', appState.currentChampionshipId);
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
                 await setDoc(champRef, { status: 'knockout' }, { merge: true });
 
             } catch (error) {
@@ -2058,7 +2058,7 @@
             const silverWinner = silverFinal?.winner; 
 
             if (goldWinner && silverWinner) {
-                const champRef = doc(db, 'leagues', appState.userId, 'championships', appState.currentChampionshipId);
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
 
                 const champDoc = await getDoc(champRef);
                 if (!champDoc.exists()) return; 
@@ -2164,7 +2164,7 @@
                 // 2. FASE DE LEITURA (Reads - Deve ocorrer antes de qualquer write dentro da transação)
                 const playerDocsData = new Map();
                 for (const [playerId, data] of playerPointsMap.entries()) {
-                    const playerRef = doc(db, 'leagues', appState.userId, 'rankings', rankingId, 'players', playerId);
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
                     const playerDoc = await transaction.get(playerRef); // Leitura dentro da transação
                     playerDocsData.set(playerId, playerDoc); 
                 }
@@ -2172,7 +2172,7 @@
                 // 3. FASE DE ESCRITA (Writes)
                 for (const [playerId, data] of playerPointsMap.entries()) {
                     const playerDoc = playerDocsData.get(playerId); 
-                    const playerRef = doc(db, 'leagues', appState.userId, 'rankings', rankingId, 'players', playerId); 
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
 
                     if (!playerDoc.exists()) {
                         transaction.set(playerRef, {
@@ -2609,7 +2609,7 @@
             }
 
             // O caminho da coleção agora é dinâmico
-            const playersCollectionRef = collection(db, 'leagues', appState.userId, 'rankings', appState.currentRankingId, 'players');
+            const playersCollectionRef = collection(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players');
             const q = query(playersCollectionRef);
 
             unsubscribeGlobalPlayers = onSnapshot(q, (querySnapshot) => {
@@ -2633,7 +2633,7 @@
         const listenToChampionships = () => {
             unsubscribeChampionships();
             // Usa o appState.userId (que será o MESTRE_USER_ID)
-            const champCollectionRef = collection(db, 'leagues', appState.userId, 'championships');
+            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
             const q = query(champCollectionRef);
 
             unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
@@ -2655,7 +2655,7 @@
         const listenToActiveChampionship = (champId) => {
             unsubscribeActiveChampionship();
             // Usa o appState.userId (que será o MESTRE_USER_ID)
-            const champDataRef = doc(db, 'leagues', appState.userId, 'championships', champId, 'data', 'main');
+            const champDataRef = doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main');
 
             unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -2676,7 +2676,7 @@
 
         const listenToRankingsList = () => {
             unsubscribeRankingsList();
-            const rankingsDocRef = doc(db, 'leagues', appState.userId, 'app_data', 'rankings');
+            const rankingsDocRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
 
             unsubscribeRankingsList = onSnapshot(rankingsDocRef, async (docSnap) => {
                 let list = [];
