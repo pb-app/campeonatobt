@@ -60,7 +60,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>Usuário: <span id="user-id-footer">Carregando...</span></p>
-            <p>App de Ranking v6.0 (Público/Global)</p>
+            <p>App de Ranking v6.1 (Público/Global)</p>
         </footer>
 
     </div>
@@ -255,10 +255,10 @@
         };
 
         const navigateTo = (view, champId = null) => {
-            // MUDANÇA v6.0: Lógica de navegação simplificada. Apenas 'auth' requer `!appState.isAdmin`
-            if (!appState.isAdmin && view === 'auth') {
-                view = 'championshipList'; // Visitantes não podem ver a tela de login (eles são redirecionados para sair)
-            }
+            // =================================================================
+            // === CORREÇÃO v6.1: O bloco 'if' abaixo estava errado e foi removido.
+            // === Um visitante (não-admin) PRECISA poder navegar para 'auth'
+            // =================================================================
             
             appState.currentView = view;
             appState.currentChampionshipId = champId;
@@ -2026,7 +2026,7 @@
             MUDANÇA RADICAL v6.0
            ============================================================================= */
 
-        // MUDANÇA v6.0: Ouve a coleção global /ranking_players/{id}/players
+        // MUDANÇA v6.0: Ouve a coleção global /ranking_players
         const listenToGlobalPlayers = () => {
             unsubscribeGlobalPlayers(); 
 
