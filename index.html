@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ranking Beach Tennis</title>
+    <title>Ranking Beach Tennis 🎾</title>
 
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#3B82F6">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0891B2"> <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ranking BT">
     <link rel="apple-touch-icon" href="icon-192.png">
@@ -21,7 +20,7 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: #3B82F6;
+            background-color: #0891B2; /* Cor 'Mar' (cyan-600) */
             color: white;
             padding: 12px 20px;
             border-radius: 12px;
@@ -31,7 +30,7 @@
 
         #installBanner button {
             background-color: white;
-            color: #3B82F6;
+            color: #0891B2; /* Cor 'Mar' (cyan-600) */
             border: none;
             padding: 6px 12px;
             margin-left: 10px;
@@ -45,10 +44,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-
-    <!-- Banner de instalação -->
-    <div id="installBanner">
+<body class="bg-amber-50 min-h-screen"> <div id="installBanner">
         Instale o aplicativo para ter acesso rápido na tela inicial!
         <button id="installBtn">Instalar</button>
     </div>
@@ -93,7 +89,7 @@
         /* Estilos personalizados */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #F7F7F7; /* Fundo Quase Branco (Light Gray) */
+            /* Cor de fundo agora controlada pelo Tailwind no <body> */
             color: #1F2937; /* Cor do Texto Principal (Gray-800) */
         }
 
@@ -114,13 +110,13 @@
             display: none;
         }
 
-        /* Melhorias no Scrollbar (Opcional - Mantém escuro para contraste) */
+        /* Melhorias no Scrollbar (Mantém escuro para contraste) */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #E5E7EB; /* bg-gray-200 */
+            background: #FEF3C7; /* bg-amber-100 */
         }
         ::-webkit-scrollbar-thumb {
             background: #9CA3AF; /* bg-gray-400 */
@@ -131,20 +127,20 @@
         }
     </style>
 </head>
-<body class="text-gray-800">
+<body class="text-gray-900"> ```
 
-    <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+<div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
         <header class="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 gap-4 bg-white p-4 rounded-xl shadow-md">
-            <h1 class="text-3xl sm:text-4xl font-bold text-blue-600 text-center sm:text-left">
-                Ranking Beach Tennis
+            <h1 class="text-3xl sm:text-4xl font-bold text-cyan-600 text-center sm:text-left">
+                🏖️ Ranking Beach Tennis
             </h1>
             <div id="header-buttons" class="flex gap-3">
                 </div>
         </header>
 
         <div id="loading-spinner" class="text-center py-20">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
             <p class="mt-4 text-gray-500">Carregando dados...</p>
         </div>
 
@@ -158,10 +154,10 @@
 
     </div>
 
-    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full mx-auto animate-fade-in-sm">
             <div class="flex justify-between items-center mb-4">
-                <h3 id="modal-title" class="text-xl sm:text-2xl font-bold text-blue-600"></h3>
+                <h3 id="modal-title" class="text-xl sm:text-2xl font-bold text-cyan-600"></h3>
                 <button id="modal-close-icon" class="text-gray-500 hover:text-gray-900 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
@@ -169,7 +165,7 @@
             <div id="modal-message" class="text-gray-700 text-sm sm:text-base mb-6 max-h-60 overflow-y-auto"></div>
             <button
                 id="modal-close-btn"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50">
                 Entendi
             </button>
         </div>
@@ -277,10 +273,10 @@
             SILVER_RUNNERUP: 20,
             PARTICIPATION: 5
         };
-
-        /* =============================================================================
+      /* =============================================================================
            Ícones SVG (Reutilizados)
            ============================================================================= */
+        // Ícones permanecem os mesmos, exceto pelo ícone "medal" que foi atualizado
         const icons = {
             users: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
             plus: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
@@ -289,7 +285,7 @@
             trophy: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>',
             shield: '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block text-yellow-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
             shieldOff: '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block text-gray-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>',
-            medal: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-white"><path d="M12 16.5l4-2.3 4 2.3-1.5-4.6 3.5-3.4-4.6-.7-2-4.2-2 4.2-4.6.7 3.5 3.4L8 16.5z"></path><path d="M12 15l-4-2.3V7.9l4 2.3 4-2.3v4.8L12 15z"></path></svg>', 
+            // Ícone "medal" removido pois não estava sendo usado no renderBracket
             award: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>',
             arrowLeft: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
             eye: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
@@ -410,8 +406,8 @@
                 navHtml = `
                 <button
                     id="nav-to-ranking"
-                    class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                    ${icons.award}
+                    class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+                    🏆 ${icons.award}
                     Ranking Geral
                 </button>
                 `;
@@ -432,7 +428,7 @@
                     authHtml = `
                     <button
                         id="nav-to-login"
-                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+                        class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
                         ${icons.logOut}
                         Sair (Admin)
                     </button>
@@ -441,7 +437,7 @@
                     authHtml = `
                     <button
                         id="nav-to-login"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+                        class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
                         ${icons.logIn}
                         Login (Admin)
                     </button>
@@ -469,7 +465,7 @@
         const renderLogin = () => {
             mainContent.innerHTML = `
                 <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
-                    <h2 class="text-3xl font-bold text-center text-blue-600 mb-8">Bem-vindo(a)</h2>
+                    <h2 class="text-3xl font-bold text-center text-cyan-600 mb-8">Bem-vindo(a) 🎾</h2>
                     
                     <div class="space-y-4">
                         <button
@@ -481,7 +477,7 @@
                         
                         <button
                             id="admin-login-btn"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
+                            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
                             ${icons.logIn}
                             Modo Administrador
                         </button>
@@ -518,15 +514,16 @@
                 : sortedChampionships.map(champ => {
                     let statusColor = 'text-yellow-600';
                     let statusText = 'Em andamento';
-                    if (champ.status === 'registration') { statusColor = 'text-blue-600'; statusText = 'Em Inscrição'; }
-                    if (champ.status === 'finished') { statusColor = 'text-green-600'; statusText = 'Finalizado'; }
+                    if (champ.status === 'registration') { statusColor = 'text-cyan-600'; statusText = 'Em Inscrição'; }
+                    if (champ.status === 'finished') { statusColor = 'text-emerald-600'; statusText = 'Finalizado 🏅'; }
 
                     const ranking = allRankings.find(r => r.id === champ.rankingId);
-                    const rankingHtml = ranking ? `<span class="block text-xs text-yellow-600">${ranking.name}</span>` : '';
+                    // Cor 'Acento' (orange-500)
+                    const rankingHtml = ranking ? `<span class="block text-xs text-orange-600 font-medium">${ranking.name}</span>` : '';
 
                     const deleteButtonHtml = appState.isAdmin ? `
                     <button
-                        class="delete-champ-btn text-red-600 hover:text-red-700 transition-colors p-2 rounded-lg bg-gray-100"
+                        class="delete-champ-btn text-rose-600 hover:text-rose-700 transition-colors p-2 rounded-lg bg-gray-100"
                         data-id="${champ.id}">
                         ${icons.trash}
                     </button>` : '';
@@ -541,7 +538,7 @@
                         </div>
                         <div class="flex gap-2">
                              <button
-                                class="open-champ-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all flex items-center gap-2 text-sm"
+                                class="open-champ-btn bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all flex items-center gap-2 text-sm"
                                 data-id="${champ.id}">
                                 ${icons.eye} Ver
                             </button>
@@ -555,7 +552,7 @@
             const newChampionshipFormHtml = appState.isAdmin ? `
             <form id="add-championship-form">
                 <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8 border border-gray-200">
-                    <h2 class="text-2xl font-bold text-blue-600 mb-4">Novo Campeonato</h2>
+                    <h2 class="text-2xl font-bold text-cyan-600 mb-4">🎾 Novo Campeonato</h2>
                     
                     <div class="mb-4">
                         <label for="championship-name-input" class="block text-sm font-medium text-gray-700 mb-1">Nome do Campeonato</label>
@@ -563,7 +560,7 @@
                             type="text"
                             id="championship-name-input"
                             placeholder="ex: Torneio de Verão"
-                            class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                             required
                         />
                     </div>
@@ -571,10 +568,10 @@
                     <div class="mb-4">
                         <label for="ranking-select" class="block text-sm font-medium text-gray-700 mb-1">Vincular ao Ranking</label>
                         <div class="flex gap-2">
-                            <select id="ranking-select" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                            <select id="ranking-select" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500" required>
                                 ${rankingsOptions.length > 0 ? rankingsOptions : '<option disabled>Nenhum ranking encontrado...</option>'}
                             </select>
-                            <button type="button" id="add-new-ranking-btn" class="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg shadow-md transition-all">
+                            <button type="button" id="add-new-ranking-btn" class="flex-shrink-0 bg-cyan-600 hover:bg-cyan-700 text-white font-bold p-3 rounded-lg shadow-md transition-all">
                                 ${icons.plus}
                             </button>
                         </div>
@@ -584,17 +581,17 @@
                     <h3 class="text-lg font-semibold text-gray-700 mb-3">Configuração de Pontos</h3>
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
                         <div>
-                            <label for="points-gold-winner" class="block text-xs font-medium text-green-600 mb-1">Campeão Ouro</label>
+                            <label for="points-gold-winner" class="block text-xs font-medium text-emerald-600 mb-1">Campeão Ouro 🥇</label>
                             <input type="number" id="points-gold-winner" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_WINNER}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-gold-runnerup" class="block text-xs font-medium text-green-700 mb-1">Vice Ouro</label>
+                            <label for="points-gold-runnerup" class="block text-xs font-medium text-emerald-700 mb-1">Vice Ouro</label>
                             <input type="number" id="points-gold-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_RUNNERUP}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-silver-winner" class="block text-xs font-medium text-gray-600 mb-1">Campeão Prata</label>
+                            <label for="points-silver-winner" class="block text-xs font-medium text-gray-600 mb-1">Campeão Prata 🥈</label>
                             <input type="number" id="points-silver-winner" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_WINNER}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
@@ -613,7 +610,7 @@
                     <button
                         type="submit"
                         id="add-championship-btn"
-                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                         ${icons.plus}
                         <span>Criar Campeonato</span>
                     </button>
@@ -626,7 +623,7 @@
                     ${newChampionshipFormHtml}
 
                     <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border border-gray-200">
-                        <h3 class="text-2xl font-bold mb-5 text-blue-600">Histórico de Campeonatos</h3>
+                        <h3 class="text-2xl font-bold mb-5 text-cyan-600">Histórico de Campeonatos</h3>
                         <div class="max-h-[60vh] overflow-y-auto pr-2 space-y-3">
                             ${championshipsListHtml}
                         </div>
@@ -791,13 +788,13 @@
             const rankingsHtml = sortedPlayers.length === 0
                 ? `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhum jogador neste ranking.</td></tr>`
                 : sortedPlayers.map((player, index) => `
-                    <tr class="border-b border-gray-100 animate-fade-in-sm">
-                        <td class="p-3 sm:p-4 font-bold text-lg text-blue-600">${index + 1}º</td>
+                    <tr class="border-b border-amber-100 animate-fade-in-sm">
+                        <td class="p-3 sm:p-4 font-bold text-lg text-cyan-600">${index + 1}º</td>
                         <td class="p-3 sm:p-4 font-medium text-gray-800">${player.name}</td>
-                        <td class="p-3 sm:p-4 font-bold text-xl text-yellow-600">${player.points || 0}</td>
-                        <td class="p-3 sm:p-4 text-center text-green-600">${player.goldWins || 0}</td>
+                        <td class="p-3 sm:p-4 font-bold text-xl text-orange-600">${player.points || 0}</td>
+                        <td class="p-3 sm:p-4 text-center text-emerald-600">${player.goldWins || 0}</td>
                         <td class="p-3 sm:p-4 text-center text-gray-600">${player.silverWins || 0}</td>
-                        <td class="p-3 sm:p-4 text-center text-red-600">${player.coveiroWins || 0}</td>
+                        <td class="p-3 sm:p-4 text-center text-rose-600">${player.coveiroWins || 0}</td>
                     </tr>
                 `).join('');
 
@@ -815,7 +812,7 @@
 
             // Botão Gerar PDF
             const printButtonHtml = `
-                <button id="print-ranking-pdf-btn" class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg shadow-sm transition-all" title="Gerar PDF do Ranking">
+                <button id="print-ranking-pdf-btn" class="flex-shrink-0 bg-rose-600 hover:bg-rose-700 text-white font-bold p-3 rounded-lg shadow-sm transition-all" title="Gerar PDF do Ranking">
                     ${icons.fileDown}
                 </button>
             `;
@@ -824,7 +821,7 @@
                 <div class="mb-6">
                     <label for="ranking-view-select" class="block text-sm font-medium text-gray-700 mb-1">Visualizando Ranking:</label>
                     <div class="flex gap-2">
-                        <select id="ranking-view-select" class="w-full bg-white border border-gray-300 text-gray-800 rounded-lg p-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="ranking-view-select" class="w-full bg-white border border-gray-300 text-gray-800 rounded-lg p-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
                             ${rankingsOptions.length > 0 ? rankingsOptions : '<option disabled>Nenhum ranking...</option>'}
                         </select>
                         ${manageButtonHtml}
@@ -835,8 +832,8 @@
 
             mainContent.innerHTML = `
                 <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200">
-                    <h2 class="text-3xl font-bold mb-6 text-blue-600 flex items-center gap-3">
-                        ${icons.award} Ranking Geral
+                    <h2 class="text-3xl font-bold mb-6 text-cyan-600 flex items-center gap-3">
+                        🏆 ${icons.award} Ranking Geral
                     </h2>
                     
                     ${rankingSelectorHtml}
@@ -844,17 +841,15 @@
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-max text-left">
                             <thead>
-                                <tr class="bg-gray-100">
-                                    <th class="p-3 sm:p-4 rounded-tl-lg text-gray-600">Pos.</th>
+                                <tr class="bg-amber-100"> <th class="p-3 sm:p-4 rounded-tl-lg text-gray-600">Pos.</th>
                                     <th class="p-3 sm:p-4 text-gray-600">Jogador</th>
                                     <th class="p-3 sm:p-4 text-gray-600">Pontos</th>
-                                    <th class="p-3 sm:p-4 text-center text-gray-600">${icons.trophy} Ouro</th>
-                                    <th class="p-3 sm:p-4 text-center text-gray-600">${icons.trophy} Prata</th>
-                                    <th class="p-3 sm:p-4 text-center rounded-tr-lg text-gray-600">${icons.shovelSmall} Coveiro</th>
+                                    <th class="p-3 sm:p-4 text-center text-gray-600">🥇 Ouro</th>
+                                    <th class="p-3 sm:p-4 text-center text-gray-600">🥈 Prata</th>
+                                    <th class="p-3 sm:p-4 text-center rounded-tr-lg text-gray-600">👻 ${icons.shovelSmall}</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                ${rankingsHtml}
+                            <tbody class="divide-y divide-amber-100"> ${rankingsHtml}
                             </tbody>
                         </table>
                     </div>
@@ -876,7 +871,7 @@
                 const inUse = championships.find(c => c.rankingId === r.id);
                 const deleteBtn = inUse ? 
                     `<span class="text-xs text-gray-500" title="Em uso pelo camp: ${inUse.name}">Em uso</span>` :
-                    `<button class="delete-ranking-btn text-red-600 hover:text-red-700" data-id="${r.id}" data-name="${r.name}">${icons.trash}</button>`;
+                    `<button class="delete-ranking-btn text-rose-600 hover:text-rose-700" data-id="${r.id}" data-name="${r.name}">${icons.trash}</button>`;
 
                 return `
                 <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
@@ -945,7 +940,7 @@
             if (!activeChampionship) {
                 mainContent.innerHTML = `
                 <div class="text-center py-20 animate-fade-in">
-                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600 mx-auto"></div>
                     <p class="mt-4 text-gray-500">Carregando campeonato...</p>
                 </div>
                 `;
@@ -961,7 +956,7 @@
                 let pdfButtonHtml = '';
                 if (champInfo?.status === 'finished') {
                     pdfButtonHtml = `
-                        <button id="print-champ-pdf-btn" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2">
+                        <button id="print-champ-pdf-btn" class="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2">
                             ${icons.fileDown}
                             Gerar PDF
                         </button>
@@ -969,7 +964,7 @@
                 }
 
                 const telaoButtonHtml = `
-                    <button id="launch-telao-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2">
+                    <button id="launch-telao-btn" class="w-full sm:w-auto bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2">
                         ${icons.tv}
                         Abrir Telão
                     </button>
@@ -1092,12 +1087,12 @@
                 ? `<p class="text-gray-500 text-center py-4">Nenhum jogador cadastrado neste torneio.</p>`
                 : activeChampionship.players.map(player => {
                     const deleteButton = appState.isAdmin ? `
-                    <button class="delete-player-btn text-red-600 hover:text-red-700 transition-colors" data-id="${player.id}">
+                    <button class="delete-player-btn text-rose-600 hover:text-rose-700 transition-colors" data-id="${player.id}">
                         ${icons.trash}
                     </button>` : '';
 
                     return `
-                    <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg animate-fade-in-sm border border-gray-200">
+                    <div class="flex justify-between items-center bg-amber-50 p-3 rounded-lg animate-fade-in-sm border border-amber-200">
                         <span class="text-gray-800 font-medium">${player.name}</span>
                         ${deleteButton}
                     </div>
@@ -1119,11 +1114,11 @@
                         id="generate-champ-btn"
                         type="button"
                         ${!canGenerate ? 'disabled' : ''}
-                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
                         ${icons.swords}
                         Gerar Grupos
                     </button>
-                    ${!canGenerate ? `<p class="text-red-600 text-sm mt-3">O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.</p>` : ''}
+                    ${!canGenerate ? `<p class="text-rose-600 text-sm mt-3">O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.</p>` : ''}
                 </div>
                 ` : `<p class="text-gray-500 text-sm mt-3 text-center">Mínimo de ${minPlayersForGroups} jogadores para começar.</p>`;
 
@@ -1142,13 +1137,13 @@
                 <form id="add-existing-player-form">
                     <label for="existing-player-select" class="block text-sm font-medium text-gray-700 mb-1">Adicionar do Ranking</label>
                     <div class="flex gap-2">
-                        <select id="existing-player-select" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500" ${availablePlayersFromRanking.length === 0 ? 'disabled' : ''}>
+                        <select id="existing-player-select" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500" ${availablePlayersFromRanking.length === 0 ? 'disabled' : ''}>
                             ${existingPlayersOptions}
                         </select>
                         <button
                             type="submit"
                             id="add-existing-player-btn"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                             ${availablePlayersFromRanking.length === 0 ? 'disabled' : ''}>
                             ${icons.plus}
                         </button>
@@ -1162,12 +1157,12 @@
                             type="text"
                             id="new-player-name-input"
                             placeholder="Nome do Novo Jogador"
-                            class="flex-grow bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            class="flex-grow bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                         />
                         <button
                             type="submit"
                             id="add-new-player-btn"
-                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                             ${icons.plus}
                         </button>
                     </div>
@@ -1181,7 +1176,7 @@
                     ${addPlayerFormHtml}
 
                     <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200">
-                        <h3 class="text-xl font-semibold mb-4 text-blue-600 flex items-center gap-2">
+                        <h3 class="text-xl font-semibold mb-4 text-cyan-600 flex items-center gap-2">
                             ${icons.users}
                             Jogadores Inscritos (${playerCount})
                         </h3>
@@ -1209,10 +1204,10 @@
                     if (score1 === null || score2 === null) allScoresFilled = false;
 
                     return `
-                    <div class="bg-gray-100 p-3 sm:p-4 rounded-lg border border-gray-200">
+                    <div class="bg-amber-50 p-3 sm:p-4 rounded-lg border border-amber-200">
                         <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
                             <span class="text-sm text-gray-700 text-center sm:text-left">${match.names[0]}</span>
-                            <span class="font-bold text-blue-600">vs</span>
+                            <span class="font-bold text-cyan-600">vs</span>
                             <span class="text-sm text-gray-700 text-center sm:text-right">${match.names[1]}</span>
                         </div>
                         <div class="flex justify-center items-center gap-3 mt-3">
@@ -1221,7 +1216,7 @@
                                 min="0"
                                 value="${score1 === null ? '' : score1}"
                                 id="g-${groupIndex}-m-${matchIndex}-s0" 
-                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDisabled ? 'opacity-70' : ''}"
+                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 ${isDisabled}
                             />
                             <span class="text-gray-500">-</span>
@@ -1230,11 +1225,11 @@
                                 min="0"
                                 value="${score2 === null ? '' : score2}"
                                 id="g-${groupIndex}-m-${matchIndex}-s1"
-                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDisabled ? 'opacity-70' : ''}"
+                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 ${isDisabled}
                             />
                             <button 
-                                class="confirm-group-score-btn p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all ${isDisabled ? 'hidden' : ''}"
+                                class="confirm-group-score-btn p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all ${isDisabled ? 'hidden' : ''}"
                                 data-group-index="${groupIndex}"
                                 data-match-index="${matchIndex}"
                                 title="Confirmar Placar">
@@ -1246,7 +1241,7 @@
                 }).join('');
 
                 const rankingsHtml = rankings.map((player, rankIndex) => `
-                    <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-green-600' : 'text-yellow-600'}">
+                    <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-emerald-600' : 'text-orange-600'}">
                         <td class="p-3 font-bold">${rankIndex + 1}º</td>
                         <td class="p-3 text-gray-800">${player.name}</td>
                         <td class="p-3 font-bold">${player.gamesWon}</td>
@@ -1263,7 +1258,7 @@
                 return `
                 <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in border border-gray-200">
                     <div class="flex justify-between items-center mb-5">
-                        <h3 class="text-2xl font-bold text-blue-600">Grupo ${groupIndex + 1}</h3>
+                        <h3 class="text-2xl font-bold text-cyan-600">Grupo ${groupIndex + 1}</h3>
                         ${printButton}
                     </div>
                     <div class="space-y-4 mb-6">${matchesHtml}</div>
@@ -1271,7 +1266,7 @@
                         <h4 class="text-lg font-semibold mb-3 text-gray-800">Ranking do Grupo</h4>
                         <table class="w-full text-left">
                             <thead>
-                                <tr class="bg-gray-100">
+                                <tr class="bg-amber-100">
                                     <th class="p-3 rounded-l-lg text-gray-600">Pos.</th>
                                     <th class="p-3 text-gray-600">Jogador</th>
                                     <th class="p-3 rounded-r-lg text-gray-600">Games Vencidos</th>
@@ -1280,8 +1275,8 @@
                             <tbody>${rankingsHtml}</tbody>
                         </table>
                         <div class="flex justify-between mt-2 text-sm">
-                            <span class="text-green-600">▲ Dupla Ouro</span>
-                            <span class="text-yellow-600">▼ Dupla Prata</span>
+                            <span class="text-emerald-600">▲ Dupla Ouro 🥇</span>
+                            <span class="text-orange-600">▼ Dupla Prata 🥈</span>
                         </div>
                     </div>
                 </div>
@@ -1295,7 +1290,7 @@
                     id="finalize-groups-btn"
                     type="button"
                     ${!allScoresFilled ? 'disabled' : ''}
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
                     ${icons.trophy}
                     ${allScoresFilled ? "Finalizar Grupos e Gerar Chaves" : "Preencha todos os placares"}
                 </button>
@@ -1313,8 +1308,8 @@
         // (ADMIN) -- Sub-tela: Chaves (Mata-Mata) --
         const renderKnockoutView = (isFinished) => {
             // Chamadas de renderBracket sem o ícone nos parâmetros (apenas o título)
-            const goldHtml = renderBracket('Série Ouro', activeChampionship.goldBracket, 'goldBracket', isFinished);
-            const silverHtml = renderBracket('Série Prata', activeChampionship.silverBracket, 'silverBracket', isFinished);
+            const goldHtml = renderBracket('Série Ouro 🥇', activeChampionship.goldBracket, 'goldBracket', isFinished);
+            const silverHtml = renderBracket('Série Prata 🥈', activeChampionship.silverBracket, 'silverBracket', isFinished);
 
             // Lógica do Coveiro
             let coveiroHtml = '';
@@ -1328,8 +1323,8 @@
 
                     coveiroHtml = `
                     <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl mt-8 text-center animate-fade-in border border-gray-200">
-                        <h4 class="text-2xl font-black uppercase tracking-wider text-red-600">Prêmio Coveiro</h4>
-                        <p class="text-4xl font-extrabold text-red-800 mt-2">${coveiroNames}</p>
+                        <h4 class="text-2xl font-black uppercase tracking-wider text-rose-600">👻 Prêmio Coveiro</h4>
+                        <p class="text-4xl font-extrabold text-gray-900 mt-2">${coveiroNames}</p>
                         <p class="text-sm text-gray-500">Com apenas ${minGames} games marcados no torneio.</p>
                     </div>
                     `;
@@ -1343,7 +1338,7 @@
             const rounds = {};
             if (!bracket || bracket.length === 0) {
                  return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
-                     <h3 class="text-3xl font-bold mb-6 text-blue-600 flex items-center gap-3">
+                     <h3 class="text-3xl font-bold mb-6 text-cyan-600 flex items-center gap-3">
                          ${title}
                      </h3>
                      <p class="text-gray-500">Chave ainda não gerada. É necessário 4, 8, 16 ou 32 duplas.</p>
@@ -1362,16 +1357,16 @@
             const isGold = bracketType === 'goldBracket';
             // Fundo do Card de Campeão
             const cardStyle = isGold 
-                ? 'bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 text-gray-900' // Gold Style
+                ? 'bg-gradient-to-r from-yellow-300 via-orange-400 to-orange-500 text-white' // Gold/Orange Style
                 : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900'; // Silver Style
 
             // Destaque do Nome do Campeão
-            const championNameStyle = isGold ? 'text-4xl font-extrabold text-gray-900' : 'text-4xl font-extrabold text-gray-800';
+            const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
 
-            // ALTERADO: Removido o ícone icons.medal
+            // ALTERADO: Removido o ícone
             const championHtml = champion ? `
             <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
-                <h4 class="text-xl font-black uppercase tracking-wider text-white">Campeões</h4>
+                <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">Campeões</h4>
                 <p class="${championNameStyle}">${champion.name}</p>
             </div>
             ` : '';
@@ -1393,9 +1388,9 @@
                     const isDisabled = (!pair1 || !pair2 || !appState.isAdmin) ? 'disabled' : '';
 
                     return `
-                    <div class="bg-gray-100 rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="font-medium text-sm ${isPair1Winner ? 'text-green-600 font-bold' : 'text-gray-800'}">
+                            <span class="font-medium text-sm ${isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
                                 ${pair1 ? pair1.name : 'Aguardando...'}
                             </span>
                             <input
@@ -1403,7 +1398,7 @@
                                 min="0"
                                 value="${score1 === null ? '' : score1}"
                                 id="k-${match.id}-s0"
-                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDisabled ? 'opacity-70' : ''}"
+                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 ${isDisabled}
                             />
                         </div>
@@ -1415,7 +1410,7 @@
                         </div>
 
                         <div class="flex justify-between items-center">
-                            <span class="font-medium text-sm ${isPair2Winner ? 'text-green-600 font-bold' : 'text-gray-800'}">
+                            <span class="font-medium text-sm ${isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
                                 ${pair2 ? pair2.name : 'Aguardando...'}
                             </span>
                             <input
@@ -1423,14 +1418,14 @@
                                 min="0"
                                 value="${score2 === null ? '' : score2}"
                                 id="k-${match.id}-s1"
-                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDisabled ? 'opacity-70' : ''}"
+                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 ${isDisabled}
                             />
                         </div>
                         
                         <div class="text-center mt-3 ${isDisabled ? 'hidden' : ''}">
                             <button 
-                                class="confirm-knockout-score-btn p-2 w-full bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all"
+                                class="confirm-knockout-score-btn p-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
                                 title="Confirmar Placar">
@@ -1452,7 +1447,7 @@
             // Removido o ícone do título principal
             return `
             <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
-                <h3 class="text-3xl font-bold mb-6 text-blue-600">
+                <h3 class="text-3xl font-bold mb-6 text-cyan-600">
                     ${title}
                 </h3>
                 ${championHtml}
@@ -1472,7 +1467,7 @@
              if (!activeChampionship) {
                 mainContent.innerHTML = `
                 <div class="text-center py-20 animate-fade-in">
-                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600 mx-auto"></div>
                     <p class="mt-4 text-gray-500">Aguardando dados do torneio...</p>
                 </div>
                 `;
@@ -1483,7 +1478,7 @@
             const champName = champInfo ? champInfo.name : "Campeonato";
 
             // Título do Telão
-            let html = `<h1 class="text-4xl sm:text-6xl font-bold text-center text-blue-600 my-8 animate-fade-in">${champName}</h1>`;
+            let html = `<h1 class="text-4xl sm:text-6xl font-bold text-center text-cyan-600 my-8 animate-fade-in">🏖️ ${champName} 🎾</h1>`;
 
             // Define o conteúdo baseado no status
             let contentHtml = '';
@@ -1509,9 +1504,9 @@
 
             mainContent.innerHTML = html;
 
-            // Ajuste do fundo para o modo telão claro
+            // Ajuste do fundo para o modo telão (definido no body global)
             if (appState.isTelaoMode) {
-                 document.body.style.backgroundColor = '#F7F7F7';
+                 document.body.style.backgroundColor = '#FFFAF0'; // bg-amber-50
             }
         };
 
@@ -1530,7 +1525,7 @@
             return `
                 <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12 animate-fade-in max-w-4xl mx-auto border border-gray-200">
                     <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8 border border-gray-200">
-                        <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-blue-600 flex items-center gap-3">
+                        <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-cyan-600 flex items-center gap-3">
                             ${icons.users}
                             Jogadores Inscritos (${playerCount})
                         </h3>
@@ -1552,10 +1547,10 @@
                     const score2 = match.score[1];
 
                     return `
-                    <div class="bg-gray-100 p-3 sm:p-4 rounded-lg border border-gray-200">
+                    <div class="bg-amber-100 p-3 sm:p-4 rounded-lg border border-amber-200">
                         <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
                             <span class="text-base text-gray-700 text-center sm:text-left">${match.names[0]}</span>
-                            <span class="font-bold text-blue-600">vs</span>
+                            <span class="font-bold text-cyan-600">vs</span>
                             <span class="text-base text-gray-700 text-center sm:text-right">${match.names[1]}</span>
                         </div>
                         <div class="flex justify-center items-center gap-3 mt-3">
@@ -1572,7 +1567,7 @@
                 }).join('');
 
                 const rankingsHtml = rankings.map((player, rankIndex) => `
-                    <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-green-600' : 'text-yellow-600'}">
+                    <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-emerald-600' : 'text-orange-600'}">
                         <td class="p-3 font-bold text-lg">${rankIndex + 1}º</td>
                         <td class="p-3 text-lg text-gray-800">${player.name}</td>
                         <td class="p-3 font-bold text-lg">${player.gamesWon}</td>
@@ -1582,14 +1577,14 @@
                 return `
                 <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:max-w-sm border border-gray-200">
                     <div class="flex justify-between items-center mb-5">
-                        <h3 class="text-3xl font-bold text-blue-600">Grupo ${groupIndex + 1}</h3>
+                        <h3 class="text-3xl font-bold text-cyan-600">Grupo ${groupIndex + 1}</h3>
                     </div>
                     <div class="space-y-4 mb-6">${matchesHtml}</div>
                     <div>
                         <h4 class="text-xl font-semibold mb-3 text-gray-800">Ranking do Grupo</h4>
                         <table class="w-full text-left">
                             <thead>
-                                <tr class="bg-gray-100">
+                                <tr class="bg-amber-100">
                                     <th class="p-3 rounded-l-lg text-base text-gray-600">Pos.</th>
                                     <th class="p-3 text-base text-gray-600">Jogador</th>
                                     <th class="p-3 rounded-r-lg text-base text-gray-600">Games Vencidos</th>
@@ -1598,8 +1593,8 @@
                             <tbody>${rankingsHtml}</tbody>
                         </table>
                         <div class="flex justify-between mt-2 text-base">
-                            <span class="text-green-600">▲ Dupla Ouro</span>
-                            <span class="text-yellow-600">▼ Dupla Prata</span>
+                            <span class="text-emerald-600">▲ Dupla Ouro 🥇</span>
+                            <span class="text-orange-600">▼ Dupla Prata 🥈</span>
                         </div>
                     </div>
                 </div>
@@ -1612,8 +1607,8 @@
         // (TELÃO) -- Sub-tela: Chaves (Mata-Mata) (Read-Only) --
         const renderKnockoutView_ReadOnly = (isFinished) => {
             // Chamadas de renderBracket_ReadOnly sem o ícone nos parâmetros (apenas o título)
-            const goldHtml = renderBracket_ReadOnly('Série Ouro', activeChampionship.goldBracket, 'goldBracket', isFinished);
-            const silverHtml = renderBracket_ReadOnly('Série Prata', activeChampionship.silverBracket, 'silverBracket', isFinished);
+            const goldHtml = renderBracket_ReadOnly('Série Ouro 🥇', activeChampionship.goldBracket, 'goldBracket', isFinished);
+            const silverHtml = renderBracket_ReadOnly('Série Prata 🥈', activeChampionship.silverBracket, 'silverBracket', isFinished);
 
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
@@ -1626,8 +1621,8 @@
 
                     coveiroHtml = `
                     <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl text-center animate-fade-in w-full sm:max-w-sm border border-gray-200">
-                        <h4 class="text-2xl font-black uppercase tracking-wider text-red-600">Prêmio Coveiro</h4>
-                        <p class="text-4xl font-extrabold text-red-800 mt-2">${coveiroNames}</p>
+                        <h4 class="text-2xl font-black uppercase tracking-wider text-rose-600">👻 Prêmio Coveiro</h4>
+                        <p class="text-4xl font-extrabold text-gray-900 mt-2">${coveiroNames}</p>
                         <p class="text-sm text-gray-500">Com apenas ${minGames} games marcados no torneio.</p>
                     </div>
                     `;
@@ -1642,7 +1637,7 @@
             const rounds = {};
             if (!bracket || bracket.length === 0) {
                  return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
-                     <h3 class="text-3xl font-bold mb-6 text-blue-600">
+                     <h3 class="text-3xl font-bold mb-6 text-cyan-600">
                          ${title}
                      </h3>
                      <p class="text-gray-500">Chave ainda não gerada.</p>
@@ -1661,16 +1656,16 @@
             const isGold = bracketType === 'goldBracket';
             // Fundo do Card de Campeão
             const cardStyle = isGold 
-                ? 'bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 text-gray-900' // Gold Style
+                ? 'bg-gradient-to-r from-yellow-300 via-orange-400 to-orange-500 text-white' // Gold/Orange Style
                 : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900'; // Silver Style
 
             // Destaque do Nome do Campeão
-            const championNameStyle = isGold ? 'text-4xl font-extrabold text-gray-900' : 'text-4xl font-extrabold text-gray-800';
+            const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
 
-            // ALTERADO: Removido o ícone icons.medal
+            // ALTERADO: Removido o ícone
             const championHtml = champion ? `
             <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
-                <h4 class="text-xl font-black uppercase tracking-wider text-white">Campeões</h4>
+                <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">Campeões</h4>
                 <p class="${championNameStyle}">${champion.name}</p>
             </div>
             ` : '';
@@ -1689,11 +1684,11 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
 
-                    const winnerClass1 = isPair1Winner ? 'text-green-600 font-bold' : 'text-gray-800';
-                    const winnerClass2 = isPair2Winner ? 'text-green-600 font-bold' : 'text-gray-800';
+                    const winnerClass1 = isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
+                    const winnerClass2 = isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
 
                     return `
-                    <div class="bg-gray-100 rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div class="bg-amber-100 rounded-lg shadow-sm border border-amber-200 p-4">
                         <div class="flex justify-between items-center mb-2">
                             <span class="font-medium text-lg ${winnerClass1}">
                                 ${pair1 ? pair1.name : 'Aguardando...'}
@@ -1732,7 +1727,7 @@
             // Removido o ícone do título principal
             return `
             <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
-                <h3 class="text-3xl font-bold mb-6 text-blue-600">
+                <h3 class="text-3xl font-bold mb-6 text-cyan-600">
                     ${title}
                 </h3>
                 ${championHtml}
@@ -2161,7 +2156,7 @@
                         await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, effectivePoints, rankingId);
 
                         hideModal();
-                        showModal("Sucesso!", `Ranking global atualizado! Campeões Ouro: ${goldWinner.name}. Campeões Prata: ${silverWinner.name}.`);
+                        showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
                     } else {
                          // Se já estava finalizado, apenas notifica sobre o ajuste de placar
                          showModal("Placar Atualizado", `O placar final foi alterado. O ranking global NÃO foi recalculado para evitar duplicidade.`);
@@ -2423,7 +2418,7 @@
 
                 const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
 
-                const head = [['Pos.', 'Jogador', 'Pontos', 'Ouro', 'Prata', 'Coveiro']];
+                const head = [['Pos.', 'Jogador', 'Pontos', '🥇 Ouro', '🥈 Prata', '👻 Coveiro']];
                 const body = sortedPlayers.map((p, index) => [
                     `${index + 1}º`,
                     p.name,
@@ -2438,9 +2433,9 @@
                     startY: 30,
                     head: head,
                     body: body,
-                    headStyles: { fillColor: [52, 152, 219] }, // Cor Azul Principal
+                    headStyles: { fillColor: [8, 145, 178] }, // Cor 'Mar' (cyan-600)
                     styles: { halign: 'center', textColor: [31, 41, 55] },
-                    headStyles: { fillColor: [209, 213, 219], textColor: [75, 85, 99] },
+                    headStyles: { fillColor: [254, 243, 199], textColor: [75, 85, 99] }, // Cor 'Areia' (amber-100)
                     columnStyles: {
                         1: { halign: 'left' } // Alinha o nome do jogador à esquerda
                     }
@@ -2486,7 +2481,7 @@
                 const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
                 const goldFinal = activeChampionship.goldBracket.find(m => m.round === maxRoundGold);
                 if (goldFinal?.winner) {
-                    finalResults.push(['Campeões Ouro', goldFinal.winner.name]);
+                    finalResults.push(['🥇 Campeões Ouro', goldFinal.winner.name]);
                     const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldFinal.winner.id);
                     if (goldRunnerUp) finalResults.push(['Vice Ouro', goldRunnerUp.name]);
                 }
@@ -2494,7 +2489,7 @@
                 const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
                 const silverFinal = activeChampionship.silverBracket.find(m => m.round === maxRoundSilver);
                 if (silverFinal?.winner) {
-                    finalResults.push(['Campeões Prata', silverFinal.winner.name]);
+                    finalResults.push(['🥈 Campeões Prata', silverFinal.winner.name]);
                     const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverFinal.winner.id);
                     if (silverRunnerUp) finalResults.push(['Vice Prata', silverRunnerUp.name]);
                 }
@@ -2505,7 +2500,7 @@
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
                     const coveiros = stats.filter(p => p.gamesWon === minGames);
-                    finalResults.push(['Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
+                    finalResults.push(['👻 Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
                 }
 
                 doc.autoTable({
@@ -2547,7 +2542,7 @@
                         startY: yPos,
                         head: [['Dupla 1', 'Placar', 'Dupla 2']],
                         body: matchesBody,
-                        headStyles: { fillColor: [52, 152, 219], textColor: [255, 255, 255] },
+                        headStyles: { fillColor: [8, 145, 178], textColor: [255, 255, 255] }, // Cor 'Mar' (cyan-600)
                         styles: { halign: 'center', textColor: [31, 41, 55] },
                         columnStyles: { 0: { halign: 'left' }, 2: { halign: 'right' } }
                     });
@@ -2567,7 +2562,7 @@
                         body: rankingsBody,
                         theme: 'grid',
                         styles: { halign: 'center', fontSize: 9, textColor: [31, 41, 55] },
-                        headStyles: { fillColor: [209, 213, 219], textColor: [75, 85, 99], fontSize: 10 },
+                        headStyles: { fillColor: [254, 243, 199], textColor: [75, 85, 99], fontSize: 10 }, // Cor 'Areia' (amber-100)
                     });
                     yPos = doc.autoTable.previous.finalY + 12;
                 });
@@ -2586,7 +2581,7 @@
 
                 // Tabela Série Ouro
                 doc.setFontSize(16);
-                doc.text("Série Ouro", 14, yPos);
+                doc.text("Série Ouro 🥇", 14, yPos);
                 yPos += 7;
                 const goldBody = activeChampionship.goldBracket.map(m => {
                     const roundTitle = m.round === maxRoundGold ? 'Final'
@@ -2610,7 +2605,7 @@
                     startY: yPos,
                     head: [['Rodada', 'Dupla 1', 'Placar', 'Dupla 2']],
                     body: goldBody,
-                    headStyles: { fillColor: [251, 191, 36], textColor: [31, 41, 55] }, // Dourado
+                    headStyles: { fillColor: [249, 115, 22], textColor: [255, 255, 255] }, // Cor 'Acento' (orange-500)
                     styles: { halign: 'center', textColor: [31, 41, 55] },
                     columnStyles: { 1: { halign: 'left' }, 3: { halign: 'right' } }
                 });
@@ -2618,7 +2613,7 @@
 
                 // Tabela Série Prata
                 doc.setFontSize(16);
-                doc.text("Série Prata", 14, yPos);
+                doc.text("Série Prata 🥈", 14, yPos);
                 yPos += 7;
                 const silverBody = activeChampionship.silverBracket.map(m => {
                     const roundTitle = m.round === maxRoundSilver ? 'Final'
@@ -2727,13 +2722,13 @@
                 } else {
                     showModal("Erro", "Não foi possível carregar os dados deste campeonato. (O doc 'data/main' não foi encontrado).");
                     if (!appState.isTelaoMode) navigateTo('championshipList');
-                    else mainContent.innerHTML = `<h1 class="text-4xl text-red-500 text-center p-10">Erro: Campeonato não encontrado.</h1>`;
+                    else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro: Campeonato não encontrado.</h1>`;
                 }
             }, (error) => {
                 console.error("Erro ao carregar campeonato ativo:", error);
                 showModal("Erro", "Não foi possível carregar este campeonato. Verifique as regras do Firestore.");
                 if (!appState.isTelaoMode) navigateTo('championshipList');
-                else mainContent.innerHTML = `<h1 class="text-4xl text-red-500 text-center p-10">Erro de conexão.</h1>`;
+                else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro de conexão.</h1>`;
             });
         };
 
@@ -2828,7 +2823,7 @@
                     // Adiciona estilos para a view limpa
                     const telaoStyles = document.createElement('style');
                     telaoStyles.innerHTML = `
-                        body { background-color: #F7F7F7; } /* Fundo Quase Branco para TV */
+                        body { background-color: #FFFAF0; } /* Fundo 'Areia' (amber-50) */
                         /* Ajusta o container para telas largas, mantendo um padding */
                         #app-container { max-width: 100%; padding: 1rem 2rem; }
                         header, footer { display: none !important; }
