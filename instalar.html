@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instalar Ranking Beach Tennis</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background-color: #F7F7F7;
+      font-family: 'Inter', sans-serif;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen text-gray-800 text-center p-6">
+
+  <div class="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 animate-fade-in">
+    <img src="icon-192.png" alt="Logo" class="w-20 h-20 mx-auto mb-4">
+    <h1 class="text-2xl font-bold mb-2 text-blue-600">Instalar Aplicativo</h1>
+    <p class="text-gray-600 mb-6">
+      Para continuar usando o <strong>Ranking Beach Tennis</strong>, instale o aplicativo no seu dispositivo.
+    </p>
+
+    <button id="installBtn" class="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+      Instalar Aplicativo
+    </button>
+
+    <p id="installMsg" class="hidden mt-4 text-sm text-green-600 font-medium">
+      O aplicativo foi instalado! Você já pode abrir ele na sua tela inicial.
+    </p>
+
+    <p class="mt-8 text-sm text-gray-500">
+      Caso o botão não apareça automaticamente, use o menu do seu navegador e selecione<br>
+      <strong>"Adicionar à tela inicial"</strong>.
+    </p>
+  </div>
+
+  <script>
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Impede o navegador de mostrar o prompt automaticamente
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('installBtn').disabled = false;
+    });
+
+    document.getElementById('installBtn').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+
+      deferredPrompt.prompt(); // Mostra o prompt de instalação
+
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('✅ Usuário aceitou instalar');
+        document.getElementById('installMsg').classList.remove('hidden');
+        setTimeout(() => (window.location.href = "/"), 1500);
+      } else {
+        console.log('❌ Usuário recusou instalar');
+      }
+      deferredPrompt = null;
+    });
+  </script>
+
+</body>
+</html>
