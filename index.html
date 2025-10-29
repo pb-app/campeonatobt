@@ -10,14 +10,14 @@
       // 🔒 Verifica se o site está sendo executado em modo PWA (standalone)
       if (!window.matchMedia('(display-mode: standalone)').matches) {
         // Se NÃO estiver no modo app, redireciona para a página de instalação
-        window.location.href = "/instalar.html";
+        window.location.href = "instalar.html";
       }
     });
     </script>
 
     <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(() => {
+      navigator.serviceWorker.register('sw.js').then(() => {
         console.log('✅ Service Worker registrado com sucesso!');
       }).catch((err) => {
         console.log('❌ Erro ao registrar o Service Worker:', err);
