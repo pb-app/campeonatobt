@@ -1848,7 +1848,7 @@
             await saveActiveChampionship(newChampData);
         };
 
-        const handleGenerateChampionship = async () => {
+ const handleGenerateChampionship = async () => {
             const playerCount = activeChampionship.players.length;
             const isMultypleOfFour = playerCount % 4 === 0;
 
@@ -1856,54 +1856,106 @@
                 showModal("Número de Jogadores Inválido", `O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.`);
                 return;
             }
-            // Verifica se o número de duplas para o mata-mata será uma potência de 2
-            const numDuplas = (playerCount / 4) * 2; // (jogadores/4 grupos) * 2 duplas por grupo
+            
+            const numGroups = playerCount / 4;
+            const numDuplas = numGroups * 2; // (jogadores/4 grupos) * 2 duplas por grupo
+            
             if (![2, 4, 8, 16, 32].includes(numDuplas)) {
-                 showModal("Regra da Chave", `A regra atual de mata-mata só suporta 2, 4, 8, 16 ou 32 duplas. Você terá ${numDuplas} duplas. Por favor, ajuste o número de jogadores.`);
+                 showModal("Regra da Chave", `A regra atual de mata-mata só suporta 2, 4, 8, 16 ou 32 duplas. Com ${playerCount} jogadores, você terá ${numDuplas} duplas. Por favor, ajuste o número de jogadores (ex: 8 ou 16 jogadores).`);
                  return;
             }
 
-
-            if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Isso criará ${playerCount / 4} grupos.`)) {
+            // === NOVA LÓGICA DE CABEÇA DE CHAVE ===
+            if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Os ${numGroups} melhores do ranking serão os "Cabeças de Chave" e o restante será sorteado.`)) {
                 return;
             }
 
             try {
-                const shuffledPlayers = [...activeChampionship.players].sort(() => 0.5 - Math.random());
-                const newGroups = [];
+                // 1. Mapear pontos do ranking global aos jogadores do torneio
+                //    'globalPlayers' é a lista do ranking (com pontos)
+                //    'activeChampionship.players' é a lista do torneio (só id, name)
+                
+                // Mapeia os pontos de 'globalPlayers' para consulta rápida
+                const globalPlayersMap = new Map(globalPlayers.map(p => [p.id, p.points || 0]));
 
-                for (let i = 0; i < shuffledPlayers.length; i += 4) {
-                    const groupPlayers = shuffledPlayers.slice(i, i + 4);
-                    const [p1, p2, p3, p4] = groupPlayers;
+                const tournamentPlayersWithPoints = activeChampionship.players.map(p => ({
+                    ...p, // id, name
+                    points: globalPlayersMap.get(p.id) || 0 // Pega pontos do ranking, 0 se for jogador novo
+                }));
 
-                    newGroups.push({
-                        id: `group_${i / 4 + 1}`,
-                        players: groupPlayers,
-                        matches: [
-                            { id: 1, p: [p1.id, p2.id, p3.id, p4.id], names: [`${p1.name} / ${p2.name}`, `${p3.name} / ${p4.name}`], score: [null, null] },
-                            { id: 2, p: [p1.id, p3.id, p2.id, p4.id], names: [`${p1.name} / ${p3.name}`, `${p2.name} / ${p4.name}`], score: [null, null] },
-                            { id: 3, p: [p1.id, p4.id, p2.id, p3.id], names: [`${p1.name} / ${p4.name}`, `${p2.name} / ${p3.name}`], score: [null, null] },
-                        ]
+                // 2. Ordenar jogadores do torneio por pontos
+                const sortedTournamentPlayers = tournamentPlayersWithPoints.sort((a, b) => b.points - a.points);
+
+                // 3. Separar Cabeças de Chave dos demais
+                const seededPlayers = sortedTournamentPlayers.slice(0, numGroups);
+                const unseededPlayers = sortedTournamentPlayers.slice(numGroups);
+
+                // 4. Embaralhar os "não-cabeças"
+                const shuffledUnseeded = unseededPlayers.sort(() => 0.5 - Math.random());
+
+                // 5. Criar os grupos "esqueleto"
+                const newGroupsList = []; // Esta será a lista final
+                for (let i = 0; i < numGroups; i++) {
+                    newGroupsList.push({
+                        id: `group_${i + 1}`,
+                        players: [], // Começa vazio
+                        matches: []  // Começa vazio
                     });
                 }
 
+                // 6. Distribuir Cabeças de Chave (1 por grupo)
+                //    (Jogador 1 no G1, Jogador 2 no G2, etc.)
+                for (let i = 0; i < seededPlayers.length; i++) {
+                    newGroupsList[i].players.push(seededPlayers[i]);
+                }
+
+                // 7. Distribuir os demais (distribuição "snake" para equilibrar)
+                //    Preenche o slot 2 de todos grupos, depois o slot 3, etc.
+                let unseededCursor = 0;
+                const playersPerGroup = 4;
+                for (let p_slot = 1; p_slot < playersPerGroup; p_slot++) { // Começa do slot 1 (o 0 é do cabeça)
+                    for (let g_index = 0; g_index < numGroups; g_index++) { // Itera nos grupos
+                        if (unseededCursor < shuffledUnseeded.length) {
+                            newGroupsList[g_index].players.push(shuffledUnseeded[unseededCursor]);
+                            unseededCursor++;
+                        }
+                    }
+                }
+
+                // 8. Agora que os groups.players estão definidos, criar as 'matches'
+                for (const group of newGroupsList) {
+                    // p1 é sempre o cabeça de chave do grupo
+                    const [p1, p2, p3, p4] = group.players; 
+                    
+                    if (!p1 || !p2 || !p3 || !p4) {
+                         console.error("Erro na distribuição de grupos. Grupo incompleto:", group.players);
+                         throw new Error("Erro de lógica ao distribuir jogadores. Grupo ficou incompleto.");
+                    }
+
+                    group.matches = [
+                        { id: 1, p: [p1.id, p2.id, p3.id, p4.id], names: [`${p1.name} / ${p2.name}`, `${p3.name} / ${p4.name}`], score: [null, null] },
+                        { id: 2, p: [p1.id, p3.id, p2.id, p4.id], names: [`${p1.name} / ${p3.name}`, `${p2.name} / ${p4.name}`], score: [null, null] },
+                        { id: 3, p: [p1.id, p4.id, p2.id, p3.id], names: [`${p1.name} / ${p4.name}`, `${p2.name} / ${p3.name}`], score: [null, null] },
+                    ];
+                }
+                
+                // 9. Salvar no banco
                 const newChampData = {
                     ...activeChampionship,
                     status: 'groups',
-                    groups: newGroups
+                    groups: newGroupsList // Salva a nova lista de grupos
                 };
                 await saveActiveChampionship(newChampData);
 
-                // Atualiza o status principal do campeonato (para a lista)
+                // 10. Atualizar status principal
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
                 await setDoc(champRef, { status: 'groups' }, { merge: true });
 
             } catch (error) {
-                console.error("Erro ao gerar campeonato:", error);
-                showModal("Erro", "Não foi possível gerar os grupos.");
+                console.error("Erro ao gerar campeonato (cabeça de chave):", error);
+                showModal("Erro", "Não foi possível gerar os grupos. " + error.message);
             }
         };
-
         const handleConfirmGroupScore = (groupIndex, matchIndex) => {
             const val0 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s0`).value;
             const val1 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s1`).value;
