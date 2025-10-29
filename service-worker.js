@@ -1,11 +1,13 @@
 // service-worker.js
-const CACHE_NAME = 'ranking-bt-v4.0.5'; // Mudei a versão para forçar a atualização
+
+// ATENÇÃO: Mude a versão do cache (ex: v4.0.5) sempre que fizer deploy de novos arquivos
+const CACHE_NAME = 'ranking-bt-v4.0.4';
 
 // Arquivos principais do app (App Shell)
+// ADICIONEI 'index.html' e atualizei para 'teste2.html' (que você usa)
 const APP_SHELL_URLS = [
-  'teste.html',
-  'teste2.html',  
-  'index.html', // Adicione o arquivo de produção
+  'index.html',   // Seu arquivo de produção
+  'teste2.html',  // Seu arquivo de teste
   'manifest.json',
   'icon-192.png',
   'icon-512.png'
@@ -30,7 +32,7 @@ self.addEventListener('install', (event) => {
       // Cacheia o App Shell
       const appShellPromise = cache.addAll(APP_SHELL_URLS);
 
-      // Cacheia as CDNs
+      // Cacheia as CDNs (sem bloquear a instalação se falhar)
       cache.addAll(CDN_URLS).catch(err => console.warn("[Service Worker] Falha ao cachear CDNs:", err));
 
       return appShellPromise;
@@ -50,30 +52,65 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
+    }).then(() => {
+        // Força o novo Service Worker a assumir o controle imediatamente
+        console.log('[Service Worker] Novo SW ativado e assumindo controle.');
+        return self.clients.claim();
     })
   );
 });
 
-// 3. Fetch (Estratégia: Cache-First)
+// 3. Fetch (ESTRATÉGIA CORRIGIDA: Híbrida)
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('firestore.googleapis.com')) {
-    return event.respondWith(fetch(event.request));
-  }
+    // Ignora o Firebase (correto, sempre vai para a rede)
+    if (event.request.url.includes('firestore.googleapis.com')) {
+        return event.respondWith(fetch(event.request));
+    }
 
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          if (event.request.method === 'GET' && networkResponse.status === 200) {
-             cache.put(event.request, responseToCache);
-          }
-        });
-        return networkResponse;
-      });
-    })
-  );
+    // --- LÓGICA CORRIGIDA ---
+    
+    // Verifica se a requisição é para um documento HTML (navegação)
+    // (ex: index.html ou teste2.html)
+    if (event.request.mode === 'navigate') {
+        // EstratégIA: Network-First (Rede Primeiro)
+        event.respondWith(
+            fetch(event.request)
+                .then((networkResponse) => {
+                    // Se conseguiu buscar na rede, salva o novo no cache e retorna
+                    return caches.open(CACHE_NAME).then((cache) => {
+                        console.log('[Service Worker] Salvando HTML novo no cache:', event.request.url);
+                        cache.put(event.request, networkResponse.clone());
+                        return networkResponse;
+                    });
+                })
+                .catch(() => {
+                    // Se falhou (offline), pega a versão antiga do cache
+                    console.log('[Service Worker] Rede falhou, servindo HTML do cache:', event.request.url);
+                    // Garante que temos um fallback para o index.html principal se a URL exata falhar
+                    return caches.match(event.request) || caches.match('index.html'); 
+                })
+        );
+    } else {
+        // Estratégia: Cache-First (Cache Primeiro)
+        // Para todo o resto (CDNs, imagens, manifest.json, etc.)
+        event.respondWith(
+            caches.match(event.request).then((response) => {
+                if (response) {
+                    return response; // Encontrou no cache, retorna
+                }
+
+                // Não encontrou no cache, busca na rede
+                return fetch(event.request).then((networkResponse) => {
+                    // Salva a resposta nova no cache para a próxima vez
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        if (event.request.method === 'GET' && networkResponse.status === 200) {
+                            cache.put(event.request, responseToCache);
+                        }
+                    });
+                    return networkResponse;
+                });
+            })
+        );
+    }
 });
