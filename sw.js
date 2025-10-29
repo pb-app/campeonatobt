@@ -1,10 +1,9 @@
-// Nome do cache (mude se fizer grandes atualizações)
+// Nome do cache
 const CACHE_NAME = "ranking-bt-v1";
 
-// Lista de arquivos que serão armazenados em cache
+// Arquivos que serão armazenados em cache
 const FILES_TO_CACHE = [
   "index.html",
-  "instalar.html",
   "manifest.json",
   "icon-192.png",
   "icon-512.png"
@@ -13,35 +12,28 @@ const FILES_TO_CACHE = [
 // Instalação — adiciona arquivos ao cache
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(FILES_TO_CACHE);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(FILES_TO_CACHE))
   );
-  self.skipWaiting(); // força ativação imediata
+  self.skipWaiting();
 });
 
 // Ativação — limpa caches antigos
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keyList) => {
-      return Promise.all(
+    caches.keys().then((keyList) =>
+      Promise.all(
         keyList.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
+          if (key !== CACHE_NAME) return caches.delete(key);
         })
-      );
-    })
+      )
+    )
   );
-  self.clients.claim(); // ativa o SW sem precisar recarregar
+  self.clients.claim();
 });
 
 // Intercepta requisições — usa cache se offline
 self.addEventListener("fetch", (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Retorna o cache se existir, senão busca da internet
-      return response || fetch(event.request);
-    })
+    caches.match(event.request).then((response) => response || fetch(event.request))
   );
 });
