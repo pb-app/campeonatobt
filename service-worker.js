@@ -4,7 +4,9 @@ const CACHE_NAME = 'ranking-bt-v4.0.5'; // Mudei a versão para forçar a atuali
 // Arquivos principais do app (App Shell)
 const APP_SHELL_URLS = [
   'teste.html',
-  'manifest.json', // Corrigido (era manifest.webmanifest)
+  'teste2.html',  
+  'index.html', // Adicione o arquivo de produção
+  'manifest.json',
   'icon-192.png',
   'icon-512.png'
 ];
