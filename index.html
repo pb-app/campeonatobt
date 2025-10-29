@@ -4,38 +4,93 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ranking Beach Tennis</title>
-    
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // 🔒 Verifica se o site está sendo executado em modo PWA (standalone)
-      if (!window.matchMedia('(display-mode: standalone)').matches) {
-        // Se NÃO estiver no modo app, redireciona para a página de instalação
-        window.location.href = "instalar.html";
-      }
-    });
-    </script>
 
-    <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').then(() => {
-        console.log('✅ Service Worker registrado com sucesso!');
-      }).catch((err) => {
-        console.log('❌ Erro ao registrar o Service Worker:', err);
-      });
-    }
-    </script>
-    
     <link rel="manifest" href="manifest.json">
-
     <meta name="theme-color" content="#3B82F6">
-
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ranking BT">
+    <link rel="apple-touch-icon" href="icon-192.png">
 
-    <link rel="apple-touch-icon" href="icon-192.png"> 
-    
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        #installBanner {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #3B82F6;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        #installBanner button {
+            background-color: white;
+            color: #3B82F6;
+            border: none;
+            padding: 6px 12px;
+            margin-left: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #installBanner button:hover {
+            background-color: #e5e7eb;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Conteúdo principal do site -->
+    <div class="p-6 text-center">
+        <h1 class="text-3xl font-bold text-blue-600 mb-4">Ranking Beach Tennis</h1>
+        <p class="text-gray-700">Bem-vindo ao aplicativo de gerenciamento de torneios e ranking.</p>
+    </div>
+
+    <!-- Banner de instalação -->
+    <div id="installBanner">
+        Instale o aplicativo para ter acesso rápido na tela inicial!
+        <button id="installBtn">Instalar</button>
+    </div>
+
+    <script>
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('✅ Service Worker registrado com sucesso!'))
+                .catch(err => console.log('❌ Erro ao registrar o Service Worker:', err));
+        }
+
+        // Banner de instalação PWA
+        let deferredPrompt;
+        const installBanner = document.getElementById('installBanner');
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); // impede o prompt automático
+            deferredPrompt = e;
+            installBanner.style.display = 'block'; // mostra o banner
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt(); // mostra o prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('✅ Usuário aceitou instalar');
+            } else {
+                console.log('❌ Usuário recusou instalar');
+            }
+            deferredPrompt = null;
+            installBanner.style.display = 'none';
+        });
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
