@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ranking Beach Tennis</title>
-
+  <script>
+        // 🔒 Verifica se o site está sendo executado em modo PWA (standalone)
+        if (!window.matchMedia('(display-mode: standalone)').matches) {
+        // Se NÃO estiver no modo app, redireciona para a página de instalação
+        window.location.href = "/instalar.html";
+    }
+    </script>
+    
     <link rel="manifest" href="manifest.json">
 
     <meta name="theme-color" content="#3B82F6">
