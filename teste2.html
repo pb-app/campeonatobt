@@ -52,7 +52,7 @@
     <script>
         // Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
+            navigator.serviceWorker.register('sw.js') // Certifique-se que o nome é 'sw.js'
                 .then(() => console.log('✅ Service Worker registrado com sucesso!'))
                 .catch(err => console.log('❌ Erro ao registrar o Service Worker:', err));
         }
@@ -127,9 +127,7 @@
         }
     </style>
 </head>
-<body class="text-gray-900"> ```
-
-<div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+<body class="text-gray-900"> <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
         <header class="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 gap-4 bg-white p-4 rounded-xl shadow-md">
             <h1 class="text-3xl sm:text-4xl font-bold text-cyan-600 text-center sm:text-left">
@@ -163,11 +161,13 @@
                 </button>
             </div>
             <div id="modal-message" class="text-gray-700 text-sm sm:text-base mb-6 max-h-60 overflow-y-auto"></div>
-            <button
-                id="modal-close-btn"
-                class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50">
-                Entendi
-            </button>
+            <div id="modal-buttons" class="flex gap-3 justify-end">
+                <button
+                    id="modal-close-btn"
+                    class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50">
+                    Entendi
+                </button>
+                </div>
         </div>
     </div>
 
@@ -259,6 +259,7 @@
         const modal = document.getElementById('modal');
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
+        const modalButtons = document.getElementById('modal-buttons'); // <- MUDANÇA: Referência para os botões
         const modalCloseBtn = document.getElementById('modal-close-btn');
         const modalCloseIcon = document.getElementById('modal-close-icon');
 
@@ -273,7 +274,8 @@
             SILVER_RUNNERUP: 20,
             PARTICIPATION: 5
         };
-      /* =============================================================================
+        
+        /* =============================================================================
            Ícones SVG (Reutilizados)
            ============================================================================= */
         // Ícones permanecem os mesmos, exceto pelo ícone "medal" que foi atualizado
@@ -297,568 +299,10 @@
             shovelSmall: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>',
             printer: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
             fileDown: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
-            tv: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>'
-        };
-
-        /* =============================================================================
-           Funções do Modal
-           ============================================================================= */
-        const showModal = (title, message) => {
-            modalTitle.textContent = title;
-            modalMessage.innerHTML = message; 
-            modal.classList.remove('hidden');
-        };
-        const hideModal = () => modal.classList.add('hidden');
-        modalCloseBtn.addEventListener('click', hideModal);
-        modalCloseIcon.addEventListener('click', hideModal);
-        modal.addEventListener('click', hideModal);
-        modal.firstElementChild.addEventListener('click', (e) => e.stopPropagation());
-
-        /* =============================================================================
-           Funções de Navegação e Renderização Principal
-           ============================================================================= */
-
-        // Router Principal
-        const render = () => {
-
-            // Esconde o spinner global se não estivermos na tela de loading
-            if (appState.currentView !== 'loading') {
-                loadingSpinner.classList.add('hidden');
-                mainContent.classList.remove('hidden');
-            } else {
-                loadingSpinner.classList.remove('hidden');
-                mainContent.classList.add('hidden');
-                return;
-            }
-
-            // Não renderiza cabeçalho no Modo Telão
-            if (!appState.isTelaoMode) {
-                renderHeaderButtons();
-            }
-
-            // Renderiza o conteúdo principal baseado na view
-            switch (appState.currentView) {
-                case 'login': 
-                    renderLogin();
-                    break;
-                case 'championshipList':
-                    renderChampionshipList();
-                    break;
-                case 'globalRanking':
-                    renderGlobalRanking();
-                    break;
-                case 'championshipView':
-                    renderChampionshipView();
-                    break;
-                case 'telaoView':
-                    renderTelaoView();
-                    break;
-                default:
-                    mainContent.innerHTML = `<p>Estado desconhecido: ${appState.currentView}</p>`;
-            }
-        };
-
-        const navigateTo = (view, champId = null) => {
-            if (view === 'login') {
-                appState.isAdmin = false;
-            }
-
-            appState.currentView = view;
-            appState.currentChampionshipId = champId;
-
-            // Desliga listeners antigos
-            unsubscribeActiveChampionship();
-            activeChampionship = null;
-
-            // Se estamos abrindo um campeonato OU um telão, precisamos garantir
-            // que o listener global de players esteja olhando o ranking *correto*.
-            if ((view === 'championshipView' || view === 'telaoView') && champId) {
-                const champ = championships.find(c => c.id === champId);
-                if (champ && champ.rankingId) {
-                    // Se o ranking do app não for o do camp, troca e re-escuta
-                    if (appState.currentRankingId !== champ.rankingId) {
-                        appState.currentRankingId = champ.rankingId;
-                        listenToGlobalPlayers(); // Isso vai carregar globalPlayers com a lista certa
-                    }
-                } else if (championships.length > 0 && !champ) {
-                    // Pode acontecer se os listeners não estiverem prontos
-                    console.warn("Navegando para o telão, mas a lista de campeonatos ainda não tem o ID:", champId);
-                    // Tentaremos carregar mesmo assim.
-                }
-                listenToActiveChampionship(champId); // Isso vai carregar o camp e chamar o render()
-
-            } else if (view === 'globalRanking') {
-                // Garante que o listener de players está ligado ao ranking selecionado
-                listenToGlobalPlayers();
-                render();
-            } else {
-                // Para outras telas (login, champList), renderiza imediatamente
-                render();
-            }
-        };
-
-        const renderHeaderButtons = () => {
-            let navHtml = ''; // Botões de Navegação (Voltar/Ranking)
-            let authHtml = ''; // Botões de Autenticação (Login/Sair)
-
-            // Lógica de Navegação
-            if (appState.currentView === 'championshipList') {
-                navHtml = `
-                <button
-                    id="nav-to-ranking"
-                    class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                    🏆 ${icons.award}
-                    Ranking Geral
-                </button>
-                `;
-            } else if (appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') {
-                navHtml = `
-                <button
-                    id="nav-to-list"
-                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                    ${icons.arrowLeft}
-                    Voltar
-                </button>
-                `;
-            }
-
-            // Lógica de Autenticação
-            if (appState.currentView !== 'login') {
-                if (appState.isAdmin) {
-                    authHtml = `
-                    <button
-                        id="nav-to-login"
-                        class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                        ${icons.logOut}
-                        Sair (Admin)
-                    </button>
-                    `;
-                } else {
-                    authHtml = `
-                    <button
-                        id="nav-to-login"
-                        class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                        ${icons.logIn}
-                        Login (Admin)
-                    </button>
-                    `;
-                }
-            }
-
-            headerButtons.innerHTML = navHtml + authHtml; // Concatena os botões
-
-            // Adiciona listeners aos botões
-            const rankingBtn = document.getElementById('nav-to-ranking');
-            if (rankingBtn) rankingBtn.addEventListener('click', () => navigateTo('globalRanking'));
-
-            const listBtn = document.getElementById('nav-to-list');
-            if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
-
-            const loginBtn = document.getElementById('nav-to-login');
-            if (loginBtn) loginBtn.addEventListener('click', () => navigateTo('login'));
-        };
-
-        /* =============================================================================
-           TELA 0: Login
-           ============================================================================= */
-
-        const renderLogin = () => {
-            mainContent.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
-                    <h2 class="text-3xl font-bold text-center text-cyan-600 mb-8">Bem-vindo(a) 🎾</h2>
-                    
-                    <div class="space-y-4">
-                        <button
-                            id="visitor-login-btn"
-                            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 px-6 rounded-lg shadow-sm transition-all flex items-center justify-center gap-3 text-lg">
-                            ${icons.eye}
-                            Modo Visitante
-                        </button>
-                        
-                        <button
-                            id="admin-login-btn"
-                            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
-                            ${icons.logIn}
-                            Modo Administrador
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            // Listeners
-            document.getElementById('visitor-login-btn').addEventListener('click', () => {
-                appState.isAdmin = false;
-                navigateTo('championshipList');
-            });
-
-            document.getElementById('admin-login-btn').addEventListener('click', () => {
-                const password = prompt("Digite a senha de administrador:");
-                if (password === ADMIN_PASSWORD) {
-                    appState.isAdmin = true;
-                    navigateTo('championshipList');
-                } else if (password !== null) { // Só mostra erro se o usuário não clicou em "Cancelar"
-                    showModal("Acesso Negado", "Senha incorreta.");
-                }
-            });
-        };
-
-        /* =============================================================================
-           TELA 1: Lista de Campeonatos (Histórico)
-           ============================================================================= */
-
-        const renderChampionshipList = () => {
-            const sortedChampionships = [...championships].sort((a, b) => b.createdAt - a.createdAt);
-
-            const championshipsListHtml = sortedChampionships.length === 0
-                ? `<p class="text-gray-500 text-center py-4">Nenhum campeonato cadastrado.</p>`
-                : sortedChampionships.map(champ => {
-                    let statusColor = 'text-yellow-600';
-                    let statusText = 'Em andamento';
-                    if (champ.status === 'registration') { statusColor = 'text-cyan-600'; statusText = 'Em Inscrição'; }
-                    if (champ.status === 'finished') { statusColor = 'text-emerald-600'; statusText = 'Finalizado 🏅'; }
-
-                    const ranking = allRankings.find(r => r.id === champ.rankingId);
-                    // Cor 'Acento' (orange-500)
-                    const rankingHtml = ranking ? `<span class="block text-xs text-orange-600 font-medium">${ranking.name}</span>` : '';
-
-                    const deleteButtonHtml = appState.isAdmin ? `
-                    <button
-                        class="delete-champ-btn text-rose-600 hover:text-rose-700 transition-colors p-2 rounded-lg bg-gray-100"
-                        data-id="${champ.id}">
-                        ${icons.trash}
-                    </button>` : '';
-
-                    return `
-                    <div class="flex flex-col sm:flex-row justify-between items-center bg-white border border-gray-200 p-4 rounded-xl shadow-sm animate-fade-in-sm gap-3">
-                        <div>
-                            <span class="text-gray-800 font-bold text-lg">${champ.name}</span>
-                            <span class="block text-sm ${statusColor}">${statusText}</span>
-                            ${rankingHtml}
-                            <span class="block text-xs text-gray-500">${new Date(champ.createdAt?.toDate()).toLocaleDateString()}</span>
-                        </div>
-                        <div class="flex gap-2">
-                             <button
-                                class="open-champ-btn bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all flex items-center gap-2 text-sm"
-                                data-id="${champ.id}">
-                                ${icons.eye} Ver
-                            </button>
-                            ${deleteButtonHtml}
-                        </div>
-                    </div>
-                    `}).join('');
-
-            const rankingsOptions = allRankings.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-
-            const newChampionshipFormHtml = appState.isAdmin ? `
-            <form id="add-championship-form">
-                <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8 border border-gray-200">
-                    <h2 class="text-2xl font-bold text-cyan-600 mb-4">🎾 Novo Campeonato</h2>
-                    
-                    <div class="mb-4">
-                        <label for="championship-name-input" class="block text-sm font-medium text-gray-700 mb-1">Nome do Campeonato</label>
-                        <input
-                            type="text"
-                            id="championship-name-input"
-                            placeholder="ex: Torneio de Verão"
-                            class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                            required
-                        />
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="ranking-select" class="block text-sm font-medium text-gray-700 mb-1">Vincular ao Ranking</label>
-                        <div class="flex gap-2">
-                            <select id="ranking-select" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500" required>
-                                ${rankingsOptions.length > 0 ? rankingsOptions : '<option disabled>Nenhum ranking encontrado...</option>'}
-                            </select>
-                            <button type="button" id="add-new-ranking-btn" class="flex-shrink-0 bg-cyan-600 hover:bg-cyan-700 text-white font-bold p-3 rounded-lg shadow-md transition-all">
-                                ${icons.plus}
-                            </button>
-                        </div>
-                    </div>
-
-
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Configuração de Pontos</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                        <div>
-                            <label for="points-gold-winner" class="block text-xs font-medium text-emerald-600 mb-1">Campeão Ouro 🥇</label>
-                            <input type="number" id="points-gold-winner" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_WINNER}"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
-                        </div>
-                        <div>
-                            <label for="points-gold-runnerup" class="block text-xs font-medium text-emerald-700 mb-1">Vice Ouro</label>
-                            <input type="number" id="points-gold-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.GOLD_RUNNERUP}"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
-                        </div>
-                        <div>
-                            <label for="points-silver-winner" class="block text-xs font-medium text-gray-600 mb-1">Campeão Prata 🥈</label>
-                            <input type="number" id="points-silver-winner" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_WINNER}"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
-                        </div>
-                        <div>
-                            <label for="points-silver-runnerup" class="block text-xs font-medium text-gray-700 mb-1">Vice Prata</label>
-                            <input type="number" id="points-silver-runnerup" min="0" value="${DEFAULT_RANKING_POINTS.SILVER_RUNNERUP}"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
-                        </div>
-                        <div>
-                            <label for="points-participation" class="block text-xs font-medium text-gray-500 mb-1">Participação</label>
-                            <input type="number" id="points-participation" min="0" value="${DEFAULT_RANKING_POINTS.PARTICIPATION}"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        id="add-championship-btn"
-                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                        ${icons.plus}
-                        <span>Criar Campeonato</span>
-                    </button>
-                </div>
-            </form>
-            ` : ''; // Se não for admin, não mostra nada
-
-            mainContent.innerHTML = `
-                <div class="animate-fade-in">
-                    ${newChampionshipFormHtml}
-
-                    <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border border-gray-200">
-                        <h3 class="text-2xl font-bold mb-5 text-cyan-600">Histórico de Campeonatos</h3>
-                        <div class="max-h-[60vh] overflow-y-auto pr-2 space-y-3">
-                            ${championshipsListHtml}
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Listeners (só adiciona se o elemento existir)
-            if (appState.isAdmin) {
-                const addForm = document.getElementById('add-championship-form');
-                if (addForm) addForm.addEventListener('submit', handleAddChampionship);
-
-                // NOVO: Listener para criar ranking
-                const addRankingBtn = document.getElementById('add-new-ranking-btn');
-                if (addRankingBtn) addRankingBtn.addEventListener('click', handleAddNewRanking);
-
-                document.querySelectorAll('.delete-champ-btn').forEach(btn => {
-                    btn.addEventListener('click', () => handleDeleteChampionship(btn.dataset.id));
-                });
-            }
-
-            document.querySelectorAll('.open-champ-btn').forEach(btn => {
-                btn.addEventListener('click', () => navigateTo('championshipView', btn.dataset.id));
-            });
-        };
-
-        const handleAddChampionship = async (e) => {
-            e.preventDefault();
-            // Esta função só é chamada se o formulário existir (isAdmin = true)
-            const input = document.getElementById('championship-name-input');
-            const button = document.getElementById('add-championship-btn');
-            const champName = input.value.trim();
-            if (!champName) return;
-
-            // =================================================================
-            // === MUDANÇA (REQUEST 3): Pega o ID do ranking selecionado ===
-            // =================================================================
-            const rankingId = document.getElementById('ranking-select').value;
-            if (!rankingId) {
-                showModal("Erro", "Nenhum ranking foi selecionado. Crie um ranking primeiro.");
-                return;
-            }
-
-            button.disabled = true;
-            button.lastChild.textContent = "Criando...";
-
-            // Coleta os pontos personalizados
-            const pointsConfig = {
-                goldWinner: parseInt(document.getElementById('points-gold-winner').value) || 0,
-                goldRunnerUp: parseInt(document.getElementById('points-gold-runnerup').value) || 0,
-                silverWinner: parseInt(document.getElementById('points-silver-winner').value) || 0,
-                silverRunnerUp: parseInt(document.getElementById('points-silver-runnerup').value) || 0,
-                participation: parseInt(document.getElementById('points-participation').value) || 0
-            };
-
-            try {
-                const batch = writeBatch(db);
-
-                // 1. Cria a referência para o NOVO doc de campeonato
-                const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
-                const newChampRef = doc(champCollectionRef);
-
-                // 2. Cria a referência para o doc de dados aninhado
-                const champDataRef = doc(db, 'users', appState.userId, 'championships', newChampRef.id, 'data', 'main');
-
-                // 3. Adiciona os dados ao batch
-                batch.set(newChampRef, {
-                    name: champName,
-                    createdAt: Timestamp.now(),
-                    status: 'registration',
-                    winnerGold: null,
-                    winnerSilver: null,
-                    pointsConfig: pointsConfig, // Salva os pontos personalizados
-                    rankingId: rankingId // NOVO: Salva o ID do ranking
-                });
-
-                batch.set(champDataRef, {
-                    players: [],
-                    groups: [],
-                    goldBracket: [],
-                    silverBracket: [],
-                    status: 'registration'
-                });
-
-                // 4. Executa o batch
-                await batch.commit();
-
-                input.value = '';
-                showModal("Sucesso!", `Campeonato "${champName}" criado e vinculado ao ranking.`);
-            } catch (error) {
-                console.error("Erro ao criar campeonato:", error);
-                showModal("Erro", "Não foi possível criar o campeonato.");
-            }
-
-            button.disabled = false;
-            button.lastChild.textContent = "Criar Campeonato";
-        };
-
-        const handleDeleteChampionship = async (champId) => {
-            // Esta função só é chamada se o botão existir (isAdmin = true)
-            const champ = championships.find(c => c.id === champId);
-            if (window.prompt(`Para confirmar, digite o nome do campeonato: "${champ.name}"`) !== champ.name) {
-                showModal("Cancelado", "A exclusão foi cancelada.");
-                return;
-            }
-
-            try {
-                // Deleta o documento de dados
-                await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main'));
-                // Deleta o documento principal
-                await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId));
-            } catch (error) {
-                console.error("Erro ao excluir campeonato:", error);
-                showModal("Erro", "Não foi possível excluir o campeonato.");
-            }
-        };
-
-        // =================================================================
-        // === NOVA FUNÇÃO: Para criar um novo ranking (temporada, etc)
-        // =================================================================
-        const handleAddNewRanking = async () => {
-            const name = prompt("Nome do novo ranking (ex: Temporada 2025):");
-            if (!name || name.trim() === '') return;
-
-            // Cria um ID seguro para o banco de dados
-            const id = name.trim().toLowerCase()
-                .replace(/\s+/g, '-') // substitui espaços por -
-                .replace(/[^a-z0-9-]/g, ''); // remove caracteres não-alfanuméricos (exceto -)
-
-            if (!id) {
-                showModal("Erro", "Nome inválido. Use letras e números.");
-                return;
-            }
-
-            // Verifica se o ID ou Nome já existem
-            if (allRankings.find(r => r.id === id || r.name.toLowerCase() === name.trim().toLowerCase())) {
-                showModal("Erro", "Um ranking com esse nome ou ID já existe.");
-                return;
-            }
-
-            const newRanking = { id, name: name.trim() };
-            const newList = [...allRankings, newRanking];
-
-            try {
-                // Salva a lista atualizada no documento 'rankings'
-                await setDoc(doc(db, 'users', appState.userId, 'app_data', 'rankings'), { list: newList });
-                showModal("Sucesso!", `Ranking "${name.trim()}" foi criado.`);
-                // O listener 'listenToRankingsList' vai atualizar a UI automaticamente
-            } catch (error) {
-                console.error("Erro ao criar ranking:", error);
-                showModal("Erro", "Não foi possível salvar o novo ranking.");
-            }
-        };
-
-        /* =============================================================================
-           TELA 2: Ranking Global
-           ============================================================================= */
-
-        const renderGlobalRanking = () => {
-            const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
-
-            const rankingsHtml = sortedPlayers.length === 0
-                ? `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhum jogador neste ranking.</td></tr>`
-                : sortedPlayers.map((player, index) => `
-                    <tr class="border-b border-amber-100 animate-fade-in-sm">
-                        <td class="p-3 sm:p-4 font-bold text-lg text-cyan-600">${index + 1}º</td>
-                        <td class="p-3 sm:p-4 font-medium text-gray-800">${player.name}</td>
-                        <td class="p-3 sm:p-4 font-bold text-xl text-orange-600">${player.points || 0}</td>
-                        <td class="p-3 sm:p-4 text-center text-emerald-600">${player.goldWins || 0}</td>
-                        <td class="p-3 sm:p-4 text-center text-gray-600">${player.silverWins || 0}</td>
-                        <td class="p-3 sm:p-4 text-center text-rose-600">${player.coveiroWins || 0}</td>
-                    </tr>
-                `).join('');
-
-            const rankingsOptions = allRankings.map(r => 
-                `<option value="${r.id}" ${r.id === appState.currentRankingId ? 'selected' : ''}>
-                    ${r.name}
-                </option>`
-            ).join('');
-
-            const manageButtonHtml = appState.isAdmin ? `
-                <button id="manage-rankings-btn" class="flex-shrink-0 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold p-3 rounded-lg shadow-sm transition-all" title="Gerenciar Rankings">
-                    ${icons.settings}
-                </button>
-            ` : '';
-
-            // Botão Gerar PDF
-            const printButtonHtml = `
-                <button id="print-ranking-pdf-btn" class="flex-shrink-0 bg-rose-600 hover:bg-rose-700 text-white font-bold p-3 rounded-lg shadow-sm transition-all" title="Gerar PDF do Ranking">
-                    ${icons.fileDown}
-                </button>
-            `;
-
-            const rankingSelectorHtml = `
-                <div class="mb-6">
-                    <label for="ranking-view-select" class="block text-sm font-medium text-gray-700 mb-1">Visualizando Ranking:</label>
-                    <div class="flex gap-2">
-                        <select id="ranking-view-select" class="w-full bg-white border border-gray-300 text-gray-800 rounded-lg p-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                            ${rankingsOptions.length > 0 ? rankingsOptions : '<option disabled>Nenhum ranking...</option>'}
-                        </select>
-                        ${manageButtonHtml}
-                        ${printButtonHtml}
-                    </div>
-                </div>
-            `;
-
-            mainContent.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200">
-                    <h2 class="text-3xl font-bold mb-6 text-cyan-600 flex items-center gap-3">
-                        🏆 ${icons.award} Ranking Geral
-                    </h2>
-                    
-                    ${rankingSelectorHtml}
-
-                    <div class="overflow-x-auto">
-                        <table class="w-full min-w-max text-left">
-                            <thead>
-                                <tr class="bg-amber-100"> <th class="p-3 sm:p-4 rounded-tl-lg text-gray-600">Pos.</th>
-                                    <th class="p-3 sm:p-4 text-gray-600">Jogador</th>
-                                    <th class="p-3 sm:p-4 text-gray-600">Pontos</th>
-                                    <th class="p-3 sm:p-4 text-center text-gray-600">🥇 Ouro</th>
-                                    <th class="p-3 sm:p-4 text-center text-gray-600">🥈 Prata</th>
-                                    <th class="p-3 sm:p-4 text-center rounded-tr-lg text-gray-600">👻 ${icons.shovelSmall}</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-amber-100"> ${rankingsHtml}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-
-            const rankingViewSelect = document.getElementById('ranking-view-select');
-            if (rankingViewSelect) rankingViewSelect.addEventListener('change', handleViewRankingChange);
-
+            tv: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>',
+            // NOVO ÍCONE
+            edit: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="non
+            
             const manageRankingsBtn = document.getElementById('manage-rankings-btn');
             if (manageRankingsBtn) manageRankingsBtn.addEventListener('click', renderRankingManagementModal);
 
@@ -1027,10 +471,19 @@
 
                 // Listeners de Admin
                 if (appState.isAdmin) {
+                    // BOTÃO DE CONFIRMAR (Check ✅)
                     document.querySelectorAll('.confirm-group-score-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             const { groupIndex, matchIndex } = e.currentTarget.dataset;
                             handleConfirmGroupScore(groupIndex, matchIndex);
+                        });
+                    });
+                    
+                    // NOVO: BOTÃO DE EDITAR (Lápis ✏️)
+                    document.querySelectorAll('.edit-group-score-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const { groupIndex, matchIndex } = e.currentTarget.dataset;
+                            handleEditGroupScore(groupIndex, matchIndex); // <- Nova função
                         });
                     });
 
@@ -1044,10 +497,19 @@
 
             // Listeners do Mata-Mata
             if (appState.isAdmin && (activeChampionship.status === 'knockout' || champInfo?.status === 'finished')) {
+                 // BOTÃO DE CONFIRMAR (Check ✅)
                  document.querySelectorAll('.confirm-knockout-score-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const { bracketType, matchId } = e.currentTarget.dataset;
                         handleConfirmKnockoutScore(bracketType, matchId);
+                    });
+                });
+                
+                // NOVO: BOTÃO DE EDITAR (Lápis ✏️)
+                document.querySelectorAll('.edit-knockout-score-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const { bracketType, matchId } = e.currentTarget.dataset;
+                        handleEditKnockoutScore(bracketType, matchId); // <- Nova função
                     });
                 });
             }
@@ -1076,8 +538,7 @@
                 await setDoc(champDataRef, newChampData);
             } catch (error) {
                 console.error("Erro ao salvar campeonato:", error);
-                // ESTE É O ERRO REPORTADO! (A transação pode estar sendo executada fora do bloco runTransaction)
-                showModal("Erro", "Não foi possível salvar as alterações. Se este erro persistir, pode ser um problema de regras do Firestore ou a transação está sendo chamada de forma incorreta.");
+                showModal("Erro", "Não foi possível salvar as alterações. Se este erro persistir, pode ser um problema de regras do Firestore.");
             }
         };
 
@@ -1193,7 +654,13 @@
         // (ADMIN) -- Sub-tela: Fase de Grupos --
         const renderGroupStage = () => {
             let allScoresFilled = true;
+            const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+            const isFinished = champInfo?.status === 'finished';
+
+            // NOVO: Desabilita inputs se NÃO for admin
+            // (Mas permite edição se for admin, mesmo que finalizado)
             const isDisabled = !appState.isAdmin ? 'disabled' : '';
+            const adminButtonsClass = appState.isAdmin ? '' : 'hidden';
 
             const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
                 const rankings = getRankings(group);
@@ -1202,6 +669,11 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     if (score1 === null || score2 === null) allScoresFilled = false;
+
+                    // NOVO: Botão de Edição (✏️)
+                    // Aparece se o jogo JÁ tiver placar, ou se o torneio estiver finalizado
+                    const showEditButton = (score1 !== null || isFinished);
+                    const showConfirmButton = !showEditButton;
 
                     return `
                     <div class="bg-amber-50 p-3 sm:p-4 rounded-lg border border-amber-200">
@@ -1228,12 +700,21 @@
                                 class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                 ${isDisabled}
                             />
+                            
                             <button 
-                                class="confirm-group-score-btn p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all ${isDisabled ? 'hidden' : ''}"
+                                class="confirm-group-score-btn p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all ${adminButtonsClass} ${showConfirmButton ? '' : 'hidden'}"
                                 data-group-index="${groupIndex}"
                                 data-match-index="${matchIndex}"
                                 title="Confirmar Placar">
                                 ${icons.check}
+                            </button>
+                            
+                            <button 
+                                class="edit-group-score-btn p-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-md transition-all ${adminButtonsClass} ${showEditButton ? '' : 'hidden'}"
+                                data-group-index="${groupIndex}"
+                                data-match-index="${matchIndex}"
+                                title="Editar Placar">
+                                ${icons.edit}
                             </button>
                         </div>
                     </div>
@@ -1363,7 +844,6 @@
             // Destaque do Nome do Campeão
             const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
 
-            // ALTERADO: Removido o ícone
             const championHtml = champion ? `
             <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
                 <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">Campeões</h4>
@@ -1384,8 +864,16 @@
                     const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
                     const score1 = match.score[0];
                     const score2 = match.score[1];
+                    const hasScore = score1 !== null && score2 !== null;
 
-                    const isDisabled = (!pair1 || !pair2 || !appState.isAdmin) ? 'disabled' : '';
+                    // NOVO: Desabilita inputs se NÃO for admin
+                    const isDisabled = !appState.isAdmin ? 'disabled' : '';
+                    const adminButtonsClass = appState.isAdmin ? '' : 'hidden';
+
+                    // NOVO: Botão de Edição (✏️)
+                    // Aparece se o jogo JÁ tiver placar, ou se o torneio estiver finalizado
+                    const showEditButton = (hasScore || isFinished);
+                    const showConfirmButton = !showEditButton && pair1 && pair2; // Só mostra check se tiver 2 duplas
 
                     return `
                     <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
@@ -1423,13 +911,21 @@
                             />
                         </div>
                         
-                        <div class="text-center mt-3 ${isDisabled ? 'hidden' : ''}">
+                        <div class="text-center mt-3 ${adminButtonsClass}">
                             <button 
-                                class="confirm-knockout-score-btn p-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all"
+                                class="confirm-knockout-score-btn p-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all ${showConfirmButton ? '' : 'hidden'}"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
                                 title="Confirmar Placar">
                                 ${icons.check}
+                            </button>
+                            
+                            <button 
+                                class="edit-knockout-score-btn p-2 w-full bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-md transition-all ${showEditButton ? '' : 'hidden'}"
+                                data-bracket-type="${bracketType}"
+                                data-match-id="${match.id}"
+                                title="Editar Placar">
+                                ${icons.edit}
                             </button>
                         </div>
                     </div>
@@ -1444,7 +940,6 @@
                 `;
             }).join('');
 
-            // Removido o ícone do título principal
             return `
             <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
                 <h3 class="text-3xl font-bold mb-6 text-cyan-600">
@@ -1662,7 +1157,6 @@
             // Destaque do Nome do Campeão
             const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
 
-            // ALTERADO: Removido o ícone
             const championHtml = champion ? `
             <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
                 <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">Campeões</h4>
@@ -1724,7 +1218,6 @@
                 `;
             }).join('');
 
-            // Removido o ícone do título principal
             return `
             <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
                 <h3 class="text-3xl font-bold mb-6 text-cyan-600">
@@ -1848,7 +1341,10 @@
             await saveActiveChampionship(newChampData);
         };
 
- const handleGenerateChampionship = async () => {
+        // ==========================================================
+        // === FUNÇÃO ATUALIZADA (CABEÇAS DE CHAVE) ===
+        // ==========================================================
+        const handleGenerateChampionship = async () => {
             const playerCount = activeChampionship.players.length;
             const isMultypleOfFour = playerCount % 4 === 0;
 
@@ -1872,10 +1368,6 @@
 
             try {
                 // 1. Mapear pontos do ranking global aos jogadores do torneio
-                //    'globalPlayers' é a lista do ranking (com pontos)
-                //    'activeChampionship.players' é a lista do torneio (só id, name)
-                
-                // Mapeia os pontos de 'globalPlayers' para consulta rápida
                 const globalPlayersMap = new Map(globalPlayers.map(p => [p.id, p.points || 0]));
 
                 const tournamentPlayersWithPoints = activeChampionship.players.map(p => ({
@@ -1904,13 +1396,11 @@
                 }
 
                 // 6. Distribuir Cabeças de Chave (1 por grupo)
-                //    (Jogador 1 no G1, Jogador 2 no G2, etc.)
                 for (let i = 0; i < seededPlayers.length; i++) {
                     newGroupsList[i].players.push(seededPlayers[i]);
                 }
 
                 // 7. Distribuir os demais (distribuição "snake" para equilibrar)
-                //    Preenche o slot 2 de todos grupos, depois o slot 3, etc.
                 let unseededCursor = 0;
                 const playersPerGroup = 4;
                 for (let p_slot = 1; p_slot < playersPerGroup; p_slot++) { // Começa do slot 1 (o 0 é do cabeça)
@@ -1924,7 +1414,6 @@
 
                 // 8. Agora que os groups.players estão definidos, criar as 'matches'
                 for (const group of newGroupsList) {
-                    // p1 é sempre o cabeça de chave do grupo
                     const [p1, p2, p3, p4] = group.players; 
                     
                     if (!p1 || !p2 || !p3 || !p4) {
@@ -1956,6 +1445,60 @@
                 showModal("Erro", "Não foi possível gerar os grupos. " + error.message);
             }
         };
+
+        // =================================================================
+        // === NOVAS FUNÇÕES DE EDIÇÃO DE PLACAR ===
+        // =================================================================
+        
+        // (Handler do Botão ✏️)
+        const handleEditGroupScore = (groupIndex, matchIndex) => {
+            const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+            const isFinished = champInfo?.status === 'finished';
+
+            if (!isFinished) {
+                // Se o torneio não acabou, só salva (mesma lógica do botão "confirmar")
+                handleConfirmGroupScore(groupIndex, matchIndex);
+                return;
+            }
+
+            // Se o torneio JÁ ACABOU, pede confirmação
+            const val0 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s0`).value;
+            const val1 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s1`).value;
+            const score0 = val0 === '' ? null : parseInt(val0, 10);
+            const score1 = val1 === '' ? null : parseInt(val1, 10);
+
+            if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                return;
+            }
+
+            const confirmationButtons = [
+                {
+                    id: 'modal-cancel-btn',
+                    text: 'Cancelar',
+                    className: 'w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-5 rounded-lg shadow-sm transition-all',
+                    handler: hideModal
+                },
+                {
+                    id: 'modal-confirm-edit-btn',
+                    text: 'Confirmar e Recalcular',
+                    className: 'w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all',
+                    handler: () => {
+                        // Salva a edição e dispara o recálculo do ranking
+                        handleConfirmGroupScore_Logic(groupIndex, matchIndex, score0, score1, true); // true = forçar recálculo
+                        hideModal();
+                    }
+                }
+            ];
+
+            showModal(
+                "Atenção: Torneio Finalizado", 
+                "Você está editando o placar de um torneio que já foi finalizado. Isso irá recalcular os vencedores e ajustar o Ranking Global.<br><br>Deseja continuar?",
+                confirmationButtons
+            );
+        };
+        
+        // (Handler do Botão ✅)
         const handleConfirmGroupScore = (groupIndex, matchIndex) => {
             const val0 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s0`).value;
             const val1 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s1`).value;
@@ -1967,13 +1510,50 @@
                 showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
                 return;
             }
+            
+            // Apenas salva, sem forçar recálculo
+            handleConfirmGroupScore_Logic(groupIndex, matchIndex, score0, score1, false);
+        };
 
+        // (Função Lógica)
+        const handleConfirmGroupScore_Logic = async (groupIndex, matchIndex, score0, score1, forceRecalculate) => {
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             newChampData.groups[groupIndex].matches[matchIndex].score[0] = score0;
             newChampData.groups[groupIndex].matches[matchIndex].score[1] = score1;
 
-            saveActiveChampionship(newChampData); 
+            // Se a edição for em um torneio finalizado, precisamos recalcular o mata-mata
+            if (forceRecalculate) {
+                // 1. Recalcula os classificados
+                let goldSeriesPairs = [];
+                let silverSeriesPairs = [];
+
+                newChampData.groups.forEach(group => {
+                    const rankings = getRankings(group); // Recalcula com o novo placar
+                    goldSeriesPairs.push({ id: `${rankings[0].id}_${rankings[1].id}`, name: `${rankings[0].name} / ${rankings[1].name}`, players: [rankings[0], rankings[1]] });
+                    silverSeriesPairs.push({ id: `${rankings[2].id}_${rankings[3].id}`, name: `${rankings[2].name} / ${rankings[3].name}`, players: [rankings[2], rankings[3]] });
+                });
+                
+                // 2. Recria as chaves (com o mesmo sorteio, se possível - mas aqui estamos recriando)
+                //    NOTA: Isso irá resetar o mata-mata. Uma lógica mais complexa
+                //    manteria os placares antigos se os times fossem os mesmos.
+                //    Para v1 da Edição: Resetar o mata-mata é aceitável.
+                const goldBracket = createBracket(goldSeriesPairs);
+                const silverBracket = createBracket(silverSeriesPairs);
+
+                newChampData.status = 'knockout'; // Volta o status para poder preencher de novo
+                newChampData.goldBracket = goldBracket;
+                newChampData.silverBracket = silverBracket;
+                
+                // Limpa os dados de finalização no doc principal
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                await setDoc(champRef, { status: 'knockout', winnerGold: null, winnerSilver: null }, { merge: true });
+                
+                showModal("Mata-Mata Resetado", "O placar do grupo foi alterado. O mata-mata foi resetado. Por favor, preencha os placares das chaves novamente.");
+            }
+
+            await saveActiveChampionship(newChampData);
         };
+
 
         const handlePrintGroup = (groupIndex) => {
             const group = activeChampionship.groups[groupIndex];
@@ -2112,7 +1692,60 @@
             }
         };
 
-        const handleConfirmKnockoutScore = async (bracketType, matchId) => {
+        // (Handler do Botão ✏️)
+        const handleEditKnockoutScore = (bracketType, matchId) => {
+            const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+            const isFinished = champInfo?.status === 'finished';
+
+            if (!isFinished) {
+                // Se o torneio não acabou, só salva (mesma lógica do botão "confirmar")
+                handleConfirmKnockoutScore(bracketType, matchId);
+                return;
+            }
+            
+            // Se o torneio JÁ ACABOU, pede confirmação
+            const val0 = document.getElementById(`k-${matchId}-s0`).value;
+            const val1 = document.getElementById(`k-${matchId}-s1`).value;
+            const score0 = val0 === '' ? null : parseInt(val0, 10);
+            const score1 = val1 === '' ? null : parseInt(val1, 10);
+
+            if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                return;
+            }
+            if (score0 === score1) {
+                showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
+                return;
+            }
+            
+            const confirmationButtons = [
+                {
+                    id: 'modal-cancel-btn',
+                    text: 'Cancelar',
+                    className: 'w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-5 rounded-lg shadow-sm transition-all',
+                    handler: hideModal
+                },
+                {
+                    id: 'modal-confirm-edit-btn',
+                    text: 'Confirmar e Recalcular',
+                    className: 'w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all',
+                    handler: () => {
+                        // Salva a edição e dispara o recálculo do ranking
+                        handleConfirmKnockoutScore_Logic(bracketType, matchId, score0, score1, true); // true = forçar recálculo
+                        hideModal();
+                    }
+                }
+            ];
+
+            showModal(
+                "Atenção: Torneio Finalizado", 
+                "Você está editando o placar de um torneio que já foi finalizado. Isso irá recalcular os vencedores e ajustar o Ranking Global.<br><br>Deseja continuar?",
+                confirmationButtons
+            );
+        };
+        
+        // (Handler do Botão ✅)
+        const handleConfirmKnockoutScore = (bracketType, matchId) => {
             const val0 = document.getElementById(`k-${matchId}-s0`).value;
             const val1 = document.getElementById(`k-${matchId}-s1`).value;
 
@@ -2127,7 +1760,13 @@
                 showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
                 return;
             }
+            
+            // Apenas salva, sem forçar recálculo
+            handleConfirmKnockoutScore_Logic(bracketType, matchId, score0, score1, false);
+        };
 
+        // (Função Lógica)
+        const handleConfirmKnockoutScore_Logic = async (bracketType, matchId, score0, score1, forceRecalculate) => {
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
             const match = bracketToUpdate.find(m => m.id === matchId);
@@ -2135,27 +1774,59 @@
             if (match) {
                 match.score[0] = score0;
                 match.score[1] = score1;
+                
+                // Determina o vencedor
+                let winner = null;
+                if (score0 > score1) winner = match.pairs[0]; 
+                else if (score1 > score0) winner = match.pairs[1];
+                
+                // Se o vencedor mudou, reseta as próximas chaves
+                if (match.winner && winner && match.winner.id !== winner.id) {
+                    let currentMatch = match;
+                    while (currentMatch && currentMatch.nextMatchId) {
+                        const nextMatch = bracketToUpdate.find(m => m.id === currentMatch.nextMatchId);
+                        if (nextMatch) {
+                            nextMatch.pairs[currentMatch.nextMatchSlot] = null;
+                            nextMatch.score = [null, null];
+                            nextMatch.winner = null;
+                            currentMatch = nextMatch;
+                        } else {
+                            currentMatch = null;
+                        }
+                    }
+                }
+                
+                match.winner = winner;
 
-                if (score0 > score1) match.winner = match.pairs[0]; 
-                else if (score1 > score0) match.winner = match.pairs[1];
-
+                // Avança o novo vencedor
                 if (match.winner && match.nextMatchId) {
                     const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
                     if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
                 }
 
                 await saveActiveChampionship(newChampData); 
-                await checkAndFinalizeChampionship(newChampData);
+                
+                // Verifica se o torneio acabou (ou se estamos forçando o recálculo)
+                const finalizationCheckData = await checkAndFinalizeChampionship(newChampData, forceRecalculate);
+                
+                // Se o checkAndFinalize rodou por causa de uma edição (forceRecalculate)
+                // E ele retornou os dados de diff, aplicamos
+                if (forceRecalculate && finalizationCheckData && finalizationCheckData.didRecalculate) {
+                    const { diffMap, rankingId } = finalizationCheckData;
+                    await applyRankingDiff(diffMap, rankingId);
+                    showModal("Sucesso!", "O placar foi corrigido e o Ranking Global foi ajustado com a diferença de pontos.");
+                }
             }
         };
 
+
         /* =============================================================================
-           Lógica de Cálculo de Ranking
+           Lógica de Cálculo de Ranking (ATUALIZADA)
            ============================================================================= */
 
-        const checkAndFinalizeChampionship = async (champData) => {
+        const checkAndFinalizeChampionship = async (champData, forceRecalculate = false) => {
             if (!champData.goldBracket || !champData.silverBracket || champData.goldBracket.length === 0 || champData.silverBracket.length === 0) {
-                return; 
+                return { didRecalculate: false }; 
             }
 
             const maxRoundGold = Math.max(...champData.goldBracket.map(m => m.round));
@@ -2167,120 +1838,163 @@
             const goldWinner = goldFinal?.winner; 
             const silverWinner = silverFinal?.winner; 
 
+            // Só continua se o torneio estiver finalizado (ambas as chaves têm campeão)
             if (goldWinner && silverWinner) {
+                
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
-
                 const champDoc = await getDoc(champRef);
-                if (!champDoc.exists()) return; 
+                if (!champDoc.exists()) return { didRecalculate: false }; 
 
                 const champDocData = champDoc.data();
-                const wasAlreadyFinished = (champDocData.status === 'finished');
-
                 const rankingId = champDocData.rankingId;
                 if (!rankingId) {
                     showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
-                    console.error("Erro Crítico: Campeonato sem rankingId.");
-                    return;
+                    return { didRecalculate: false };
                 }
 
+                // Pega o "snapshot" de pontos antigos (se houver)
+                const oldPointsMap = champDocData.finalPointsAwarded || null;
+                const effectivePoints = champDocData.pointsConfig || DEFAULT_RANKING_POINTS;
+                
+                // 1. CALCULA O NOVO ESTADO
+                const { newPointsMap, newWinners } = calculatePlayerPointsMap(champData, effectivePoints);
+
+                // 2. SALVA O NOVO ESTADO (Status, Vencedores e o novo Snapshot de Pontos)
+                await setDoc(champRef, {
+                    status: 'finished',
+                    winnerGold: newWinners.goldWinner.name, 
+                    winnerSilver: newWinners.silverWinner.name,
+                    finalPointsAwarded: newPointsMap // Salva o novo snapshot
+                }, { merge: true });
+
+                // 3. APLICA A LÓGICA DE RANKING
                 try {
-                    const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
-                    const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
+                    if (oldPointsMap) {
+                        // JÁ FOI FINALIZADO (É UMA EDIÇÃO)
+                        // Calcula a diferença (diff) entre o novo e o antigo
+                        const diffMap = new Map();
+                        
+                        // Combina todas as chaves (IDs) de ambos os mapas
+                        const allPlayerIds = new Set([...Object.keys(oldPointsMap), ...Object.keys(newPointsMap)]);
 
-                    const stats = getGlobalTournamentStats(champData);
+                        allPlayerIds.forEach(id => {
+                            const oldP = oldPointsMap[id] || { points: 0, goldWins: 0, silverWins: 0, coveiroWins: 0 };
+                            const newP = newPointsMap[id] || { points: 0, goldWins: 0, silverWins: 0, coveiroWins: 0 };
+                            
+                            const diff = {
+                                points: newP.points - oldP.points,
+                                goldWins: newP.goldWins - oldP.goldWins,
+                                silverWins: newP.silverWins - oldP.silverWins,
+                                coveiroWins: newP.coveiroWins - oldP.coveiroWins
+                            };
 
-                    const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
-                    const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
+                            // Só adiciona se houver diferença
+                            if (diff.points !== 0 || diff.goldWins !== 0 || diff.silverWins !== 0 || diff.coveiroWins !== 0) {
+                                diffMap.set(id, { name: newP.name || oldP.name, diff }); // Salva o diff
+                            }
+                        });
+                        
+                        // Retorna os dados para a função que chamou (handleConfirmKnockoutScore_Logic)
+                        // para que ela possa aplicar o Diff DEPOIS de salvar
+                        if (forceRecalculate) {
+                             return { didRecalculate: true, diffMap, rankingId };
+                        }
 
-                    const effectivePoints = champDocData.pointsConfig || DEFAULT_RANKING_POINTS;
-
-                    // O update principal do status e vencedores deve ser feito antes da transação de ranking.
-                    await setDoc(champRef, {
-                        status: 'finished',
-                        winnerGold: goldWinner.name, 
-                        winnerSilver: silverWinner.name
-                    }, { merge: true });
-
-                    if (!wasAlreadyFinished) {
-                        showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
-
-                        // APLICA O RANKING DENTRO DA TRANSAÇÃO
-                        await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, effectivePoints, rankingId);
-
-                        hideModal();
-                        showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
                     } else {
-                         // Se já estava finalizado, apenas notifica sobre o ajuste de placar
-                         showModal("Placar Atualizado", `O placar final foi alterado. O ranking global NÃO foi recalculado para evitar duplicidade.`);
+                        // PRIMEIRA VEZ FINALIZANDO
+                        showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+                        
+                        // Aplica os pontos TOTAIS (não é um diff)
+                        await updateGlobalRanking(newPointsMap, rankingId); 
+                        
+                        hideModal();
+                        showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${newWinners.goldWinner.name}. 🥈 Campeões Prata: ${newWinners.silverWinner.name}.`);
                     }
-
                 } catch (error) {
                     console.error("Erro ao finalizar e aplicar ranking:", error);
-                    // O erro de "Firestone transactions require all reads to be executed before all writes"
-                    // geralmente ocorre na função updateGlobalRanking, pois o bloco runTransaction foi mal construído.
-                    // Garantindo que a função `updateGlobalRanking` use o `runTransaction` corretamente.
-                    showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes.");
+                    showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console.");
                 }
             }
+            
+            return { didRecalculate: false }; // Não recalculou
         };
 
-        const updateGlobalRanking = async (champData, winners, pointsConfig, rankingId) => {
-            // Garante que toda a lógica de leitura e escrita do ranking está dentro da transação
+        // NOVO HELPER: Calcula o mapa de pontos (para ser usado na finalização e no diff)
+        const calculatePlayerPointsMap = (champData, pointsConfig) => {
+            const goldFinal = champData.goldBracket.find(m => m.round === Math.max(...champData.goldBracket.map(m => m.round)));
+            const silverFinal = champData.silverBracket.find(m => m.round === Math.max(...champData.silverBracket.map(m => m.round)));
+
+            const goldWinner = goldFinal?.winner;
+            const goldRunnerUp = goldWinner ? goldFinal.pairs.find(p => p.id !== goldWinner.id) : null;
+            const silverWinner = silverFinal?.winner;
+            const silverRunnerUp = silverWinner ? silverFinal.pairs.find(p => p.id !== silverWinner.id) : null;
+
+            const stats = getGlobalTournamentStats(champData);
+            const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
+            const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
+
+            const winners = { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros };
+            
+            // Converte o Map para um Objeto serializável
+            const playerPointsObject = {}; 
+
+            for (const player of champData.players) {
+                playerPointsObject[player.id] = {
+                    name: player.name,
+                    points: pointsConfig.participation,
+                    goldWins: 0,
+                    silverWins: 0,
+                    coveiroWins: 0 
+                };
+            }
+            if (winners.goldWinner) {
+                for (const player of winners.goldWinner.players) {
+                    const p = playerPointsObject[player.id];
+                    if (p) { p.points += pointsConfig.goldWinner; p.goldWins = 1; }
+                }
+            }
+            if (winners.goldRunnerUp) {
+                for (const player of winners.goldRunnerUp.players) {
+                    const p = playerPointsObject[player.id];
+                     if (p) p.points += pointsConfig.goldRunnerUp;
+                }
+            }
+            if (winners.silverWinner) {
+                for (const player of winners.silverWinner.players) {
+                    const p = playerPointsObject[player.id];
+                     if (p) { p.points += pointsConfig.silverWinner; p.silverWins = 1; }
+                }
+            }
+            if (winners.silverRunnerUp) {
+                 for (const player of winners.silverRunnerUp.players) {
+                    const p = playerPointsObject[player.id];
+                     if (p) p.points += pointsConfig.silverRunnerUp;
+                }
+            }
+            if (winners.coveiros && winners.coveiros.length > 0) {
+                for (const coveiro of winners.coveiros) {
+                    const p = playerPointsObject[coveiro.id];
+                    if (p) { p.coveiroWins = 1; }
+                }
+            }
+            
+            return { newPointsMap: playerPointsObject, newWinners: winners };
+        };
+
+        // (ATUALIZADA: Recebe o Map/Objeto de pontos)
+        const updateGlobalRanking = async (playerPointsMap, rankingId) => {
             await runTransaction(db, async (transaction) => {
-                const playerPointsMap = new Map();
-
-                // 1. CALCULAR PONTOS (Em memória)
-                for (const player of champData.players) {
-                    playerPointsMap.set(player.id, {
-                        name: player.name,
-                        points: pointsConfig.participation,
-                        goldWins: 0,
-                        silverWins: 0,
-                        coveiroWins: 0 
-                    });
-                }
-                if (winners.goldWinner) {
-                    for (const player of winners.goldWinner.players) {
-                        const p = playerPointsMap.get(player.id);
-                        if (p) { p.points += pointsConfig.goldWinner; p.goldWins = 1; }
-                    }
-                }
-                if (winners.goldRunnerUp) {
-                    for (const player of winners.goldRunnerUp.players) {
-                        const p = playerPointsMap.get(player.id);
-                         if (p) p.points += pointsConfig.goldRunnerUp;
-                    }
-                }
-                if (winners.silverWinner) {
-                    for (const player of winners.silverWinner.players) {
-                        const p = playerPointsMap.get(player.id);
-                         if (p) { p.points += pointsConfig.silverWinner; p.silverWins = 1; }
-                    }
-                }
-                if (winners.silverRunnerUp) {
-                     for (const player of winners.silverRunnerUp.players) {
-                        const p = playerPointsMap.get(player.id);
-                         if (p) p.points += pointsConfig.silverRunnerUp;
-                    }
-                }
-                if (winners.coveiros && winners.coveiros.length > 0) {
-                    for (const coveiro of winners.coveiros) {
-                        const p = playerPointsMap.get(coveiro.id);
-                        if (p) { p.coveiroWins = 1; }
-                    }
-                }
-
-
-                // 2. FASE DE LEITURA (Reads - Deve ocorrer antes de qualquer write dentro da transação)
+                // 1. FASE DE LEITURA
                 const playerDocsData = new Map();
-                for (const [playerId, data] of playerPointsMap.entries()) {
+                for (const playerId in playerPointsMap) {
                     const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
-                    const playerDoc = await transaction.get(playerRef); // Leitura dentro da transação
+                    const playerDoc = await transaction.get(playerRef);
                     playerDocsData.set(playerId, playerDoc); 
                 }
 
-                // 3. FASE DE ESCRITA (Writes)
-                for (const [playerId, data] of playerPointsMap.entries()) {
+                // 2. FASE DE ESCRITA
+                for (const playerId in playerPointsMap) {
+                    const data = playerPointsMap[playerId];
                     const playerDoc = playerDocsData.get(playerId); 
                     const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
 
@@ -2295,11 +2009,52 @@
                     } else {
                         const oldData = playerDoc.data();
                         transaction.update(playerRef, {
-                            name: data.name, 
+                            name: data.name, // Garante que o nome está atualizado
                             points: (oldData.points || 0) + data.points,
                             goldWins: (oldData.goldWins || 0) + data.goldWins,
                             silverWins: (oldData.silverWins || 0) + data.silverWins,
                             coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWins 
+                        });
+                    }
+                }
+            });
+        };
+        
+        // (NOVA FUNÇÃO: Aplica apenas a diferença)
+        const applyRankingDiff = async (diffMap, rankingId) => {
+            await runTransaction(db, async (transaction) => {
+                // 1. FASE DE LEITURA
+                const playerDocsData = new Map();
+                for (const [playerId, data] of diffMap.entries()) {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                    const playerDoc = await transaction.get(playerRef);
+                    playerDocsData.set(playerId, playerDoc); 
+                }
+
+                // 2. FASE DE ESCRITA
+                for (const [playerId, data] of diffMap.entries()) {
+                    const { name, diff } = data;
+                    const playerDoc = playerDocsData.get(playerId); 
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
+
+                    if (!playerDoc.exists()) {
+                        // Se o jogador não existe, aplicamos o diff como o valor inicial
+                        console.warn(`Aplicando diff para jogador ${name} que não existia no ranking.`);
+                        transaction.set(playerRef, {
+                            name: name,
+                            points: diff.points,
+                            goldWins: diff.goldWins,
+                            silverWins: diff.silverWins,
+                            coveiroWins: diff.coveiroWins 
+                        });
+                    } else {
+                        // Se existe, somamos o diff
+                        const oldData = playerDoc.data();
+                        transaction.update(playerRef, {
+                            points: (oldData.points || 0) + diff.points,
+                            goldWins: (oldData.goldWins || 0) + diff.goldWins,
+                            silverWins: (oldData.silverWins || 0) + diff.silverWins,
+                            coveiroWins: (oldData.coveiroWins || 0) + diff.coveiroWins 
                         });
                     }
                 }
