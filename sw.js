@@ -3,12 +3,11 @@ const CACHE_NAME = "ranking-bt-v1";
 
 // Lista de arquivos que serão armazenados em cache
 const FILES_TO_CACHE = [
-  "/",
-  "/index.html",
-  "/instalar.html",
-  "/manifest.json",
-  "/icon-192.png",
-  "/icon-512.png"
+  "index.html",
+  "instalar.html",
+  "manifest.json",
+  "icon-192.png",
+  "icon-512.png"
 ];
 
 // Instalação — adiciona arquivos ao cache
