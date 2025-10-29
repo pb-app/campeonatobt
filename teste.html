@@ -1008,28 +1008,274 @@
                 let pdfButtonHtml = '';
                 if (champInfo?.status === 'finished') {
                     pdfButtonHtml = `
-                        <button id="print-champ-pdf-btn" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg ...(truncated 39115 characters)...artas de Final'
-                    : `Rodada ${roundNum}`;
+                        <button id="print-champ-pdf-btn" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg mb-2 sm:mb-0 sm:mr-2">
+                            ${icons.fileDown} Gerar PDF
+                        </button>`;
+                }
+                topButtonsHtml = `
+                    <div class="flex flex-col sm:flex-row justify-end mb-6 space-y-2 sm:space-y-0 sm:space-x-2">
+                        ${pdfButtonHtml}
+                        <button id="launch-telao-btn" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg">
+                            ${icons.tv} Abrir Telão
+                        </button>
+                    </div>`;
+            }
+            html += topButtonsHtml;
 
-                const matchesHtml = rounds[roundNum].map(match => {
-                    const pair1 = match.pairs[0]; 
-                    const pair2 = match.pairs[1]; 
+            // Conteúdo baseado no status
+            if (activeChampionship.status === 'registration') {
+                html += renderRegistrationSection();
+            } else if (activeChampionship.status === 'groups') {
+                html += renderGroupsSection();
+            } else if (activeChampionship.status === 'knockout') {
+                html += renderKnockoutSection();
+            } else if (activeChampionship.status === 'finished') {
+                html += renderFinishedSection();
+            }
+
+            mainContent.innerHTML = html;
+
+            // Adiciona listeners para botões
+            if (appState.isAdmin) {
+                const printChampBtn = document.getElementById('print-champ-pdf-btn');
+                if (printChampBtn) printChampBtn.addEventListener('click', handlePrintChampionshipPDF);
+
+                const telaoBtn = document.getElementById('launch-telao-btn');
+                if (telaoBtn) telaoBtn.addEventListener('click', handleLaunchTelao);
+            }
+
+            // Outros listeners específicos da tela
+            if (activeChampionship.status === 'registration') {
+                document.getElementById('add-new-player-form').addEventListener('submit', handleAddNewPlayerToChampionship);
+                document.getElementById('add-existing-player-form').addEventListener('submit', handleAddExistingPlayerToChampionship);
+                document.querySelectorAll('.delete-player-btn').forEach(btn => {
+                    btn.addEventListener('click', () => handleDeletePlayerFromChampionship(btn.dataset.id));
+                });
+                document.getElementById('generate-champ-btn').addEventListener('click', handleGenerateChampionship);
+            } else if (activeChampionship.status === 'groups') {
+                document.querySelectorAll('.confirm-group-score-btn').forEach(btn => {
+                    btn.addEventListener('click', () => handleConfirmGroupScore(btn.dataset.group, btn.dataset.match));
+                });
+                document.querySelectorAll('.print-group-btn').forEach(btn => {
+                    btn.addEventListener('click', () => handlePrintGroup(btn.dataset.group));
+                });
+                document.getElementById('finalize-groups-btn').addEventListener('click', handleFinalizeGroups);
+            } else if (activeChampionship.status === 'knockout') {
+                document.querySelectorAll('.confirm-knockout-score-btn').forEach(btn => {
+                    btn.addEventListener('click', () => handleConfirmKnockoutScore(btn.dataset.bracket, btn.dataset.match));
+                });
+            }
+        };
+
+        const renderRegistrationSection = () => {
+            const sortedPlayers = [...activeChampionship.players].sort((a, b) => a.name.localeCompare(b.name));
+            const playersHtml = sortedPlayers.map(p => `
+                <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg shadow-sm">
+                    <span class="text-gray-800">${p.name}</span>
+                    ${appState.isAdmin ? `
+                    <button class="delete-player-btn text-red-600 hover:text-red-700" data-id="${p.id}">
+                        ${icons.trash}
+                    </button>` : ''}
+                </div>
+            `).join('');
+
+            const existingPlayersOptions = globalPlayers
+                .filter(gp => !activeChampionship.players.some(ap => ap.id === gp.id))
+                .map(gp => `<option value="${gp.id}">${gp.name}</option>`).join('');
+
+            return `
+                <div class="card mb-8">
+                    <h2 class="text-2xl font-bold mb-6 text-blue-600">Inscrições</h2>
+                    <div class="space-y-4">
+                        <form id="add-new-player-form" class="flex gap-2">
+                            <input id="new-player-name-input" type="text" placeholder="Nome do jogador" class="flex-grow bg-gray-50 border border-gray-300 rounded-lg p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button id="add-new-player-btn" type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold p-3 rounded-lg shadow-md transition-all">
+                                ${icons.plus}
+                            </button>
+                        </form>
+
+                        <form id="add-existing-player-form" class="flex gap-2">
+                            <select id="existing-player-select" class="flex-grow bg-gray-50 border border-gray-300 rounded-lg p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Adicionar do Ranking</option>
+                                ${existingPlayersOptions}
+                            </select>
+                            <button id="add-existing-player-btn" type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg shadow-md transition-all">
+                                ${icons.plus}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="text-xl font-bold mb-4 text-blue-600">Jogadores Inscritos (${activeChampionship.players.length})</h3>
+                    <div class="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
+                        ${playersHtml || '<p class="text-gray-500 text-center">Nenhum jogador inscrito.</p>'}
+                    </div>
+                    ${appState.isAdmin && activeChampionship.players.length >= 4 && activeChampionship.players.length % 4 === 0 ? `
+                    <button id="generate-champ-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all mt-6 flex items-center justify-center gap-2">
+                        ${icons.swords}
+                        Gerar Chaves
+                    </button>` : ''}
+                </div>
+            `;
+        };
+
+        const renderGroupsSection = () => {
+            let html = '';
+
+            activeChampionship.groups.forEach((group, index) => {
+                const rankings = getRankings(group);
+                const rankingsHtml = rankings.map((p, rIndex) => `
+                    <tr class="${rIndex < 2 ? 'bg-green-50' : 'bg-red-50'}">
+                        <td class="p-3 text-center font-medium">${rIndex + 1}º</td>
+                        <td class="p-3">${p.name}</td>
+                        <td class="p-3 text-center font-bold">${p.gamesWon}</td>
+                    </tr>
+                `).join('');
+
+                let matchesHtml = '';
+                group.matches.forEach((m, mIndex) => {
+                    matchesHtml += `
+                    <div class="bg-gray-100 rounded-lg p-4 mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium">${m.names[0]}</span>
+                            <input id="g-${index}-m-${mIndex}-s0" type="number" min="0" value="${m.score[0] === null ? '' : m.score[0]}" class="w-16 bg-white border border-gray-300 rounded-lg p-2 text-center text-xl font-bold">
+                        </div>
+                        <div class="text-center my-2 text-gray-500">vs</div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">${m.names[1]}</span>
+                            <input id="g-${index}-m-${mIndex}-s1" type="number" min="0" value="${m.score[1] === null ? '' : m.score[1]}" class="w-16 bg-white border border-gray-300 rounded-lg p-2 text-center text-xl font-bold">
+                        </div>
+                        ${appState.isAdmin ? `
+                        <button class="confirm-group-score-btn w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg mt-3" data-group="${index}" data-match="${mIndex}">
+                            Confirmar
+                        </button>` : ''}
+                    </div>`;
+                });
+
+                html += `
+                <div class="card mb-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-blue-600">Grupo ${index + 1}</h3>
+                        ${appState.isAdmin ? `
+                        <button class="print-group-btn text-gray-600 hover:text-gray-800" data-group="${index}">
+                            ${icons.printer}
+                        </button>` : ''}
+                    </div>
+                    <div class="space-y-4 mb-6">
+                        ${matchesHtml}
+                    </div>
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="p-3">Pos.</th>
+                                <th class="p-3">Jogador</th>
+                                <th class="p-3 text-center">Games</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rankingsHtml}
+                        </tbody>
+                    </table>
+                </div>`;
+            });
+
+            if (appState.isAdmin) {
+                html += `
+                <button id="finalize-groups-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2">
+                    ${icons.check}
+                    Finalizar Grupos
+                </button>`;
+            }
+
+            return html;
+        };
+
+        const renderKnockoutSection = () => {
+            const goldBracketHtml = renderBracketSection('Ouro', activeChampionship.goldBracket, 'goldBracket');
+            const silverBracketHtml = renderBracketSection('Prata', activeChampionship.silverBracket, 'silverBracket');
+
+            return goldBracketHtml + silverBracketHtml;
+        };
+
+        const renderFinishedSection = () => {
+            const goldWinner = championships.find(c => c.id === appState.currentChampionshipId)?.winnerGold;
+            const silverWinner = championships.find(c => c.id === appState.currentChampionshipId)?.winnerSilver;
+
+            const stats = getGlobalTournamentStats(activeChampionship);
+            const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
+            const coveiros = stats.filter(p => p.gamesWon === minGames).map(p => p.name).join(', ');
+
+            const goldBracketHtml = renderBracketSection('Ouro', activeChampionship.goldBracket, 'goldBracket', true);
+            const silverBracketHtml = renderBracketSection('Prata', activeChampionship.silverBracket, 'silverBracket', true);
+
+            return `
+                <div class="card mb-8 text-center">
+                    <h2 class="text-3xl font-bold mb-4 text-yellow-600">Campeões Ouro</h2>
+                    ${icons.medal}
+                    <p class="text-2xl font-bold mb-6">${goldWinner || 'Não definido'}</p>
+
+                    <h2 class="text-3xl font-bold mb-4 text-gray-600">Campeões Prata</h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3"><path d="M12 16.5l4-2.3 4 2.3-1.5-4.6 3.5-3.4-4.6-.7-2-4.2-2 4.2-4.6.7 3.5 3.4L8 16.5z"></path><path d="M12 15l-4-2.3V7.9l4 2.3 4-2.3v4.8L12 15z"></path></svg>
+                    <p class="text-2xl font-bold mb-6">${silverWinner || 'Não definido'}</p>
+
+                    <h2 class="text-3xl font-bold mb-4 text-red-600">Coveiro(s)</h2>
+                    ${icons.shovel}
+                    <p class="text-xl font-bold">${coveiros || 'Não definido'}</p>
+                </div>
+
+                ${goldBracketHtml}
+                ${silverBracketHtml}
+            `;
+        };
+
+        const renderBracketSection = (title, bracket, bracketType, isFinished = false) => {
+            const maxRound = Math.max(...bracket.map(m => m.round));
+            const rounds = {};
+            bracket.forEach(m => {
+                if (!rounds[m.round]) rounds[m.round] = [];
+                rounds[m.round].push(m);
+            });
+
+            let roundsHtml = '';
+            for (let r = 1; r <= maxRound; r++) {
+                const roundTitle = r === maxRound ? 'Final' 
+                    : r === maxRound - 1 ? 'Semi-Final' 
+                    : r === maxRound - 2 ? 'Quartas' : `Rodada ${r}`;
+
+                const matchesHtml = rounds[r].map(match => {
+                    const pair1 = match.pairs[0];
+                    const pair2 = match.pairs[1];
                     const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
                     const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
-                    const score1 = match.score[0];
-                    const score2 = match.score[1];
-
+                    const score1 = match.score[0] === null ? '-' : match.score[0];
+                    const score2 = match.score[1] === null ? '-' : match.score[1];
                     const winnerClass1 = isPair1Winner ? 'text-green-600 font-bold' : 'text-gray-800';
                     const winnerClass2 = isPair2Winner ? 'text-green-600 font-bold' : 'text-gray-800';
+
+                    let scoreInputHtml = '';
+                    if (appState.isAdmin && !isFinished && pair1 && pair2) {
+                        scoreInputHtml = `
+                        <div class="mt-4 flex gap-2">
+                            <input id="k-${match.id}-s0" type="number" min="0" value="${match.score[0] === null ? '' : match.score[0]}" class="w-16 bg-white border border-gray-300 rounded-lg p-2 text-center text-xl font-bold">
+                            <span class="self-center text-gray-500">vs</span>
+                            <input id="k-${match.id}-s1" type="number" min="0" value="${match.score[1] === null ? '' : match.score[1]}" class="w-16 bg-white border border-gray-300 rounded-lg p-2 text-center text-xl font-bold">
+                            <button class="confirm-knockout-score-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg" data-bracket="${bracketType}" data-match="${match.id}">
+                                Confirmar
+                            </button>
+                        </div>`;
+                    } else {
+                        scoreInputHtml = `
+                        <div class="text-center text-xl font-bold text-gray-800 mt-2">
+                            ${score1} vs ${score2}
+                        </div>`;
+                    }
 
                     return `
                     <div class="bg-gray-100 rounded-lg shadow-sm border border-gray-200 p-4">
                         <div class="flex justify-between items-center mb-2">
                             <span class="font-medium text-lg ${winnerClass1}">
                                 ${pair1 ? pair1.name : 'Aguardando...'}
-                            </span>
-                            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
-                                ${score1 === null ? '-' : score1}
                             </span>
                         </div>
                         
@@ -1043,21 +1289,19 @@
                             <span class="font-medium text-lg ${winnerClass2}">
                                 ${pair2 ? pair2.name : 'Aguardando...'}
                             </span>
-                            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
-                                ${score2 === null ? '-' : score2}
-                            </span>
                         </div>
+                        ${scoreInputHtml}
                     </div>
                     `;
                 }).join('');
 
-                return `
+                roundsHtml += `
                 <div class="flex flex-col space-y-6 w-full max-w-xs">
                     <h4 class="text-xl font-semibold text-gray-800">${roundTitle}</h4>
                     ${matchesHtml}
                 </div>
                 `;
-            }).join('');
+            }
 
             // Removido o ícone do título principal
             return `
@@ -1065,7 +1309,6 @@
                 <h3 class="text-3xl font-bold mb-6 text-blue-600">
                     ${title}
                 </h3>
-                ${championHtml}
                 <div class="flex flex-wrap justify-center gap-4 sm:gap-6 pb-4">
                     ${roundsHtml}
                 </div>
@@ -2175,6 +2418,16 @@
                 }
             }
         });
+
+        const saveActiveChampionship = async (newData) => {
+            const champDataRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId, 'data', 'main');
+            try {
+                await setDoc(champDataRef, newData);
+            } catch (error) {
+                console.error("Erro ao salvar campeonato:", error);
+                showModal("Erro", "Não foi possível salvar as alterações.");
+            }
+        };
 
     </script>
 </body>
