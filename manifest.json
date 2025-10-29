@@ -1,7 +1,7 @@
 {
   "name": "Ranking Beach Tennis",
   "short_name": "Ranking BT",
-  "start_url": "/campeonatobt/instalar.html",
+  "start_url": "/campeonatobt/index.html",
   "display": "standalone",
   "background_color": "#F7F7F7",
   "theme_color": "#3B82F6",
