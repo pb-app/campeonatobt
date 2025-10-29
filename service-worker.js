@@ -1,5 +1,5 @@
 // service-worker.js
-const CACHE_NAME = 'ranking-bt-v4.0.4'; // Mudei a versão para forçar a atualização
+const CACHE_NAME = 'ranking-bt-v4.0.5'; // Mudei a versão para forçar a atualização
 
 // Arquivos principais do app (App Shell)
 const APP_SHELL_URLS = [
