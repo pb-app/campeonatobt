@@ -125,6 +125,44 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #6B7280; /* bg-gray-500 */
         }
+        <style>
+/* ... Seus estilos existentes ... */
+
+/* --- INÍCIO: CSS para Suporte a BYE (Folga) (REQUERIDO) --- */
+
+.match-bye {
+    background-color: #f7f7f7; /* Um cinza claro para diferenciar */
+    border: 1px dashed #ccc; /* Borda tracejada */
+    opacity: 0.85; /* Levemente transparente */
+}
+
+.pair-bye {
+    font-weight: bold;
+    color: #1a73e8; /* Cor azul para indicar o avanço */
+    padding: 5px;
+    border-bottom: 1px solid #ddd;
+}
+
+.pair-bye-message {
+    font-size: 0.8em;
+    color: #555;
+    margin-top: 5px;
+    padding: 5px;
+    background-color: #e8f0fe; /* Fundo azul bem claro */
+    border-radius: 3px;
+    text-align: center;
+}
+
+/* Ajuste sutil na classe 'winner' para garantir a cor */
+.pair.winner {
+    background-color: #d4edda;
+    color: #155724;
+    font-weight: bold;
+    border-left: 5px solid #155724;
+}
+
+/* --- FIM: CSS para Suporte a BYE (Folga) (REQUERIDO) --- */
+</style>
     </style>
 </head>
 <body class="text-gray-900"> <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -147,7 +185,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v5.0.4 (Final)</p>
+            <p>App de Ranking v4.0.4 (Final)</p>
         </footer>
 
     </div>
@@ -308,6 +346,7 @@
         /* =============================================================================
            Funções do Modal (ATUALIZADA)
            ============================================================================= */
+        
         // ATUALIZADA: Limpa botões extras
         const showModal = (title, message, buttons = null) => {
             modalTitle.textContent = title;
@@ -815,6 +854,7 @@
 
         const renderGlobalRanking = () => {
             const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
+
             const rankingsHtml = sortedPlayers.length === 0
                 ? `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhum jogador neste ranking.</td></tr>`
                 : sortedPlayers.map((player, index) => `
@@ -1152,6 +1192,7 @@
                 const isMultipleOfFour = playerCount % 4 === 0;
                 const minPlayersForGroups = 4;
                 const canGenerate = playerCount >= minPlayersForGroups && isMultipleOfFour;
+
                 const generateButtonHtml = playerCount >= minPlayersForGroups
                     ? `
                     <div class="mt-8 text-center">
@@ -1406,7 +1447,7 @@
                          <h3 class="text-3xl font-bold mb-6 text-cyan-600 flex items-center gap-3">
                              ${title}
                          </h3>
-                         <p class="text-gray-500">Chave ainda não gerada.</p>
+                         <p class="text-gray-500">Chave ainda não gerada. É necessário 4, 8, 16 ou 32 duplas.</p>
                       </div>`;
                 }
 
@@ -1435,44 +1476,118 @@
                 </div>
                 ` : '';
 
-                const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
-                    const roundTitle = Number(roundNum) === maxRound ? 'Final'
-                        : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
-                        : Number(roundNum) === maxRound - 2 ? 'Quartas de Final'
-                        : `Rodada ${roundNum}`;
+               // SUBSTITUA SOMENTE O CORPO DO .map() DENTRO DE renderBracket
+const matchesHtml = rounds[roundNum].map(match => {
+    const pair1 = match.pairs[0];
+    const pair2 = match.pairs[1];
+    const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
+    const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
+    const score1 = match.score[0];
+    const score2 = match.score[1];
+    const hasScore = score1 !== null && score2 !== null;
 
-                    const matchesHtml = rounds[roundNum].map(match => {
-                        const pair1 = match.pairs[0]; 
-                        const pair2 = match.pairs[1]; 
-                        const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
-                        const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
-                        const score1 = match.score[0];
-                        const score2 = match.score[1];
-                        const hasScore = score1 !== null && score2 !== null;
-                        
-                        // Determina se a partida é um Bye
-                        const isByeMatch = (pair1 && !pair2) || (!pair1 && pair2);
+    // NOVO: Adiciona classe de estilo para Byes
+    const matchClass = match.isBye ? 'match-bye' : 'bg-amber-50 border border-amber-200';
+    
+    // NOVO: Define se a dupla é uma Folga (Bye)
+    const isPair1Bye = pair1 && pair1.id === 'BYE';
+    const isPair2Bye = pair2 && pair2.id === 'BYE';
 
-                        // NOVO: Desabilita inputs se NÃO for admin
-                        const isDisabled = !appState.isAdmin ? 'disabled' : '';
-                        const adminButtonsClass = appState.isAdmin ? '' : 'hidden';
+    // NOVO: Renderiza a mensagem de avanço se for Bye
+    if (match.isBye) {
+        const winningPair = match.winner;
+        const winnerName = winningPair ? winningPair.name : 'Vencedor Indefinido';
+        
+        return `
+        <div class="rounded-lg shadow-sm p-4 ${matchClass}">
+            <div class="pair-bye-message">
+                ${isPair1Bye ? `Dupla ${pair2.name} avança por Folga (Bye).` : `Dupla ${pair1.name} avança por Folga (Bye).`}
+            </div>
+            
+            <div class="flex flex-col gap-1 mt-3">
+                <div class="pair pair1 ${isPair1Bye ? 'pair-bye' : 'bg-white font-bold'} rounded p-2 text-sm">
+                    ${pair1 ? pair1.name : 'Aguardando...'}
+                </div>
+                <div class="text-center text-xs text-gray-500">
+                    → Vencedor avança para a próxima rodada.
+                </div>
+                <div class="pair pair2 ${isPair2Bye ? 'pair-bye' : 'bg-white font-bold'} rounded p-2 text-sm">
+                    ${pair2 ? pair2.name : 'Aguardando...'}
+                </div>
+            </div>
+        </div>
+        `;
+    }
 
-                        // NOVO: Botão de Edição (✏️)
-                        // Aparece se o jogo JÁ tiver placar, ou se o torneio estiver finalizado
-                        const showEditButton = (hasScore || isFinished) && !isByeMatch; // Não edita Bye
-                        const showConfirmButton = !showEditButton && pair1 && pair2 && !isByeMatch; // Só mostra check se tiver 2 duplas e não for Bye
-                        
-                        // Texto de Bye (Substitui os inputs de score)
-                        const byeHtml = isByeMatch ? `<span class="text-gray-500 text-sm font-semibold italic">Bye (Folga)</span>` : '';
+    // Código original para partidas normais continua abaixo:
+    const isDisabled = !appState.isAdmin ? 'disabled' : '';
+    const adminButtonsClass = appState.isAdmin ? '' : 'hidden';
 
+    // NOVO: Botão de Edição (✏️)
+    const showEditButton = (hasScore || isFinished);
+    const showConfirmButton = !showEditButton && pair1 && pair2;
 
-                        return `
+    return `
+    <div class="rounded-lg shadow-sm p-4 ${matchClass}">
+        <div class="flex justify-between items-center mb-2">
+            <span class="font-medium text-sm ${isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
+                ${pair1 ? pair1.name : 'Aguardando...'}
+            </span>
+            <input
+                type="number"
+                min="0"
+                value="${score1 === null ? '' : score1}"
+                id="k-${match.id}-s0"
+                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
+                ${isDisabled}
+            />
+        </div>
+        
+        <div class="flex items-center my-2">
+            <div class="flex-grow border-t border-gray-300"></div>
+            <span class="mx-2 text-xs text-gray-500">vs</span>
+            <div class="flex-grow border-t border-gray-300"></div>
+        </div>
+
+        <div class="flex justify-between items-center">
+            <span class="font-medium text-sm ${isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
+                ${pair2 ? pair2.name : 'Aguardando...'}
+            </span>
+            <input
+                type="number"
+                min="0"
+                value="${score2 === null ? '' : score2}"
+                id="k-${match.id}-s1"
+                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
+                ${isDisabled}
+            />
+        </div>
+        
+        <div class="text-center mt-3 ${adminButtonsClass}">
+            <button 
+                class="confirm-knockout-score-btn p-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all ${showConfirmButton ? '' : 'hidden'}"
+                data-bracket-type="${bracketType}"
+                data-match-id="${match.id}"
+                title="Confirmar Placar">
+                ${icons.check}
+            </button>
+            
+            <button 
+                class="edit-knockout-score-btn p-2 w-full bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-md transition-all ${showEditButton ? '' : 'hidden'}"
+                data-bracket-type="${bracketType}"
+                data-match-id="${match.id}"
+                title="Editar Placar">
+                ${icons.edit}
+            </button>
+        </div>
+    </div>
+    `;
+}).join('');
                         <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-medium text-sm ${isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
                                     ${pair1 ? pair1.name : 'Aguardando...'}
                                 </span>
-                                ${isByeMatch ? '' : `
                                 <input
                                     type="number"
                                     min="0"
@@ -1481,12 +1596,11 @@
                                     class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                     ${isDisabled}
                                 />
-                                `}
                             </div>
                             
                             <div class="flex items-center my-2">
                                 <div class="flex-grow border-t border-gray-300"></div>
-                                ${isByeMatch ? byeHtml : '<span class="mx-2 text-xs text-gray-500">vs</span>'}
+                                <span class="mx-2 text-xs text-gray-500">vs</span>
                                 <div class="flex-grow border-t border-gray-300"></div>
                             </div>
 
@@ -1494,7 +1608,6 @@
                                 <span class="font-medium text-sm ${isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
                                     ${pair2 ? pair2.name : 'Aguardando...'}
                                 </span>
-                                ${isByeMatch ? '' : `
                                 <input
                                     type="number"
                                     min="0"
@@ -1503,7 +1616,6 @@
                                     class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
                                     ${isDisabled}
                                 />
-                                `}
                             </div>
                             
                             <div class="text-center mt-3 ${adminButtonsClass}">
@@ -1765,36 +1877,92 @@
                         : Number(roundNum) === maxRound - 2 ? 'Quartas de Final'
                         : `Rodada ${roundNum}`;
 
-                    const matchesHtml = rounds[roundNum].map(match => {
-                        const pair1 = match.pairs[0]; 
-                        const pair2 = match.pairs[1]; 
-                        const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
-                        const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
-                        const score1 = match.score[0];
-                        const score2 = match.score[1];
-                        
-                        const isByeMatch = (pair1 && !pair2) || (!pair1 && pair2);
-                        const byeHtml = isByeMatch ? `<span class="text-gray-500 text-sm font-semibold italic">Bye (Folga)</span>` : '<span class="mx-2 text-sm text-gray-500">vs</span>';
+                   // SUBSTITUA SOMENTE O CORPO DO .map() DENTRO DE renderBracket_ReadOnly
+const matchesHtml = rounds[roundNum].map(match => {
+    const pair1 = match.pairs[0];
+    const pair2 = match.pairs[1];
+    const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
+    const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
+    const score1 = match.score[0];
+    const score2 = match.score[1];
+    
+    // NOVO: Adiciona classe de estilo para Byes
+    const matchClass = match.isBye ? 'match-bye' : 'bg-amber-100 border border-amber-200';
 
-                        const winnerClass1 = isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
-                        const winnerClass2 = isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
+    // NOVO: Define se a dupla é uma Folga (Bye)
+    const isPair1Bye = pair1 && pair1.id === 'BYE';
+    const isPair2Bye = pair2 && pair2.id === 'BYE';
 
-                        return `
+    // NOVO: Renderiza a mensagem de avanço se for Bye
+    if (match.isBye) {
+        const winnerName = match.winner ? match.winner.name : 'Vencedor Indefinido';
+        
+        return `
+        <div class="rounded-lg shadow-sm p-4 text-center ${matchClass}">
+            <div class="pair-bye-message text-base">
+                ${isPair1Bye ? `Dupla ${pair2.name} avança por Folga (Bye).` : `Dupla ${pair1.name} avança por Folga (Bye).`}
+            </div>
+            
+            <div class="flex flex-col gap-1 mt-3">
+                <div class="pair pair1 ${isPair1Bye ? 'pair-bye text-xl' : 'bg-white font-bold text-lg'} rounded p-2">
+                    ${pair1 ? pair1.name : 'Aguardando...'}
+                </div>
+                <div class="text-center text-sm text-gray-500">
+                    → Vencedor avança para a próxima rodada.
+                </div>
+                <div class="pair pair2 ${isPair2Bye ? 'pair-bye text-xl' : 'bg-white font-bold text-lg'} rounded p-2">
+                    ${pair2 ? pair2.name : 'Aguardando...'}
+                </div>
+            </div>
+        </div>
+        `;
+    }
+
+    // Código original para partidas normais continua abaixo:
+    const winnerClass1 = isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
+    const winnerClass2 = isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
+
+    return `
+    <div class="rounded-lg shadow-sm p-4 ${matchClass}">
+        <div class="flex justify-between items-center mb-2">
+            <span class="font-medium text-lg ${winnerClass1}">
+                ${pair1 ? pair1.name : 'Aguardando...'}
+            </span>
+            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
+                ${score1 === null ? '-' : score1}
+            </span>
+        </div>
+        
+        <div class="flex items-center my-2">
+            <div class="flex-grow border-t border-gray-300"></div>
+            <span class="mx-2 text-sm text-gray-500">vs</span>
+            <div class="flex-grow border-t border-gray-300"></div>
+        </div>
+
+        <div class="flex justify-between items-center">
+            <span class="font-medium text-lg ${winnerClass2}">
+                ${pair2 ? pair2.name : 'Aguardando...'}
+            </span>
+            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
+                ${score2 === null ? '-' : score2}
+            </span>
+        </div>
+    </div>
+    `;
+}).join('');
                         <div class="bg-amber-100 rounded-lg shadow-sm border border-amber-200 p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-medium text-lg ${winnerClass1}">
                                     ${pair1 ? pair1.name : 'Aguardando...'}
                                 </span>
-                                ${!isByeMatch ? `
                                 <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
                                     ${score1 === null ? '-' : score1}
                                 </span>
-                                ` : ''}
                             </div>
                             
                             <div class="flex items-center my-2">
                                 <div class="flex-grow border-t border-gray-300"></div>
-                                ${byeHtml}
+                                <span class="mx-2 text-sm text-gray-500">vs</span>
                                 <div class="flex-grow border-t border-gray-300"></div>
                             </div>
 
@@ -1802,11 +1970,9 @@
                                 <span class="font-medium text-lg ${winnerClass2}">
                                     ${pair2 ? pair2.name : 'Aguardando...'}
                                 </span>
-                                ${!isByeMatch ? `
                                 <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
                                     ${score2 === null ? '-' : score2}
                                 </span>
-                                ` : ''}
                             </div>
                         </div>
                         `;
@@ -1944,20 +2110,26 @@
             };
 
             // ==========================================================
-            // === FUNÇÃO ATUALIZADA (CABEÇAS DE CHAVE + BYE) ===
+            // === FUNÇÃO ATUALIZADA (CABEÇAS DE CHAVE) ===
             // ==========================================================
             const handleGenerateChampionship = async () => {
                 const playerCount = activeChampionship.players.length;
                 const isMultypleOfFour = playerCount % 4 === 0;
-                const minPlayersForGroups = 4;
 
-                if (playerCount < minPlayersForGroups || !isMultypleOfFour) {
+                if (playerCount < 4 || !isMultypleOfFour) {
                     showModal("Número de Jogadores Inválido", `O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.`);
                     return;
                 }
                 
                 const numGroups = playerCount / 4;
+                const numDuplas = numGroups * 2; // (jogadores/4 grupos) * 2 duplas por grupo
                 
+                if (![2, 4, 8, 16, 32].includes(numDuplas)) {
+                     showModal("Regra da Chave", `A regra atual de mata-mata só suporta 2, 4, 8, 16 ou 32 duplas. Com ${playerCount} jogadores, você terá ${numDuplas} duplas. Por favor, ajuste o número de jogadores (ex: 8 ou 16 jogadores).`);
+                     return;
+                }
+
+                // === NOVA LÓGICA DE CABEÇA DE CHAVE ===
                 if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Os ${numGroups} melhores do ranking serão os "Cabeças de Chave" e o restante será sorteado.`)) {
                     return;
                 }
@@ -2050,1118 +2222,1395 @@
             const handleEditGroupScore = (groupIndex, matchIndex) => {
                 const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
                 const isFinished = champInfo?.status === 'finished';
-                const handleEditGroupScore = (groupIndex, matchIndex) => {
-                const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
-                const isFinished = champInfo?.status === 'finished';
 
-                const group = activeChampionship.groups[groupIndex];
-                const match = group.matches[matchIndex];
-
-                // Remove os botões de confirmação/edição e re-habilita os inputs
-                document.getElementById(`g-${groupIndex}-m-${matchIndex}-s0`).disabled = false;
-                document.getElementById(`g-${groupIndex}-m-${matchIndex}-s1`).disabled = false;
-                
-                // Esconde a edição, mostra a confirmação
-                const editBtn = document.querySelector(`.edit-group-score-btn[data-group-index="${groupIndex}"][data-match-index="${matchIndex}"]`);
-                const confirmBtn = document.querySelector(`.confirm-group-score-btn[data-group-index="${groupIndex}"][data-match-index="${matchIndex}"]`);
-                
-                if (editBtn) editBtn.classList.add('hidden');
-                if (confirmBtn) confirmBtn.classList.remove('hidden');
-
-                if (isFinished) {
-                     // Se o campeonato está finalizado, mostra um aviso
-                     showModal("Edição Avançada", "O campeonato foi finalizado. Editar este placar agora pode exigir recalcular manualmente os pontos e vencedores do mata-mata.");
+                if (!isFinished) {
+                    // Se o torneio não acabou, só salva (mesma lógica do botão "confirmar")
+                    handleConfirmGroupScore(groupIndex, matchIndex);
+                    return;
                 }
+
+                // Se o torneio JÁ ACABOU, pede confirmação
+                const val0 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s0`).value;
+                const val1 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s1`).value;
+                const score0 = val0 === '' ? null : parseInt(val0, 10);
+                const score1 = val1 === '' ? null : parseInt(val1, 10);
+
+                if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                    showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                    return;
+                }
+
+                const confirmationButtons = [
+                    {
+                        id: 'modal-cancel-btn',
+                        text: 'Cancelar',
+                        className: 'w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-5 rounded-lg shadow-sm transition-all',
+                        handler: hideModal
+                    },
+                    {
+                        id: 'modal-confirm-edit-btn',
+                        text: 'Confirmar e Recalcular',
+                        className: 'w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all',
+                        handler: () => {
+                            // Salva a edição e dispara o recálculo do ranking
+                            handleConfirmGroupScore_Logic(groupIndex, matchIndex, score0, score1, true); // true = forçar recálculo
+                            hideModal();
+                        }
+                    }
+                ];
+
+                showModal(
+                    "Atenção: Torneio Finalizado", 
+                    "Você está editando o placar de um torneio que já foi finalizado. Isso irá recalcular os vencedores e ajustar o Ranking Global.<br><br>Deseja continuar?",
+                    confirmationButtons
+                );
             };
             
             // (Handler do Botão ✅)
-            const handleConfirmGroupScore = async (groupIndex, matchIndex) => {
-                // Recupera os valores dos inputs
-                const score1Input = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s0`);
-                const score2Input = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s1`);
+            const handleConfirmGroupScore = (groupIndex, matchIndex) => {
+                const val0 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s0`).value;
+                const val1 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s1`).value;
 
-                const score1 = parseInt(score1Input.value, 10);
-                const score2 = parseInt(score2Input.value, 10);
-                
-                if (isNaN(score1) || isNaN(score2) || score1 < 0 || score2 < 0 || (score1 === score2)) {
-                    showModal("Placar Inválido", "O placar deve conter números válidos e não pode haver empate.");
+                const score0 = val0 === '' ? null : parseInt(val0, 10);
+                const score1 = val1 === '' ? null : parseInt(val1, 10);
+
+                if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                    showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
                     return;
                 }
                 
-                // 1. Clonar o estado e atualizar
-                const newGroups = JSON.parse(JSON.stringify(activeChampionship.groups));
-                const matchToUpdate = newGroups[groupIndex].matches[matchIndex];
-                
-                matchToUpdate.score = [score1, score2];
+                // Apenas salva, sem forçar recálculo
+                handleConfirmGroupScore_Logic(groupIndex, matchIndex, score0, score1, false);
+            };
 
-                // 2. Salvar
-                const newChampData = {
-                    ...activeChampionship,
-                    groups: newGroups
-                };
+            // (Função Lógica)
+            const handleConfirmGroupScore_Logic = async (groupIndex, matchIndex, score0, score1, forceRecalculate) => {
+                const newChampData = JSON.parse(JSON.stringify(activeChampionship));
+                newChampData.groups[groupIndex].matches[matchIndex].score[0] = score0;
+                newChampData.groups[groupIndex].matches[matchIndex].score[1] = score1;
+
+                // Se a edição for em um torneio finalizado, precisamos recalcular o mata-mata
+                if (forceRecalculate) {
+                    // 1. Recalcula os classificados
+                    let goldSeriesPairs = [];
+                    let silverSeriesPairs = [];
+
+                    newChampData.groups.forEach(group => {
+                        const rankings = getRankings(group); // Recalcula com o novo placar
+                        goldSeriesPairs.push({ id: `${rankings[0].id}_${rankings[1].id}`, name: `${rankings[0].name} / ${rankings[1].name}`, players: [rankings[0], rankings[1]] });
+                        silverSeriesPairs.push({ id: `${rankings[2].id}_${rankings[3].id}`, name: `${rankings[2].name} / ${rankings[3].name}`, players: [rankings[2], rankings[3]] });
+                    });
+                    
+                    // 2. Recria as chaves (com o mesmo sorteio, se possível - mas aqui estamos recriando)
+                    //    NOTA: Isso irá resetar o mata-mata. Uma lógica mais complexa
+                    //    manteria os placares antigos se os times fossem os mesmos.
+                    //    Para v1 da Edição: Resetar o mata-mata é aceitável.
+                    const goldBracket = createBracket(goldSeriesPairs);
+                    const silverBracket = createBracket(silverSeriesPairs);
+
+                    newChampData.status = 'knockout'; // Volta o status para poder preencher de novo
+                    newChampData.goldBracket = goldBracket;
+                    newChampData.silverBracket = silverBracket;
+                    
+                    // Limpa os dados de finalização no doc principal
+                    const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                    await setDoc(champRef, { status: 'knockout', winnerGold: null, winnerSilver: null }, { merge: true });
+                    
+                    showModal("Mata-Mata Resetado", "O placar do grupo foi alterado. O mata-mata foi resetado. Por favor, preencha os placares das chaves novamente.");
+                }
 
                 await saveActiveChampionship(newChampData);
-                
-                // 3. Re-renderizar (acontece automaticamente pelo listener)
             };
-            
-            /* =============================================================================
-               Lógica de Finalização de Grupos e Geração de Chaves (BYE IMPLEMENTADO AQUI)
-               ============================================================================= */
 
-            // NOVO HELPER: Encontra a próxima potência de 2
-            const findNextPowerOfTwo = (n) => {
-                if (n <= 1) return 1;
-                let power = 1;
-                while (power < n) {
-                    power *= 2;
-                }
-                return power;
-            }
 
+            const handlePrintGroup = (groupIndex) => {
+                const group = activeChampionship.groups[groupIndex];
+                const champ = championships.find(c => c.id === appState.currentChampionshipId);
+                const champName = champ ? champ.name : "Torneio";
+
+                let matchesHtml = '';
+                group.matches.forEach((match, index) => {
+                    matchesHtml += `
+                        <div class="match">
+                            <div class="team">${match.names[0]}</div>
+                            <div class="score-box"></div>
+                            <div class="vs">vs</div>
+                            <div class="score-box"></div>
+                            <div class="team">${match.names[1]}</div>
+                        </div>
+                    `;
+                });
+
+                const playersHtml = group.players.map(p => `<li>${p.name}</li>`).join('');
+
+                const printStyles = `
+                    <style>
+                        @page { margin: 20mm; }
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            margin: 0; 
+                            color: #000; 
+                            width: 100%;
+                        }
+                        h1 { text-align: center; font-size: 24px; margin-bottom: 5px; }
+                        h2 { text-align: center; font-size: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; margin-top: 0; }
+                        .players { margin-bottom: 20px; }
+                        .players h3 { font-size: 18px; margin-bottom: 5px; }
+                        .players ul { list-style: none; padding-left: 0; margin: 0; }
+                        .players li { font-size: 16px; }
+                        .match { 
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: space-between; 
+                            padding: 20px 0; 
+                            border-bottom: 1px dashed #999; 
+                            page-break-inside: avoid;
+                        }
+                        .team { flex: 1; font-size: 18px; font-weight: bold; }
+                        .team:last-of-type { text-align: right; }
+                        .vs { font-size: 14px; font-weight: bold; margin: 0 10px; }
+                        .score-box {
+                            width: 60px;
+                            height: 40px;
+                            border: 2px solid #000;
+                            margin: 0 10px;
+                        }
+                    </style>
+                `;
+
+                const printWindow = window.open('', '_blank', 'width=800,height=600');
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Imprimir - ${champName} - Grupo ${groupIndex + 1}</title>
+                            ${printStyles}
+                        </head>
+                        <body>
+                            <h1>${champName}</h1>
+                            <h2>Grupo ${groupIndex + 1}</h2>
+                            <div class="players">
+                                <h3>Jogadores do Grupo:</h3>
+                                <ul>${playersHtml}</ul>
+                            </div>
+                            <h2>Jogos</h2>
+                            <div class="matches">
+                                ${matchesHtml}
+                            </div>
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.focus();
+
+                // Um pequeno delay para garantir que o DOM esteja pronto antes de imprimir
+                setTimeout(() => {
+                    printWindow.print();
+                }, 250);
+            };
 
             const handleFinalizeGroups = async () => {
-                if (!confirm("Tem certeza que deseja finalizar a Fase de Grupos e gerar as Chaves de Mata-Mata (Série Ouro e Prata)?")) {
-                    return;
-                }
-                
-                const allPlayers = activeChampionship.players;
-                const groups = activeChampionship.groups;
-                
-                // 1. Obter todos os classificados
-                const goldPlayers = [];
-                const silverPlayers = [];
-                const allStats = []; // Para ranking global dos classificados (critério de bye)
+                if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata e bloquear os grupos.")) return;
 
-                for (const group of groups) {
-                    const rankings = getRankings(group); // [1º, 2º, 3º, 4º]
-                    
-                    // Os dois melhores de cada grupo (ranking do grupo)
-                    const p1 = rankings[0]; 
-                    const p2 = rankings[1]; 
+                let goldSeriesPairs = [];
+                let silverSeriesPairs = [];
 
-                    // 1º e 2º do grupo passam para Ouro
-                    goldPlayers.push(p1);
-                    goldPlayers.push(p2);
-                    
-                    // Os dois piores do grupo (3º e 4º) passam para Prata (se houver)
-                    if (rankings[2]) silverPlayers.push(rankings[2]); 
-                    if (rankings[3]) silverPlayers.push(rankings[3]); 
+                activeChampionship.groups.forEach(group => {
+                    const rankings = getRankings(group); // [p1, p2, p3, p4]
 
-                    // Adiciona as estatísticas dos classificados (1º e 2º) para o cálculo do Bye (Ouro)
-                    allStats.push(p1, p2); 
-                }
-                
-                // 2. Classificar os 1º e 2º lugares globalmente (critério de desempate/bye)
-                // Critério de justiça: Mais Games Vencidos na fase de grupos
-                const sortedGoldQualifiers = allStats.sort((a, b) => b.gamesWon - a.gamesWon);
-                
-                // 3. Calcular a Chave Ouro (BYE)
-                // ==========================================================
-                const numGoldPairs = sortedGoldQualifiers.length; // Ex: 8 duplas (4 grupos x 2)
-                const nextPowerOfTwo = findNextPowerOfTwo(numGoldPairs); // Ex: 8 -> 8; 5 -> 8; 6 -> 8
-                const numByes = nextPowerOfTwo - numGoldPairs; // Ex: 8-8=0 Byes; 8-5=3 Byes; 8-6=2 Byes
+                    const goldPair = {
+                        id: `${rankings[0].id}_${rankings[1].id}`,
+                        name: `${rankings[0].name} / ${rankings[1].name}`,
+                        players: [rankings[0], rankings[1]] 
+                    };
+                    goldSeriesPairs.push(goldPair);
 
-                // Separar os Byes (melhores duplas)
-                const byePlayers = sortedGoldQualifiers.slice(0, numByes); // Ex: 3 melhores pegam Bye
-                const playInPlayers = sortedGoldQualifiers.slice(numByes); // Ex: 2 piores jogam o Play-In (Rodada 1)
+                    const silverPair = {
+                        id: `${rankings[2].id}_${rankings[3].id}`,
+                        name: `${rankings[2].name} / ${rankings[3].name}`,
+                        players: [rankings[2], rankings[3]]
+                    };
+                    silverSeriesPairs.push(silverPair);
+                });
 
-                let goldBracket = [];
-                let matchIdCounter = 1; 
-
-                // A. Adicionar partidas de BYE à Rodada 1
-                // As duplas que pegaram bye avançam direto, mas geramos uma 'partida' para registrar o score
-                const goldQualifiersForR2 = []; // Jogadores que vão para a Rodada 2 (inclui vencedores do play-in)
-
-                // NOVO: Adiciona a regra: quem passa de bye recebe 6 games (para o Coveiro)
-                for (const player of byePlayers) {
-                    const byeMatch = createKnockoutMatch(matchIdCounter++, player, null, 1); // Bye é Rodada 1
-                    byeMatch.winner = player;
-                    byeMatch.score = [6, 0]; // 6 games para o Coveiro
-                    goldBracket.push(byeMatch);
-                    goldQualifiersForR2.push(player); // Jogador do bye avança para R2
+                // Revalida a regra de potência de 2 antes de gerar a chave
+                if (![2, 4, 8, 16, 32].includes(goldSeriesPairs.length) || ![2, 4, 8, 16, 32].includes(silverSeriesPairs.length)) {
+                     showModal("Erro de Geração", `A regra atual de mata-mata (sem Byes) exige que o número de duplas seja 2, 4, 8, 16 ou 32. Chave Ouro tem ${goldSeriesPairs.length} e Prata tem ${silverSeriesPairs.length}. Ajuste o número de jogadores antes de finalizar.`);
+                     return;
                 }
 
-                // B. Adicionar partidas de Play-In (Rodada 1)
-                const r1GoldMatches = [];
-                for (let i = 0; i < playInPlayers.length; i += 2) {
-                    const pair1 = playInPlayers[i];
-                    const pair2 = playInPlayers[i + 1] || null; // Pode ser ímpar, mas a lógica de Byes deve evitar isso
-                    
-                    if (pair2 === null) {
-                         // Erro lógico se isso acontecer. Devemos ter um número par de play-in players.
-                         // Se numGoldPairs é ímpar, numByes garante que playInPlayers é par (ex: 5 players -> 3 byes -> 2 play-ins)
-                         throw new Error("Erro na lógica de Byes/Play-In: Número ímpar de duplas para o Play-In. Favor revisar o critério de classificação.");
-                    }
-                    
-                    const match = createKnockoutMatch(matchIdCounter++, pair1, pair2, 1); // Rodada 1
-                    r1GoldMatches.push(match);
+                try {
+                    const goldBracket = createBracket(goldSeriesPairs);
+                    const silverBracket = createBracket(silverSeriesPairs);
+
+                    const newChampData = {
+                        ...activeChampionship,
+                        status: 'knockout',
+                        goldBracket: goldBracket,
+                        silverBracket: silverBracket,
+                    };
+
+                    await saveActiveChampionship(newChampData);
+
+                    const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                    await setDoc(champRef, { status: 'knockout' }, { merge: true });
+
+                } catch (error) {
+                    console.error("Erro ao finalizar grupos:", error);
+                    showModal("Erro", "Ocorreu um erro ao gerar as chaves.");
                 }
-
-                goldBracket.push(...r1GoldMatches);
-                
-                // 4. Calcular a Chave Prata (Sorteio Simples)
-                // ==========================================================
-                let silverBracket = [];
-                let silverMatchIdCounter = 1;
-                const shuffledSilverPlayers = silverPlayers.sort(() => 0.5 - Math.random());
-                
-                for (let i = 0; i < shuffledSilverPlayers.length; i += 2) {
-                    const pair1 = shuffledSilverPlayers[i];
-                    const pair2 = shuffledSilverPlayers[i + 1] || null;
-
-                    if (pair2) { // Não deve ocorrer bye na Prata, mas previne.
-                        const match = createKnockoutMatch(silverMatchIdCounter++, pair1, pair2, 1);
-                        silverBracket.push(match);
-                    }
-                }
-                
-                // 5. Gerar o restante das chaves (Rodadas 2 em diante)
-                
-                // Geração da Chave Ouro - Rodada 2 em diante (A partir dos vencedores de R1 + Byes)
-                // A lista goldQualifiersForR2 contém os vencedores dos Byes.
-                
-                const finalGoldBracket = generateSubsequentRounds(goldBracket, goldQualifiersForR2, goldQualifiersForR2.length + r1GoldMatches.length, nextPowerOfTwo);
-                
-                // A lista silverBracket já contém a Rodada 1. Agora gera o restante.
-                const finalSilverBracket = generateSubsequentRounds(silverBracket, [], silverBracket.length, findNextPowerOfTwo(silverPlayers.length));
-
-                // 6. Atualizar no banco
-                const newChampData = {
-                    ...activeChampionship,
-                    status: 'knockout',
-                    goldBracket: finalGoldBracket,
-                    silverBracket: finalSilverBracket
-                };
-                await saveActiveChampionship(newChampData);
-                
-                // 7. Atualizar status principal
-                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
-                await setDoc(champRef, { status: 'knockout' }, { merge: true });
-
             };
-            
-            // Helper: Cria um objeto Match padronizado
-            const createKnockoutMatch = (id, pair1, pair2, round) => {
-                return {
-                    id: id,
-                    round: round,
-                    pairs: [pair1, pair2],
-                    score: [null, null],
-                    winner: null, // Objeto {id, name}
-                    nextMatchId: null // Id da partida da próxima rodada que receberá o vencedor
-                };
-            }
 
-            // Helper: Gera as rodadas subsequentes de forma recursiva
-            const generateSubsequentRounds = (currentBracket, playersForNextRound, currentMatchCount, finalSize) => {
-                if (currentMatchCount >= finalSize) {
-                     return currentBracket; // Chegou na última rodada (Final)
-                }
-
-                let round = currentBracket.length > 0 ? currentBracket[currentBracket.length - 1].round + 1 : 1;
-                let nextRoundMatchCount = currentMatchCount / 2;
-                let nextMatchId = currentBracket.length > 0 ? Math.max(...currentBracket.map(m => m.id)) + 1 : 1;
-
-                // Constrói os placeholders para a próxima rodada
-                for (let i = 0; i < nextRoundMatchCount; i++) {
-                    const match = createKnockoutMatch(nextMatchId + i, null, null, round);
-                    currentBracket.push(match);
-                    
-                    // Conecta as partidas da rodada anterior a esta nova partida (placeholder)
-                    const prevRoundMatches = currentBracket.filter(m => m.round === round - 1);
-                    
-                    // 1ª partida da rodada anterior alimenta o 1º par desta
-                    const prevMatch1 = prevRoundMatches[i * 2];
-                    if (prevMatch1) prevMatch1.nextMatchId = match.id;
-
-                    // 2ª partida da rodada anterior alimenta o 2º par desta
-                    const prevMatch2 = prevRoundMatches[i * 2 + 1];
-                    if (prevMatch2) prevMatch2.nextMatchId = match.id;
-                    
-                    // Para o caso do BYE, onde a partida de Bye (R1) já tem o vencedor,
-                    // ele é colocado diretamente na Rodada 2
-                    if (playersForNextRound.length > 0) {
-                        if (i * 2 < playersForNextRound.length) {
-                             // Alimentar o 1º par com o jogador que passou de Bye (ou do play-in)
-                             match.pairs[0] = playersForNextRound[i * 2];
-                        }
-                        if (i * 2 + 1 < playersForNextRound.length) {
-                             // Alimentar o 2º par
-                             match.pairs[1] = playersForNextRound[i * 2 + 1];
-                        }
-                    }
-                }
-                
-                // Recursão para a próxima rodada
-                return generateSubsequentRounds(currentBracket, [], currentMatchCount + nextRoundMatchCount, finalSize);
-            }
-            
-            // =================================================================
-            // === NOVAS FUNÇÕES DE EDIÇÃO DE PLACAR MATA-MATA ===
-            // =================================================================
-            
             // (Handler do Botão ✏️)
             const handleEditKnockoutScore = (bracketType, matchId) => {
                 const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
                 const isFinished = champInfo?.status === 'finished';
 
-                // Verifica se é Bye (não pode editar)
-                const match = activeChampionship[bracketType].find(m => m.id === Number(matchId));
-                if (!match || (match.pairs[0] && !match.pairs[1]) || (!match.pairs[0] && match.pairs[1])) {
-                    showModal("Partida de Bye", "Não é possível editar a partida de Bye (Folga).");
+                if (!isFinished) {
+                    // Se o torneio não acabou, só salva (mesma lógica do botão "confirmar")
+                    handleConfirmKnockoutScore(bracketType, matchId);
                     return;
                 }
                 
-                // Remove os botões de confirmação/edição e re-habilita os inputs
-                document.getElementById(`k-${matchId}-s0`).disabled = false;
-                document.getElementById(`k-${matchId}-s1`).disabled = false;
-                
-                // Esconde a edição, mostra a confirmação
-                const editBtn = document.querySelector(`.edit-knockout-score-btn[data-bracket-type="${bracketType}"][data-match-id="${matchId}"]`);
-                const confirmBtn = document.querySelector(`.confirm-knockout-score-btn[data-bracket-type="${bracketType}"][data-match-id="${matchId}"]`);
-                
-                if (editBtn) editBtn.classList.add('hidden');
-                if (confirmBtn) confirmBtn.classList.remove('hidden');
+                // Se o torneio JÁ ACABOU, pede confirmação
+                const val0 = document.getElementById(`k-${matchId}-s0`).value;
+                const val1 = document.getElementById(`k-${matchId}-s1`).value;
+                const score0 = val0 === '' ? null : parseInt(val0, 10);
+                const score1 = val1 === '' ? null : parseInt(val1, 10);
 
-                if (isFinished) {
-                     showModal("Edição Avançada", "O campeonato foi finalizado. Editar este placar agora pode exigir recalcular manualmente os pontos e os próximos vencedores.");
+                if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                    showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                    return;
+                }
+                if (score0 === score1) {
+                    showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
+                    return;
+                }
+                
+                const confirmationButtons = [
+                    {
+                        id: 'modal-cancel-btn',
+                        text: 'Cancelar',
+                        className: 'w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-5 rounded-lg shadow-sm transition-all',
+                        handler: hideModal
+                    },
+                    {
+                        id: 'modal-confirm-edit-btn',
+                        text: 'Confirmar e Recalcular',
+                        className: 'w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all',
+                        handler: () => {
+                            // Salva a edição e dispara o recálculo do ranking
+                            handleConfirmKnockoutScore_Logic(bracketType, matchId, score0, score1, true); // true = forçar recálculo
+                            hideModal();
+                        }
+                    }
+                ];
+
+                showModal(
+                    "Atenção: Torneio Finalizado", 
+                    "Você está editando o placar de um torneio que já foi finalizado. Isso irá recalcular os vencedores e ajustar o Ranking Global.<br><br>Deseja continuar?",
+                    confirmationButtons
+                );
+            };
+            
+           // (Handler do Botão ✅)
+const handleConfirmKnockoutScore = (bracketType, matchId) => {
+    const val0 = document.getElementById(`k-${matchId}-s0`).value;
+    const val1 = document.getElementById(`k-${matchId}-s1`).value;
+
+    const score0 = val0 === '' ? null : parseInt(val0, 10);
+    const score1 = val1 === '' ? null : parseInt(val1, 10);
+
+    if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+        showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+        return;
+    }
+    if (score0 === score1) {
+        showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
+        return;
+    }
+    
+    // NOVO: Chama a nova função lógica que gerencia o avanço, incluindo BYE.
+    handleUpdateMatch(matchId, score0, score1);
+};
+
+// (Handler do Botão ✏️)
+const handleEditKnockoutScore = (bracketType, matchId) => {
+    const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+    const isFinished = champInfo?.status === 'finished';
+
+    // Se o torneio não acabou, apenas trata como confirmação
+    if (!isFinished) {
+        handleConfirmKnockoutScore(bracketType, matchId);
+        return;
+    }
+    
+    // Se o torneio JÁ ACABOU, pede confirmação para recalcular (lógica antiga, mantida)
+    const val0 = document.getElementById(`k-${matchId}-s0`).value;
+    const val1 = document.getElementById(`k-${matchId}-s1`).value;
+    const score0 = val0 === '' ? null : parseInt(val0, 10);
+    const score1 = val1 === '' ? null : parseInt(val1, 10);
+
+    if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+        showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+        return;
+    }
+    if (score0 === score1) {
+        showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
+        return;
+    }
+    
+    const confirmationButtons = [
+        {
+            id: 'modal-cancel-btn',
+            text: 'Cancelar',
+            className: 'w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-5 rounded-lg shadow-sm transition-all',
+            handler: hideModal
+        },
+        {
+            id: 'modal-confirm-edit-btn',
+            text: 'Confirmar e Recalcular',
+            className: 'w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all',
+            handler: () => {
+                // Salva a edição e dispara o recálculo do ranking
+                // NOVO: Chama a nova função lógica de atualização.
+                handleUpdateMatch(matchId, score0, score1); 
+                // A lógica de Recalculate precisa ser feita APÓS o handleUpdateMatch.
+                // A função `handleConfirmKnockoutScore_Logic` (antiga) não é mais necessária,
+                // mas vamos emular o efeito de recálculo aqui, usando a função finalizadora.
+                checkAndFinalizeChampionship(activeChampionship, true); 
+                hideModal();
+            }
+        }
+    ];
+
+    showModal(
+        "Atenção: Torneio Finalizado", 
+        "Você está editando o placar de um torneio que já foi finalizado. Isso irá recalcular os vencedores e ajustar o Ranking Global.<br><br>Deseja continuar?",
+        confirmationButtons
+    );
+};
+
+            // (Função Lógica)
+            const handleConfirmKnockoutScore_Logic = async (bracketType, matchId, score0, score1, forceRecalculate) => {
+                const newChampData = JSON.parse(JSON.stringify(activeChampionship));
+                const bracketToUpdate = newChampData[bracketType];
+                const match = bracketToUpdate.find(m => m.id === matchId);
+
+                if (match) {
+                    match.score[0] = score0;
+                    match.score[1] = score1;
+                    
+                    // Determina o vencedor
+                    let winner = null;
+                    if (score0 > score1) winner = match.pairs[0]; 
+                    else if (score1 > score0) winner = match.pairs[1];
+                    
+                    // Se o vencedor mudou, reseta as próximas chaves
+                    if (match.winner && winner && match.winner.id !== winner.id) {
+                        let currentMatch = match;
+                        while (currentMatch && currentMatch.nextMatchId) {
+                            const nextMatch = bracketToUpdate.find(m => m.id === currentMatch.nextMatchId);
+                            if (nextMatch) {
+                                nextMatch.pairs[currentMatch.nextMatchSlot] = null;
+                                nextMatch.score = [null, null];
+                                nextMatch.winner = null;
+                                currentMatch = nextMatch;
+                            } else {
+                                currentMatch = null;
+                            }
+                        }
+                    }
+                    
+                    match.winner = winner;
+
+                    // Avança o novo vencedor
+                    if (match.winner && match.nextMatchId) {
+                        const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
+                        if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
+                    }
+
+                    await saveActiveChampionship(newChampData); 
+                    
+                    // Verifica se o torneio acabou (ou se estamos forçando o recálculo)
+                    const finalizationCheckData = await checkAndFinalizeChampionship(newChampData, forceRecalculate);
+                    
+                    // Se o checkAndFinalize rodou por causa de uma edição (forceRecalculate)
+                    // E ele retornou os dados de diff, aplicamos
+                    if (forceRecalculate && finalizationCheckData && finalizationCheckData.didRecalculate) {
+                        const { diffMap, rankingId } = finalizationCheckData;
+                        await applyRankingDiff(diffMap, rankingId);
+                        showModal("Sucesso!", "O placar foi corrigido e o Ranking Global foi ajustado com a diferença de pontos.");
+                    }
                 }
             };
 
 
-            // (Handler do Botão ✅)
-            const handleConfirmKnockoutScore = async (bracketType, matchId) => {
-                const matchIdNum = Number(matchId);
-                const isGold = bracketType === 'goldBracket';
+            /* =============================================================================
+               Lógica de Cálculo de Ranking (ATUALIZADA)
+               ============================================================================= */
 
-                const score1Input = document.getElementById(`k-${matchId}-s0`);
-                const score2Input = document.getElementById(`k-${matchId}-s1`);
-
-                const score1 = parseInt(score1Input.value, 10);
-                const score2 = parseInt(score2Input.value, 10);
-                
-                if (isNaN(score1) || isNaN(score2) || score1 < 0 || score2 < 0 || (score1 === score2)) {
-                    showModal("Placar Inválido", "O placar deve conter números válidos e não pode haver empate.");
-                    return;
+            const checkAndFinalizeChampionship = async (champData, forceRecalculate = false) => {
+                if (!champData.goldBracket || !champData.silverBracket || champData.goldBracket.length === 0 || champData.silverBracket.length === 0) {
+                    return { didRecalculate: false }; 
                 }
 
-                // 1. Identificar o vencedor e perdedor
-                const winnerIndex = score1 > score2 ? 0 : 1;
-                const loserIndex = 1 - winnerIndex;
+                const maxRoundGold = Math.max(...champData.goldBracket.map(m => m.round));
+                const maxRoundSilver = Math.max(...champData.silverBracket.map(m => m.round));
 
-                const currentBracket = activeChampionship[bracketType];
-                const matchIndex = currentBracket.findIndex(m => m.id === matchIdNum);
-                const matchToUpdate = currentBracket[matchIndex];
-                
-                if (!matchToUpdate) return;
-                
-                const winner = matchToUpdate.pairs[winnerIndex];
-                
-                // 2. Aplicar o placar e o vencedor na partida atual
-                matchToUpdate.score = [score1, score2];
-                matchToUpdate.winner = { id: winner.id, name: winner.name }; // Salva um objeto simples
-                
-                // 3. Promover o vencedor para a próxima partida (se houver)
-                if (matchToUpdate.nextMatchId) {
-                    const nextMatchIndex = currentBracket.findIndex(m => m.id === matchToUpdate.nextMatchId);
-                    const nextMatch = currentBracket[nextMatchIndex];
-                    
-                    if (nextMatch) {
-                        const previousRoundMatches = currentBracket.filter(m => m.round === matchToUpdate.round);
-                        
-                        // Determinar se o vencedor preenche o primeiro ou o segundo slot
-                        const isFirstPair = previousRoundMatches.findIndex(m => m.id === matchIdNum) % 2 === 0;
-                        
-                        if (isFirstPair) {
-                             nextMatch.pairs[0] = matchToUpdate.winner;
-                        } else {
-                             nextMatch.pairs[1] = matchToUpdate.winner;
-                        }
-                    }
-                }
-                
-                // 4. Checar se a final foi concluída
-                const maxRound = Math.max(...currentBracket.map(m => m.round));
-                const isFinal = matchToUpdate.round === maxRound;
+                const goldFinal = champData.goldBracket.find(m => m.round === maxRoundGold);
+                const silverFinal = champData.silverBracket.find(m => m.round === maxRoundSilver);
 
-                if (isFinal) {
-                    // Encontrar o perdedor da final (vice-campeão)
-                    const loser = matchToUpdate.pairs[loserIndex];
+                const goldWinner = goldFinal?.winner; 
+                const silverWinner = silverFinal?.winner; 
+
+                // Só continua se o torneio estiver finalizado (ambas as chaves têm campeão)
+                if (goldWinner && silverWinner) {
                     
                     const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
-                    
-                    // Atualiza o documento principal com os vencedores e o status
-                    await setDoc(champRef, { 
-                        // Atualiza o campo correto com o nome/id do vencedor
-                        winnerGold: isGold ? matchToUpdate.winner : activeChampionship.winnerGold,
-                        winnerSilver: !isGold ? matchToUpdate.winner : activeChampionship.winnerSilver,
-                        
-                        // Atualiza o vice-campeão
-                        runnerUpGold: isGold ? loser : activeChampionship.runnerUpGold,
-                        runnerUpSilver: !isGold ? loser : activeChampionship.runnerUpSilver,
+                    const champDoc = await getDoc(champRef);
+                    if (!champDoc.exists()) return { didRecalculate: false }; 
 
-                        // Se as duas chaves acabaram, finaliza o campeonato
-                        status: (isGold && activeChampionship.winnerSilver) || (!isGold && activeChampionship.winnerGold) 
-                                ? 'finished' 
-                                : activeChampionship.status
+                    const champDocData = champDoc.data();
+                    const rankingId = champDocData.rankingId;
+                    if (!rankingId) {
+                        showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
+                        return { didRecalculate: false };
+                    }
+
+                    // Pega o "snapshot" de pontos antigos (se houver)
+                    const oldPointsMap = champDocData.finalPointsAwarded || null;
+                    const effectivePoints = champDocData.pointsConfig || DEFAULT_RANKING_POINTS;
+                    
+                    // 1. CALCULA O NOVO ESTADO
+                    const { newPointsMap, newWinners } = calculatePlayerPointsMap(champData, effectivePoints);
+
+                    // 2. SALVA O NOVO ESTADO (Status, Vencedores e o novo Snapshot de Pontos)
+                    await setDoc(champRef, {
+                        status: 'finished',
+                        winnerGold: newWinners.goldWinner.name, 
+                        winnerSilver: newWinners.silverWinner.name,
+                        finalPointsAwarded: newPointsMap // Salva o novo snapshot
                     }, { merge: true });
 
-                    // Se a finalização de ambas as chaves levou ao status 'finished', aplica a pontuação
-                    if ((isGold && activeChampionship.winnerSilver) || (!isGold && activeChampionship.winnerGold)) {
-                        await applyFinalRankingPoints();
-                        showModal("CAMPEONATO FINALIZADO!", "Todas as chaves foram concluídas. Os pontos foram aplicados ao Ranking Global.");
+                    // 3. APLICA A LÓGICA DE RANKING
+                    try {
+                        if (oldPointsMap) {
+                            // JÁ FOI FINALIZADO (É UMA EDIÇÃO)
+                            // Calcula a diferença (diff) entre o novo e o antigo
+                            const diffMap = new Map();
+                            
+                            // Combina todas as chaves (IDs) de ambos os mapas
+                            const allPlayerIds = new Set([...Object.keys(oldPointsMap), ...Object.keys(newPointsMap)]);
+
+                            allPlayerIds.forEach(id => {
+                                const oldP = oldPointsMap[id] || { points: 0, goldWins: 0, silverWins: 0, coveiroWins: 0 };
+                                const newP = newPointsMap[id] || { points: 0, goldWins: 0, silverWins: 0, coveiroWins: 0 };
+                                
+                                const diff = {
+                                    points: newP.points - oldP.points,
+                                    goldWins: newP.goldWins - oldP.goldWins,
+                                    silverWins: newP.silverWins - oldP.silverWins,
+                                    coveiroWins: newP.coveiroWins - oldP.coveiroWins
+                                };
+
+                                // Só adiciona se houver diferença
+                                if (diff.points !== 0 || diff.goldWins !== 0 || diff.silverWins !== 0 || diff.coveiroWins !== 0) {
+                                    diffMap.set(id, { name: newP.name || oldP.name, diff }); // Salva o diff
+                                }
+                            });
+                            
+                            // Retorna os dados para a função que chamou (handleConfirmKnockoutScore_Logic)
+                            // para que ela possa aplicar o Diff DEPOIS de salvar
+                            if (forceRecalculate) {
+                                 return { didRecalculate: true, diffMap, rankingId };
+                            }
+
+                        } else {
+                            // PRIMEIRA VEZ FINALIZANDO
+                            showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+                            
+                            // Aplica os pontos TOTAIS (não é um diff)
+                            await updateGlobalRanking(newPointsMap, rankingId); 
+                            
+                            hideModal();
+                            showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${newWinners.goldWinner.name}. 🥈 Campeões Prata: ${newWinners.silverWinner.name}.`);
+                        }
+                    } catch (error) {
+                        console.error("Erro ao finalizar e aplicar ranking:", error);
+                        showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console.");
                     }
                 }
-
-                // 5. Salvar o estado da chave no banco
-                const newChampData = {
-                    ...activeChampionship,
-                    [bracketType]: currentBracket // Atualiza a chave modificada
-                };
-                await saveActiveChampionship(newChampData);
                 
-                // Re-renderização automática pelo listener
+                return { didRecalculate: false }; // Não recalculou
             };
 
+            // NOVO HELPER: Calcula o mapa de pontos (para ser usado na finalização e no diff)
+            const calculatePlayerPointsMap = (champData, pointsConfig) => {
+                const goldFinal = champData.goldBracket.find(m => m.round === Math.max(...champData.goldBracket.map(m => m.round)));
+                const silverFinal = champData.silverBracket.find(m => m.round === Math.max(...champData.silverBracket.map(m => m.round)));
 
-            // =============================================================================
-            // === LÓGICA DE RANKING GLOBAL E PONTUAÇÃO (FINALIZAÇÃO)
-            // =============================================================================
+                const goldWinner = goldFinal?.winner;
+                const goldRunnerUp = goldWinner ? goldFinal.pairs.find(p => p.id !== goldWinner.id) : null;
+                const silverWinner = silverFinal?.winner;
+                const silverRunnerUp = silverWinner ? silverFinal.pairs.find(p => p.id !== silverWinner.id) : null;
 
-            const applyFinalRankingPoints = async () => {
-                const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
-                if (!champInfo || champInfo.finalPointsAwarded) {
-                    // Previne a aplicação duplicada de pontos
-                    console.warn("Pontos já aplicados ou campeonato não encontrado. Pulando aplicação de pontos.");
-                    return;
+                const stats = getGlobalTournamentStats(champData);
+                const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
+                const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
+
+                const winners = { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros };
+                
+                // Converte o Map para um Objeto serializável
+                const playerPointsObject = {}; 
+
+                for (const player of champData.players) {
+                    playerPointsObject[player.id] = {
+                        name: player.name,
+                        points: pointsConfig.participation,
+                        goldWins: 0,
+                        silverWins: 0,
+                        coveiroWins: 0 
+                    };
                 }
-
-                // Obtém a lista de jogadores classificados (1º e 2º) e não classificados (3º e 4º)
-                // A estrutura 'activeChampionship' precisa estar atualizada com groups, goldBracket e silverBracket
-                
-                const allParticipatingPlayers = activeChampionship.players.map(p => p.id);
-                const pointsConfig = champInfo.pointsConfig;
-                
-                // 1. Identificar Vencedores e Vices
-                const goldWinnerId = champInfo.winnerGold?.id;
-                const goldRunnerUpId = champInfo.runnerUpGold?.id;
-                const silverWinnerId = champInfo.winnerSilver?.id;
-                const silverRunnerUpId = champInfo.runnerUpSilver?.id;
-                
-                // 2. Identificar todos os 1ºs e 2ºs lugares dos grupos (que jogaram Ouro/Prata)
-                const playersInBracket = activeChampionship.groups.flatMap(group => getRankings(group).slice(0, 4).map(p => p.id));
-                
-                // 3. Calcule o total de games de cada um para o Coveiro
-                const globalStats = getGlobalTournamentStats(activeChampionship);
-                
-                // 4. Mapear pontos a serem aplicados
-                const pointsToApply = new Map();
-                const coveiroWinsToApply = new Map(); // Para o campo coveiroWins
-                
-                // Função para adicionar pontos
-                const addPoints = (playerId, points, goldWin = false, silverWin = false, isCoveiroWin = false) => {
-                    if (!pointsToApply.has(playerId)) {
-                         pointsToApply.set(playerId, { points: 0, goldWins: 0, silverWins: 0 });
+                if (winners.goldWinner) {
+                    for (const player of winners.goldWinner.players) {
+                        const p = playerPointsObject[player.id];
+                        if (p) { p.points += pointsConfig.goldWinner; p.goldWins = 1; }
                     }
-                    const data = pointsToApply.get(playerId);
-                    data.points += points;
-                    if (goldWin) data.goldWins += 1;
-                    if (silverWin) data.silverWins += 1;
-                    // O coveiroWins é tratado separadamente, pois é um prêmio, não uma vitória em chave
-                };
-
-                // a) Vencedor Ouro
-                if (goldWinnerId) addPoints(goldWinnerId, pointsConfig.goldWinner, true);
-                
-                // b) Vice-campeão Ouro
-                if (goldRunnerUpId) addPoints(goldRunnerUpId, pointsConfig.goldRunnerUp);
-                
-                // c) Vencedor Prata
-                if (silverWinnerId) addPoints(silverWinnerId, pointsConfig.silverWinner, false, true);
-
-                // d) Vice-campeão Prata
-                if (silverRunnerUpId) addPoints(silverRunnerUpId, pointsConfig.silverRunnerUp);
-                
-                // e) Participação (A todos que não foram Ouro/Prata Winner/RunnerUp)
-                const alreadyScored = new Set([goldWinnerId, goldRunnerUpId, silverWinnerId, silverRunnerUpId]);
-                
-                // A participação é dada a todos os jogadores que estão no `players` do campeonato.
-                for (const playerId of allParticipatingPlayers) {
-                    if (!alreadyScored.has(playerId)) {
-                        addPoints(playerId, pointsConfig.participation);
+                }
+                if (winners.goldRunnerUp) {
+                    for (const player of winners.goldRunnerUp.players) {
+                        const p = playerPointsObject[player.id];
+                         if (p) p.points += pointsConfig.goldRunnerUp;
+                    }
+                }
+                if (winners.silverWinner) {
+                    for (const player of winners.silverWinner.players) {
+                        const p = playerPointsObject[player.id];
+                         if (p) { p.points += pointsConfig.silverWinner; p.silverWins = 1; }
+                    }
+                }
+                if (winners.silverRunnerUp) {
+                     for (const player of winners.silverRunnerUp.players) {
+                        const p = playerPointsObject[player.id];
+                         if (p) p.points += pointsConfig.silverRunnerUp;
+                    }
+                }
+                if (winners.coveiros && winners.coveiros.length > 0) {
+                    for (const coveiro of winners.coveiros) {
+                        const p = playerPointsObject[coveiro.id];
+                        if (p) { p.coveiroWins = 1; }
                     }
                 }
                 
-                // f) Prêmio Coveiro
-                const minGames = globalStats.length > 0 ? globalStats[0].gamesWon : null;
-                const coveiroPlayers = globalStats.filter(p => p.gamesWon === minGames).map(p => p.id);
-                
-                for (const playerId of allParticipatingPlayers) {
-                     // 1 se for coveiro, 0 se não for.
-                     coveiroWinsToApply.set(playerId, coveiroPlayers.includes(playerId) ? 1 : 0);
-                }
+                return { newPointsMap: playerPointsObject, newWinners: winners };
+            };
 
-                // 5. Aplicação no Banco via Transaction
-                try {
-                    await runTransaction(db, async (transaction) => {
-                        // Salvar os pontos de participação dos jogadores novos (criando um documento se necessário)
-                        for (const [playerId, playerData] of pointsToApply.entries()) {
-                            
-                            // 5.1. Busca o doc do jogador
-                            const playerRef = doc(db, 'users', appState.userId, 'rankings', champInfo.rankingId, 'players', playerId);
-                            const playerDoc = await transaction.get(playerRef);
-                            
-                            let currentPoints = 0;
-                            let currentGoldWins = 0;
-                            let currentSilverWins = 0;
-                            let currentCoveiroWins = 0;
-                            let playerName = activeChampionship.players.find(p => p.id === playerId)?.name || "Desconhecido";
-                            
-                            if (playerDoc.exists()) {
-                                const data = playerDoc.data();
-                                currentPoints = data.points || 0;
-                                currentGoldWins = data.goldWins || 0;
-                                currentSilverWins = data.silverWins || 0;
-                                currentCoveiroWins = data.coveiroWins || 0;
-                                playerName = data.name || playerName;
-                            }
-                            
-                            // 5.2. Calcula os novos valores
-                            const newPoints = currentPoints + playerData.points;
-                            const newGoldWins = currentGoldWins + playerData.goldWins;
-                            const newSilverWins = currentSilverWins + playerData.silverWins;
-                            // O prêmio Coveiro não é cumulativo de torneios, é 1 para este torneio (se ganhou)
-                            const newCoveiroWins = currentCoveiroWins + coveiroWinsToApply.get(playerId); 
-                            
-                            // 5.3. Atualiza o documento
+            // (ATUALIZADA: Recebe o Map/Objeto de pontos)
+            const updateGlobalRanking = async (playerPointsMap, rankingId) => {
+                await runTransaction(db, async (transaction) => {
+                    // 1. FASE DE LEITURA
+                    const playerDocsData = new Map();
+                    for (const playerId in playerPointsMap) {
+                        const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                        const playerDoc = await transaction.get(playerRef);
+                        playerDocsData.set(playerId, playerDoc); 
+                    }
+
+                    // 2. FASE DE ESCRITA
+                    for (const playerId in playerPointsMap) {
+                        const data = playerPointsMap[playerId];
+                        const playerDoc = playerDocsData.get(playerId); 
+                        const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
+
+                        if (!playerDoc.exists()) {
                             transaction.set(playerRef, {
-                                id: playerId, // Garantir que o ID está no documento
-                                name: playerName, // Manter o nome
-                                points: newPoints,
-                                goldWins: newGoldWins,
-                                silverWins: newSilverWins,
-                                coveiroWins: newCoveiroWins
+                                name: data.name,
+                                points: data.points,
+                                goldWins: data.goldWins,
+                                silverWins: data.silverWins,
+                                coveiroWins: data.coveiroWins 
+                            });
+                        } else {
+                            const oldData = playerDoc.data();
+                            transaction.update(playerRef, {
+                                name: data.name, // Garante que o nome está atualizado
+                                points: (oldData.points || 0) + data.points,
+                                goldWins: (oldData.goldWins || 0) + data.goldWins,
+                                silverWins: (oldData.silverWins || 0) + data.silverWins,
+                                coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWins 
                             });
                         }
-
-                        // 6. Marcar o campeonato como 'pontos aplicados' no documento principal
-                        const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
-                        transaction.update(champRef, { 
-                            finalPointsAwarded: Timestamp.now(), 
-                            status: 'finished' // Garante que o status final está correto
-                        });
-                    });
-
-                } catch (error) {
-                    console.error("Erro na transação de aplicação de pontos:", error);
-                    showModal("Erro Crítico", "Falha ao aplicar a pontuação final. Tente novamente ou revise as regras do Firestore.");
-                }
-                
-                // Re-renderização automática pelo listener
-            };
-            
-            // =============================================================================
-            // === HELPERS DE ESTATÍSTICAS E UTILIDADES
-            // =============================================================================
-            
-            // Helper: Obtém o ranking de um grupo baseado em Games Vencidos
-            const getRankings = (group) => {
-                const playerStats = {}; // {playerId: {name, gamesWon, gamesLost}}
-
-                // Inicializar estatísticas de cada jogador no grupo
-                group.players.forEach(p => {
-                    playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0, gamesLost: 0 };
-                });
-
-                // Processar todas as partidas
-                group.matches.forEach(match => {
-                    const [pair1, pair2] = match.p; // IDs das duplas (p1/p2 vs p3/p4)
-                    const [score1, score2] = match.score;
-                    
-                    if (score1 === null || score2 === null) return; // Placar não confirmado
-
-                    // Quem ganhou o jogo
-                    const winnerIds = score1 > score2 ? [pair1[0], pair1[1]] : [pair2[0], pair2[1]];
-                    const loserIds = score1 < score2 ? [pair1[0], pair1[1]] : [pair2[0], pair2[1]];
-
-                    // Pontuação para o Coveiro: Games Vencidos e Perdidos
-                    // Os scores são games (não pontos de jogo/set)
-                    const winnerScore = Math.max(score1, score2);
-                    const loserScore = Math.min(score1, score2);
-
-                    // Adiciona games
-                    winnerIds.forEach(id => {
-                        if (playerStats[id]) {
-                            playerStats[id].gamesWon += winnerScore;
-                            playerStats[id].gamesLost += loserScore;
-                        }
-                    });
-                    
-                    loserIds.forEach(id => {
-                        if (playerStats[id]) {
-                            playerStats[id].gamesWon += loserScore;
-                            playerStats[id].gamesLost += winnerScore;
-                        }
-                    });
-                });
-                
-                // -------------------------------------------------------------
-                //  Cálculo de Ranking: Games Won > Confronto Direto > Sorteio
-                // -------------------------------------------------------------
-                
-                let rankedPlayers = Object.values(playerStats);
-
-                // 1. Critério: Games Vencidos (Games Won)
-                rankedPlayers.sort((a, b) => b.gamesWon - a.gamesWon);
-
-                // No Beach Tennis tradicional, o critério é: Jogos Vencidos, Saldo de Sets, Saldo de Games.
-                // Como aqui só temos 1 jogo por confronto (e placares de games), usamos a simplificação:
-                // 1. Games Vencidos (total)
-                // 2. Confronto Direto (Não implementado para 4 pessoas - exige complexidade de loop)
-                // 3. Sorteio (Se Games Won for igual, usa o embaralhamento inicial, mas aqui vamos usar Games Perdidos para desempate)
-                
-                // Desempate (simples): Menos Games Perdidos
-                rankedPlayers.sort((a, b) => {
-                    if (b.gamesWon === a.gamesWon) {
-                        return a.gamesLost - b.gamesLost; // Menor gamesLost ganha
-                    }
-                    return b.gamesWon - a.gamesWon;
-                });
-
-
-                return rankedPlayers; // Já está na ordem correta [1º, 2º, 3º, 4º]
-            };
-
-            // Helper: Obtém estatísticas globais (usado para o Coveiro)
-            const getGlobalTournamentStats = (activeChampionship) => {
-                const playerStats = {}; 
-
-                // Inicializar estatísticas de cada jogador no torneio
-                activeChampionship.players.forEach(p => {
-                    playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
-                });
-                
-                // Processar Grupos
-                activeChampionship.groups.forEach(group => {
-                    Object.values(getRankings(group)).forEach(p => {
-                        if (playerStats[p.id]) {
-                            playerStats[p.id].gamesWon += p.gamesWon;
-                        }
-                    });
-                });
-
-                // Processar Mata-Mata (apenas scores confirmados, para jogos não-Bye)
-                const allKnockoutMatches = [...activeChampionship.goldBracket, ...activeChampionship.silverBracket];
-                
-                allKnockoutMatches.forEach(match => {
-                    const [pair1, pair2] = match.pairs; // Objetos {id, name}
-                    const [score1, score2] = match.score;
-                    
-                    if (score1 === null || score2 === null) return; 
-                    
-                    // Se for uma partida de BYE (apenas um par preenchido), o placar de 6-0
-                    // já foi contabilizado no `handleFinalizeGroups` e já está no playerStats
-                    // (porque `getRankings` soma os games won)
-                    // Mas se o placar é 6-0 (Bye), não fazemos nada aqui (já foi feito lá)
-                    if ((pair1 && !pair2) || (!pair1 && pair2)) return; 
-                    
-                    // Se não for Bye, processa o score real
-                    if (pair1 && pair2) {
-                        const winnerScore = Math.max(score1, score2);
-                        const loserScore = Math.min(score1, score2);
-                        
-                        const winnerIds = score1 > score2 ? [pair1.id] : [pair2.id];
-                        const loserIds = score1 < score2 ? [pair1.id] : [pair2.id];
-                        
-                        // O score do mata-mata é total
-                        winnerIds.forEach(id => {
-                            if (playerStats[id]) playerStats[id].gamesWon += winnerScore;
-                        });
-                        loserIds.forEach(id => {
-                            if (playerStats[id]) playerStats[id].gamesWon += loserScore;
-                        });
                     }
                 });
+            };
+            
+            // (NOVA FUNÇÃO: Aplica apenas a diferença)
+            const applyRankingDiff = async (diffMap, rankingId) => {
+                await runTransaction(db, async (transaction) => {
+                    // 1. FASE DE LEITURA
+                    const playerDocsData = new Map();
+                    for (const [playerId, data] of diffMap.entries()) {
+                        const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                        const playerDoc = await transaction.get(playerRef);
+                        playerDocsData.set(playerId, playerDoc); 
+                    }
 
-                // Sortear por Games Won (Menor primeiro)
-                let rankedPlayers = Object.values(playerStats);
-                rankedPlayers.sort((a, b) => a.gamesWon - b.gamesWon); // Games Vencidos crescente (o pior é o 1º)
+                    // 2. FASE DE ESCRITA
+                    for (const [playerId, data] of diffMap.entries()) {
+                        const { name, diff } = data;
+                        const playerDoc = playerDocsData.get(playerId); 
+                        const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
 
-                return rankedPlayers;
+                        if (!playerDoc.exists()) {
+                            // Se o jogador não existe, aplicamos o diff como o valor inicial
+                            console.warn(`Aplicando diff para jogador ${name} que não existia no ranking.`);
+                            transaction.set(playerRef, {
+                                name: name,
+                                points: diff.points,
+                                goldWins: diff.goldWins,
+                                silverWins: diff.silverWins,
+                                coveiroWins: diff.coveiroWins 
+                            });
+                        } else {
+                            // Se existe, somamos o diff
+                            const oldData = playerDoc.data();
+                            transaction.update(playerRef, {
+                                points: (oldData.points || 0) + diff.points,
+                                goldWins: (oldData.goldWins || 0) + diff.goldWins,
+                                silverWins: (oldData.silverWins || 0) + diff.silverWins,
+                                coveiroWins: (oldData.coveiroWins || 0) + diff.coveiroWins 
+                            });
+                        }
+                    }
+                });
             };
 
             /* =============================================================================
-               LÓGICA DE FIREBASE (LISTENERS)
+               Funções Utilitárias (Cálculos de Grupos e Chaves)
                ============================================================================= */
 
-            // 1. Listener de Autenticação (Abre o app)
-            onAuthStateChanged(auth, (user) => {
-                // Apenas conecta como admin se o ID for o ID Mestre
-                if (user && user.uid === MESTRE_USER_ID) {
-                    appState.userId = MESTRE_USER_ID;
-                } else if (!user) {
-                    // Tenta login anônimo
-                    signInAnonymously(auth).then(anonUser => {
-                         // Este é o user ID para o modo Visitante/Telão
-                         appState.userId = anonUser.user.uid; 
-                         initApp(); // Inicia o app após o login anônimo
-                    }).catch(error => {
-                        console.error("Erro ao fazer login anônimo:", error);
-                        showModal("Erro de Conexão", "Não foi possível conectar ao servidor.");
-                    });
-                }
-
-                if (user && !appState.isAuthReady) {
-                    appState.userId = user.uid; // Define o ID Mestre se logado
-                    initApp(); // Inicia o app no modo Mestre
-                }
-            });
-
-            const initApp = () => {
-                if (appState.isAuthReady) return;
-                appState.isAuthReady = true;
-                userIdFooter.textContent = appState.userId;
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const telaoChampId = urlParams.get('champId');
-
-                // 1. Inicializa o Firebase e a Auth (feito acima)
-
-                // 2. Inicia os listeners globais (necessários para ambos os modos)
-                listenToChampionships();
-                listenToRankingsList(); // Esta função vai chamar listenToGlobalPlayers()
-
-                if (urlParams.has('telao') && telaoChampId) {
-                    // --- MODO TELÃO ---
-                    appState.isTelaoMode = true;
-                    appState.isAdmin = false; // Telão é sempre visitante
-
-                    // Adiciona estilos para a view limpa
-                    const telaoStyles = document.createElement('style');
-                    telaoStyles.innerHTML = `
-                        body { background-color: #FFFAF0; } /* Fundo 'Areia' (amber-50) */
-                        /* Ajusta o container para telas largas, mantendo um padding */
-                        #app-container { max-width: 100%; padding: 1rem 2rem; }
-                        header, footer { display: none !important; }
-                    `;
-                    document.head.appendChild(telaoStyles);
-
-                    // Navega direto para o telão
-                    navigateTo('telaoView', telaoChampId);
-
-                } else {
-                    // --- MODO NORMAL ---
-                    appState.isTelaoMode = false;
-                    navigateTo('login');
-                }
-            }
-
-            // 2. Listener para a lista de Rankings (Necessário para o seletor)
-            const listenToRankingsList = () => {
-                unsubscribeRankingsList(); // Desliga o listener anterior
-                
-                const rankingsDocRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
-                
-                unsubscribeRankingsList = onSnapshot(rankingsDocRef, (docSnap) => {
-                    if (docSnap.exists() && docSnap.data().list) {
-                        allRankings = docSnap.data().list;
-                    } else {
-                        // Se não existir, cria o ranking padrão
-                        allRankings = [{ id: 'default', name: 'Ranking Principal' }];
-                        setDoc(rankingsDocRef, { list: allRankings });
-                    }
-                    
-                    // Garante que um ranking está selecionado
-                    if (!appState.currentRankingId || !allRankings.find(r => r.id === appState.currentRankingId)) {
-                        appState.currentRankingId = allRankings[0].id;
-                    }
-
-                    // Força a atualização do listener de players, caso o ranking tenha mudado
-                    listenToGlobalPlayers();
-                    
-                    // Re-renderiza se necessário
-                    if (appState.currentView === 'championshipList' || appState.currentView === 'globalRanking') {
-                        render();
-                    }
-                }, (error) => {
-                    console.error("Erro ao ouvir a lista de rankings:", error);
+            const getRankings = (group) => {
+                const playerStats = {};
+                group.players.forEach(p => {
+                    playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
                 });
+
+                group.matches.forEach(match => {
+                    const [p1, p2, p3, p4] = match.p;
+                    const [s1, s2] = match.score;
+
+                    if (s1 !== null && !isNaN(s1)) {
+                        playerStats[p1].gamesWon += s1;
+                        playerStats[p2].gamesWon += s1;
+                    }
+                    if (s2 !== null && !isNaN(s2)) {
+                        playerStats[p3].gamesWon += s2;
+                        playerStats[p4].gamesWon += s2;
+                    }
+                });
+
+                return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
             };
 
 
-            // 3. Listener para os Jogadores do Ranking Global (Players)
-            const listenToGlobalPlayers = () => {
-                unsubscribeGlobalPlayers(); // Desliga o listener anterior
-                
-                if (!appState.currentRankingId) {
-                     // Isso deve ser resolvido em listenToRankingsList
-                     console.warn("currentRankingId não está definido. Pulando listener de players.");
-                     return;
+            // Calcula o total de games do TORNEIO (Grupos + Mata-Mata)
+            const getGlobalTournamentStats = (champData) => {
+                const playerStats = {};
+
+                // 1. Inicializa todos os jogadores do torneio
+                champData.players.forEach(p => {
+                    playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
+                });
+
+                // 2. Soma os games da Fase de Grupos
+                if (champData.groups) {
+                    champData.groups.forEach(group => {
+                        group.matches.forEach(match => {
+                            const [p1, p2, p3, p4] = match.p;
+                            const [s1, s2] = match.score;
+
+                            if (s1 !== null && !isNaN(s1)) {
+                                if (playerStats[p1]) playerStats[p1].gamesWon += s1;
+                                if (playerStats[p2]) playerStats[p2].gamesWon += s1;
+                            }
+                            if (s2 !== null && !isNaN(s2)) {
+                                if (playerStats[p3]) playerStats[p3].gamesWon += s2;
+                                if (playerStats[p4]) playerStats[p4].gamesWon += s2;
+                            }
+                        });
+                    });
                 }
 
+                // 3. Soma os games do Mata-Mata (Ouro e Prata)
+                const allKnockoutMatches = (champData.goldBracket || []).concat(champData.silverBracket || []);
+
+                allKnockoutMatches.forEach(match => {
+                    const [pair1, pair2] = match.pairs;
+                    const [s0, s1] = match.score;
+
+                    // Não conta jogos de Bye no placar, mas conta a folga como vitória
+                    if (s0 !== null && !isNaN(s0) && pair1 && pair1.players) {
+                        pair1.players.forEach(player => {
+                            if (playerStats[player.id]) {
+                                playerStats[player.id].gamesWon += s0;
+                            }
+                        });
+                    }
+
+                    if (s1 !== null && !isNaN(s1) && pair2 && pair2.players) {
+                        pair2.players.forEach(player => {
+                            if (playerStats[player.id]) {
+                                playerStats[player.id].gamesWon += s1;
+                            }
+                        });
+                    }
+                });
+
+                // 4. Retorna a lista ordenada por games (do menor para o maior)
+              };
+
+
+            // Cria a estrutura de chave de mata-mata (apenas potências de 2)
+            /* =============================================================================
+   Funções Utilitárias (Cálculos de Grupos e Chaves) - (continuação)
+   ============================================================================= */
+
+// Cria a estrutura de chave de mata-mata (AGORA COM SUPORTE A BYE)
+const createBracket = (bracketPairs) => {
+    // Sorteio aleatório das duplas (cumprindo requisito)
+    const shuffledPairs = [...bracketPairs].sort(() => 0.5 - Math.random());
+    const bracket = [];
+    const numPairs = bracketPairs.length;
+    const isPowerOfTwo = (num) => num > 0 && (num & (num - 1)) === 0;
+
+    // 1. Determina o tamanho ideal da chave (próxima potência de 2)
+    let totalSlots = 2;
+    while (totalSlots < numPairs) {
+        totalSlots *= 2;
+    }
+    const numByes = totalSlots - numPairs;
+    const numRounds = Math.log2(totalSlots);
+
+    // 2. Prepara a lista de duplas e a lista de BYEs (folgas)
+    const teamsWithByes = [];
+    let pairsCursor = 0;
+    
+    // Distribui os BYEs nas vagas de maior prioridade (normalmente as primeiras e últimas)
+    for (let i = 0; i < totalSlots; i++) {
+        if (numByes > 0 && (i < numByes / 2 || i >= totalSlots - numByes / 2)) {
+            // Se houver Byes, as primeiras N/2 e últimas N/2 vagas da chave
+            // serão Byes, onde N é o número de Byes.
+            teamsWithByes.push({ id: 'BYE', name: 'Folga (BYE)', players: [] });
+        } else if (pairsCursor < shuffledPairs.length) {
+            // Preenche as vagas restantes com as duplas
+            teamsWithByes.push(shuffledPairs[pairsCursor]);
+            pairsCursor++;
+        } else {
+            // Preenche o resto com Byes (caso o calculo acima não seja exato, ou por segurança)
+            teamsWithByes.push({ id: 'BYE', name: 'Folga (BYE)', players: [] });
+        }
+    }
+    
+    // 3. Embaralha a ordem das duplas (mantendo BYEs nos slots sorteados)
+    // Para simplificar, vamos manter a ordem calculada acima e apenas sortear as duplas reais.
+    // O algoritmo de 'seeding' tradicional é complexo, então para este projeto, 
+    // manteremos o sorteio puro das duplas, e os BYEs nos slots calculados.
+
+    // 4. Cria a estrutura da chave
+    // Loop crescente (Rodada 1, Rodada 2, ...)
+    for (let r = 1; r <= numRounds; r++) {
+
+        const matchesInRound = totalSlots / Math.pow(2, r);
+
+        for (let m = 0; m < matchesInRound; m++) {
+            const matchId = `R${r}_M${m + 1}`;
+            let nextMatchId = null;
+            let nextMatchSlot = null;
+
+            if (r < numRounds) { // Se não for a rodada final
+                const nextRoundMatchIndex = Math.floor(m / 2);
+                nextMatchId = `R${r + 1}_M${nextRoundMatchIndex + 1}`;
+                nextMatchSlot = m % 2;
+            }
+
+            const match = {
+                id: matchId,
+                round: r,
+                pairs: [null, null],
+                score: [null, null],
+                winner: null,
+                nextMatchId: nextMatchId,
+                nextMatchSlot: nextMatchSlot,
+                isBye: false, // NOVO: Flag para Byes
+            };
+            
+            // Preenche a Rodada 1 com as duplas (e Byes) da lista teamsWithByes
+            if (r === 1) {
+                const index1 = m * 2;
+                const index2 = m * 2 + 1;
+                const pair1 = teamsWithByes[index1] || null;
+                const pair2 = teamsWithByes[index2] || null;
+
+                match.pairs[0] = pair1;
+                match.pairs[1] = pair2;
+
+                // Lógica de BYE: Se um lado é BYE
+                if (pair1 && pair2 && (pair1.id === 'BYE' || pair2.id === 'BYE')) {
+                    match.isBye = true;
+                    // O vencedor do BYE é a dupla que não é BYE (ou null se for BYE vs BYE)
+                    if (pair1.id !== 'BYE' && pair2.id === 'BYE') {
+                        match.winner = pair1;
+                    } else if (pair2.id !== 'BYE' && pair1.id === 'BYE') {
+                        match.winner = pair2;
+                    } else {
+                         // BYE vs BYE -> Não deve acontecer se a lógica de cálculo for correta
+                         match.winner = null; 
+                    }
+                }
+            }
+
+            bracket.push(match);
+        }
+    }
+
+    // 5. Processa os BYEs automaticamente (avança o vencedor)
+    for (const match of bracket) {
+        if (match.isBye && match.winner && match.nextMatchId) {
+            const nextMatch = bracket.find(m => m.id === match.nextMatchId);
+            if (nextMatch) {
+                nextMatch.pairs[match.nextMatchSlot] = match.winner;
+            }
+        }
+    }
+
+    return bracket;
+};
+
+
+// ADICIONE ESTA FUNÇÃO COMPLETA (handleUpdateMatch)
+// Ela contém a nova validação de BYE
+const handleUpdateMatch = async (matchId, score1, score2) => {
+    // 1. Encontra a chave e o jogo
+    const bracketType = matchId.startsWith('Ouro') ? 'gold' : 'silver';
+    const bracketKey = bracketType === 'gold' ? 'goldBracket' : 'silverBracket';
+
+    // Acessa a lista de jogos, se for a primeira vez, usa activeChampionship.goldBracket
+    const bracketList = activeChampionship[bracketKey];
+    const targetMatch = bracketList.find(m => m.id === matchId);
+
+    if (!targetMatch) return;
+    
+    // **NOVA LÓGICA DE BLOQUEIO DE BYE (PONTO C)**
+    if (targetMatch.isBye) {
+        showModal("Ação Bloqueada", "Esta partida é uma Folga (Bye) e o avanço já foi processado automaticamente.");
+        return;
+    }
+
+    // Converte scores para número e valida
+    const s1 = parseInt(score1, 10);
+    const s2 = parseInt(score2, 10);
+
+    if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) {
+        showModal("Erro de Placar", "Os scores devem ser números inteiros não negativos.");
+        return;
+    }
+
+    if (s1 === s2) {
+        showModal("Erro de Placar", "Partidas de mata-mata não podem terminar empatadas.");
+        return;
+    }
+    
+    // 2. Define o vencedor e perdedor
+    const winnerPair = s1 > s2 ? targetMatch.pairs[0] : targetMatch.pairs[1];
+    
+    // 3. Atualiza o jogo atual
+    targetMatch.score = [s1, s2];
+    targetMatch.winner = winnerPair; // O vencedor já está definido
+
+    // 4. Avança o vencedor para o próximo jogo
+    if (targetMatch.nextMatchId) {
+        const nextMatch = bracketList.find(m => m.id === targetMatch.nextMatchId);
+        
+        if (nextMatch) {
+            // Usa match.nextMatchSlot (0 ou 1) para saber onde colocar a dupla
+            nextMatch.pairs[targetMatch.nextMatchSlot] = winnerPair;
+
+             // Se o próximo jogo se tornou um BYE (ex: foi preenchido o último slot, mas o outro é BYE)
+             const p1 = nextMatch.pairs[0];
+             const p2 = nextMatch.pairs[1];
+
+             if (p1 && p2 && (p1.id === 'BYE' || p2.id === 'BYE')) {
+                 nextMatch.isBye = true;
+                 if (p1.id !== 'BYE') {
+                     nextMatch.winner = p1;
+                 } else if (p2.id !== 'BYE') {
+                     nextMatch.winner = p2;
+                 }
+                 // Aciona a lógica de avanço de BYE (recursivamente para o próximo)
+                 if (nextMatch.winner && nextMatch.nextMatchId) {
+                      const nextNextMatch = bracketList.find(m => m.id === nextMatch.nextMatchId);
+                      if (nextNextMatch) {
+                            nextNextMatch.pairs[nextMatch.nextMatchSlot] = nextMatch.winner;
+                      }
+                 }
+             }
+        }
+    }
+
+    // 5. Salva e verifica a finalização (com a flag forceRecalculate=false)
+    await saveActiveChampionship(activeChampionship);             return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
+ 
+    await checkAndFinalizeChampionship(activeChampionship, false);
+};
+
+            /* =============================================================================
+               Funções de PDF
+               ============================================================================= */
+
+            const handlePrintRankingPDF = () => {
+                // Pega a instância global do jsPDF carregada no <head>
+                const { jsPDF } = window.jspdf;
+                if (!jsPDF) {
+                    showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
+                    return;
+                }
+
+                try {
+                    const doc = new jsPDF();
+
+                    const currentRanking = allRankings.find(r => r.id === appState.currentRankingId);
+                    const rankingName = currentRanking ? currentRanking.name : "Ranking";
+                    const title = `Ranking Geral: ${rankingName}`;
+
+                    doc.setFontSize(18);
+                    doc.text(title, 105, 22, { align: 'center' }); // Centraliza o título
+
+                    const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
+
+                    const head = [['Pos.', 'Jogador', 'Pontos', '🥇 Ouro', '🥈 Prata', '👻 Coveiro']];
+                    const body = sortedPlayers.map((p, index) => [
+                        `${index + 1}º`,
+                        p.name,
+                        p.points || 0,
+                        p.goldWins || 0,
+                        p.silverWins || 0,
+                        p.coveiroWins || 0
+                    ]);
+
+                    // Usa o plugin autoTable
+                    doc.autoTable({
+                        startY: 30,
+                        head: head,
+                        body: body,
+                        headStyles: { fillColor: [8, 145, 178] }, // Cor 'Mar' (cyan-600)
+                        styles: { halign: 'center', textColor: [31, 41, 55] },
+                        headStyles: { fillColor: [254, 243, 199], textColor: [75, 85, 99] }, // Cor 'Areia' (amber-100)
+                        columnStyles: {
+                            1: { halign: 'left' } // Alinha o nome do jogador à esquerda
+                        }
+                    });
+
+                    doc.save(`ranking_${rankingName.toLowerCase().replace(/\s/g, '_')}.pdf`);
+
+                } catch (error) {
+                    console.error("Erro ao gerar PDF do ranking:", error);
+                    showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
+                }
+            };
+
+            const handlePrintChampionshipPDF = () => {
+                const { jsPDF } = window.jspdf;
+                if (!jsPDF) {
+                    showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
+                    return;
+                }
+
+                const champ = championships.find(c => c.id === appState.currentChampionshipId);
+                if (!champ || !activeChampionship) {
+                    showModal("Erro", "Dados do campeonato não carregados.");
+                    return;
+                }
+
+                try {
+                    const doc = new jsPDF();
+                    let yPos = 22; // Posição vertical inicial
+
+                    // 1. Título
+                    doc.setFontSize(18);
+                    doc.text(champ.name, 105, yPos, { align: 'center' });
+                    yPos += 10;
+
+                    // 2. Tabela de Resultados Finais
+                    doc.setFontSize(14);
+                    doc.text("Resultados Finais", 14, yPos);
+                    yPos += 7;
+
+                    const finalResults = [];
+                    // Ouro
+                    const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
+                    const goldFinal = activeChampionship.goldBracket.find(m => m.round === maxRoundGold);
+                    if (goldFinal?.winner) {
+                        finalResults.push(['🥇 Campeões Ouro', goldFinal.winner.name]);
+                        const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldFinal.winner.id);
+                        if (goldRunnerUp) finalResults.push(['Vice Ouro', goldRunnerUp.name]);
+                    }
+                    // Prata
+                    const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
+                    const silverFinal = activeChampionship.silverBracket.find(m => m.round === maxRoundSilver);
+                    if (silverFinal?.winner) {
+                        finalResults.push(['🥈 Campeões Prata', silverFinal.winner.name]);
+                        const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverFinal.winner.id);
+                        if (silverRunnerUp) finalResults.push(['Vice Prata', silverRunnerUp.name]);
+                    }
+
+                    // Coveiro
+                    const stats = getGlobalTournamentStats(activeChampionship);
+
+                    if (stats.length > 0) {
+                        const minGames = stats[0].gamesWon;
+                        const coveiros = stats.filter(p => p.gamesWon === minGames);
+                        finalResults.push(['👻 Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
+                    }
+
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Prêmio', 'Dupla/Jogador']],
+                        body: finalResults,
+                        headStyles: { fillColor: [52, 73, 94], textColor: [255, 255, 255] },
+                        styles: { textColor: [31, 41, 55] },
+                        theme: 'striped',
+                    });
+                    yPos = doc.autoTable.previous.finalY + 10; // Atualiza a posição Y
+
+                    // 3. Fase de Grupos (em nova página)
+                    doc.addPage();
+                    yPos = 22;
+                    doc.setFontSize(18);
+                    doc.text("Resultados da Fase de Grupos", 105, yPos, { align: 'center' });
+                    yPos += 10;
+
+                    activeChampionship.groups.forEach((group, index) => {
+                        // Verifica se precisa de uma nova página
+                        if (yPos > 240) {
+                            doc.addPage();
+                            yPos = 22;
+                        }
+
+                        doc.setFontSize(14);
+                        doc.text(`Grupo ${index + 1}`, 14, yPos);
+                        yPos += 7;
+
+                        // Tabela de Jogos do Grupo
+                        const matchesBody = group.matches.map(m => [
+                            m.names[0],
+                            `${m.score[0] === null ? '-' : m.score[0]} vs ${m.score[1] === null ? '-' : m.score[1]}`,
+                            m.names[1]
+                        ]);
+
+                        doc.autoTable({
+                            startY: yPos,
+                            head: [['Dupla 1', 'Placar', 'Dupla 2']],
+                            body: matchesBody,
+                            headStyles: { fillColor: [8, 145, 178], textColor: [255, 255, 255] }, // Cor 'Mar' (cyan-600)
+                            styles: { halign: 'center', textColor: [31, 41, 55] },
+                            columnStyles: { 0: { halign: 'left' }, 2: { halign: 'right' } }
+                        });
+                        yPos = doc.autoTable.previous.finalY + 5;
+
+                        // Tabela de Ranking do Grupo
+                        const rankings = getRankings(group);
+                        const rankingsBody = rankings.map((p, rIndex) => [
+                            `${rIndex + 1}º`,
+                            p.name,
+                            p.gamesWon
+                        ]);
+
+                        doc.autoTable({
+                            startY: yPos,
+                            head: [['Pos.', 'Jogador', 'Games Vencidos']],
+                            body: rankingsBody,
+                            theme: 'grid',
+                            styles: { halign: 'center', fontSize: 9, textColor: [31, 41, 55] },
+                            headStyles: { fillColor: [254, 243, 199], textColor: [75, 85, 99], fontSize: 10 }, // Cor 'Areia' (amber-100)
+                        });
+                        yPos = doc.autoTable.previous.finalY + 12;
+                    });
+
+                    // 4. Chaves (Mata-Mata)
+                    if (yPos > 180) { // Se não houver muito espaço
+                        doc.addPage();
+                        yPos = 22;
+                    } else {
+                        yPos += 5; // Espaçamento
+                    }
+
+                    doc.setFontSize(18);
+                    doc.text("Resultados do Mata-Mata", 105, yPos, { align: 'center' });
+                    yPos += 10;
+
+                    // Tabela Série Ouro
+                    doc.setFontSize(16);
+                    doc.text("Série Ouro 🥇", 14, yPos);
+                    yPos += 7;
+                    const goldBody = activeChampionship.goldBracket.map(m => {
+                        const roundTitle = m.round === maxRoundGold ? 'Final'
+                            : m.round === maxRoundGold - 1 ? 'Semi-Final'
+                            : m.round === maxRoundGold - 2 ? 'Quartas' : `Rodada ${m.round}`;
+
+                        const pair1Name = m.pairs[0]?.name || '-';
+                        const pair2Name = m.pairs[1]?.name || '-';
+                        const score = m.score[0] === null || m.score[1] === null 
+                            ? ' - '
+                            : `${m.score[0]} vs ${m.score[1]}`;
+
+                        return [
+                            roundTitle,
+                            pair1Name,
+                            score,
+                            pair2Name
+                        ];
+                    });
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Rodada', 'Dupla 1', 'Placar', 'Dupla 2']],
+                        body: goldBody,
+                        headStyles: { fillColor: [249, 115, 22], textColor: [255, 255, 255] }, // Cor 'Acento' (orange-500)
+                        styles: { halign: 'center', textColor: [31, 41, 55] },
+                        columnStyles: { 1: { halign: 'left' }, 3: { halign: 'right' } }
+                    });
+                    yPos = doc.autoTable.previous.finalY + 10;
+
+                    // Tabela Série Prata
+                    doc.setFontSize(16);
+                    doc.text("Série Prata 🥈", 14, yPos);
+                    yPos += 7;
+                    const silverBody = activeChampionship.silverBracket.map(m => {
+                        const roundTitle = m.round === maxRoundSilver ? 'Final'
+                            : m.round === maxRoundSilver - 1 ? 'Semi-Final'
+                            : m.round === maxRoundSilver - 2 ? 'Quartas' : `Rodada ${m.round}`;
+
+                        const pair1Name = m.pairs[0]?.name || '-';
+                        const pair2Name = m.pairs[1]?.name || '-';
+                        const score = m.score[0] === null || m.score[1] === null 
+                            ? ' - '
+                            : `${m.score[0]} vs ${m.score[1]}`;
+
+                        return [
+                            roundTitle,
+                            pair1Name,
+                            score,
+                            pair2Name
+                        ];
+                    });
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Rodada', 'Dupla 1', 'Placar', 'Dupla 2']],
+                        body: silverBody,
+                        headStyles: { fillColor: [156, 163, 175], textColor: [31, 41, 55] }, // Prata
+                        styles: { halign: 'center', textColor: [31, 41, 55] },
+                        columnStyles: { 1: { halign: 'left' }, 3: { halign: 'right' } }
+                    });
+
+                    // 5. Salvar
+                    doc.save(`resultados_${champ.name.toLowerCase().replace(/\s/g, '_')}.pdf`);
+
+                } catch (error) {
+                     console.error("Erro ao gerar PDF do campeonato:", error);
+                    showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
+                }
+            };
+
+
+            /* =============================================================================
+               Inicialização do App (Autenticação e Listeners Globais)
+               ============================================================================= */
+
+            const listenToGlobalPlayers = () => {
+                unsubscribeGlobalPlayers(); 
+
+                // Se nenhum ranking estiver selecionado (ex: durante o carregamento), não faz nada
+                if (!appState.currentRankingId) {
+                    globalPlayers = [];
+                    if(appState.currentView === 'globalRanking') render();
+                    return;
+                }
+
+                // O caminho da coleção agora é dinâmico
                 const playersCollectionRef = collection(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players');
-                
-                // Note: Não há 'orderBy' no ranking global, a ordenação é feita no frontend pelo `renderGlobalRanking`
-                const q = query(playersCollectionRef); 
+                const q = query(playersCollectionRef);
 
-                unsubscribeGlobalPlayers = onSnapshot(q, (snapshot) => {
-                    globalPlayers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                unsubscribeGlobalPlayers = onSnapshot(q, (querySnapshot) => {
+                    globalPlayers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                    // Se estiver na tela de ranking global, re-renderiza
                     if (appState.currentView === 'globalRanking') {
                         render();
                     }
-                    // Se estiver na tela de registro, re-renderiza (para listar os players disponíveis)
-                    if (activeChampionship && activeChampionship.status === 'registration') {
-                         render();
+                    if (appState.currentView === 'championshipView' && activeChampionship?.status === 'registration') {
+                        render();
                     }
 
                 }, (error) => {
-                    console.error("Erro ao ouvir os jogadores globais:", error);
+                    console.error(`Erro ao carregar ranking ${appState.currentRankingId}:`, error);
+                    showModal("Erro", "Não foi possível carregar o ranking selecionado.");
+                    globalPlayers = [];
+                    if(appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') render();
                 });
             };
 
-
-            // 4. Listener para a lista de Campeonatos (Usado em 'championshipList')
             const listenToChampionships = () => {
                 unsubscribeChampionships();
-                
-                const championshipsCollectionRef = collection(db, 'users', appState.userId, 'championships');
-                // Não há query, pega todos
+                // Usa o appState.userId (que será o MESTRE_USER_ID)
+                const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
+                const q = query(champCollectionRef);
 
-                unsubscribeChampionships = onSnapshot(championshipsCollectionRef, (snapshot) => {
-                    championships = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
+                    championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                    // Se estiver na lista de campeonatos, re-renderiza
                     if (appState.currentView === 'championshipList') {
                         render();
                     }
-                    
-                    // Se estiver no modo telão, re-renderiza para pegar a info do campeão
                     if (appState.isTelaoMode && appState.currentView === 'telaoView') {
-                         render();
+                        render();
                     }
 
                 }, (error) => {
-                    console.error("Erro ao ouvir os campeonatos:", error);
+                    console.error("Erro ao carregar campeonatos:", error);
+                    showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
                 });
             };
-            
-            // 5. Listener para o Campeonato Ativo (Apenas a *view* do campeonato, não a lista)
-            const listenToActiveChampionship = (champId) => {
-                unsubscribeActiveChampionship(); // Desliga o listener anterior
 
-                // 1. Tenta buscar o doc principal (para pegar o status)
-                const champRef = doc(db, 'users', appState.userId, 'championships', champId);
+            const listenToActiveChampionship = (champId) => {
+                unsubscribeActiveChampionship();
+                // Usa o appState.userId (que será o MESTRE_USER_ID)
                 const champDataRef = doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main');
 
-                let currentChampInfo = championships.find(c => c.id === champId);
-
-                // Listener no documento principal (para status, winners, pointsConfig)
-                const unsubChampInfo = onSnapshot(champRef, (docSnap) => {
+                unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
                     if (docSnap.exists()) {
-                        // Atualiza a lista global de campeonatos com a última info
-                        championships = championships.map(c => c.id === champId ? ({ id: champId, ...docSnap.data() }) : c);
-                        currentChampInfo = docSnap.data();
-                    }
-                    // Se o documento de dados ainda estiver carregando, espera.
-                    if (activeChampionship) {
-                         render(); // Renderiza se o doc de dados já estiver pronto
-                    }
-                }, (error) => {
-                    console.error("Erro ao ouvir o doc principal do campeonato:", error);
-                });
-
-
-                // Listener no sub-documento de dados (para grupos, players, brackets)
-                const unsubChampData = onSnapshot(champDataRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        activeChampionship = { ...docSnap.data(), id: champId }; // Combina o ID
+                        activeChampionship = { id: docSnap.id, ...docSnap.data() };
+                        render(); // Renderiza a tela atual (seja 'championshipView' ou 'telaoView')
                     } else {
-                        // Se o sub-doc não existe (nunca deveria), inicializa com players vazios
-                        activeChampionship = { players: [], groups: [], goldBracket: [], silverBracket: [], status: 'registration', id: champId };
+                        showModal("Erro", "Não foi possível carregar os dados deste campeonato. (O doc 'data/main' não foi encontrado).");
+                        if (!appState.isTelaoMode) navigateTo('championshipList');
+                        else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro: Campeonato não encontrado.</h1>`;
                     }
-                    
-                    // Renderiza o conteúdo (usando a info do doc principal se disponível)
-                    render(); 
                 }, (error) => {
-                    console.error("Erro ao ouvir o doc de dados do campeonato:", error);
+                    console.error("Erro ao carregar campeonato ativo:", error);
+                    showModal("Erro", "Não foi possível carregar este campeonato. Verifique as regras do Firestore.");
+                    if (!appState.isTelaoMode) navigateTo('championshipList');
+                    else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro de conexão.</h1>`;
                 });
-                
-                // Função para desligar ambos
-                unsubscribeActiveChampionship = () => {
-                    unsubChampInfo();
-                    unsubChampData();
-                };
-            };
-        </script>
-    </body>
-    </html>
-    /* =============================================================================
-               LÓGICA DE PDF (Impressão)
-               ============================================================================= */
-
-            // 1. Imprime a ficha de um único grupo
-            const handlePrintGroup = (groupIndex) => {
-                const group = activeChampionship.groups[groupIndex];
-                if (!group) return showModal("Erro", "Grupo não encontrado.");
-
-                const doc = new window.jspdf.jsPDF();
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const pageHeight = doc.internal.pageSize.getHeight();
-                
-                const title = `Ficha de Jogos - Grupo ${groupIndex + 1}`;
-                const championshipName = championships.find(c => c.id === appState.currentChampionshipId)?.name || "Campeonato";
-
-                doc.setFontSize(16);
-                doc.text(championshipName, pageWidth / 2, 15, { align: 'center' });
-                doc.setFontSize(12);
-                doc.text(title, pageWidth / 2, 22, { align: 'center' });
-
-                let yPos = 30;
-
-                // Tabela de Classificação
-                const rankings = getRankings(group);
-                const rankingHeaders = [['Pos.', 'Dupla', 'Games Vencidos']];
-                const rankingData = rankings.map((player, index) => {
-                    const status = index < 2 ? '🥇 Ouro' : '🥈 Prata';
-                    return [`${index + 1}º`, player.name, `${player.gamesWon} games (${status})`];
-                });
-
-                doc.autoTable({
-                    startY: yPos,
-                    head: rankingHeaders,
-                    body: rankingData,
-                    theme: 'grid',
-                    styles: { fontSize: 10, cellPadding: 2 },
-                    headStyles: { fillColor: [8, 145, 170] }, // cyan-600
-                    columnStyles: { 0: { cellWidth: 15 }, 2: { cellWidth: 40, halign: 'center' } },
-                });
-
-                yPos = doc.autoTable.previous.finalY + 10;
-
-                // Tabela de Partidas
-                doc.setFontSize(14);
-                doc.text("Partidas:", 14, yPos);
-                yPos += 5;
-
-                const matchHeaders = [['Partida', 'Dupla 1', 'Dupla 2', 'Placar']];
-                const matchData = group.matches.map((match, index) => {
-                    const scoreText = match.score[0] !== null ? `${match.score[0]} - ${match.score[1]}` : 'A Confirmar';
-                    
-                    return [
-                        `Jogo ${index + 1}`,
-                        match.names[0],
-                        match.names[1],
-                        scoreText
-                    ];
-                });
-
-                doc.autoTable({
-                    startY: yPos,
-                    head: matchHeaders,
-                    body: matchData,
-                    theme: 'grid',
-                    styles: { fontSize: 10, cellPadding: 2 },
-                    headStyles: { fillColor: [251, 191, 36] }, // amber-400
-                    columnStyles: { 0: { cellWidth: 20 }, 3: { cellWidth: 30, halign: 'center' } },
-                });
-
-                doc.save(`Ficha_Grupo_${groupIndex + 1}_${championshipName.replace(/\s/g, '_')}.pdf`);
             };
 
-            // 2. Imprime o ranking global em PDF
-            const handlePrintRankingPDF = () => {
-                const ranking = allRankings.find(r => r.id === appState.currentRankingId);
-                const rankingName = ranking ? ranking.name : "Ranking Geral";
+            const listenToRankingsList = () => {
+                unsubscribeRankingsList();
+                const rankingsDocRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
 
-                const doc = new window.jspdf.jsPDF();
-                const pageWidth = doc.internal.pageSize.getWidth();
-                
-                doc.setFontSize(18);
-                doc.text(`🏆 Ranking: ${rankingName}`, pageWidth / 2, 15, { align: 'center' });
-                
-                const rankingHeaders = [['Pos.', 'Jogador', 'Pontos', 'Ouro', 'Prata', 'Coveiro']];
-                const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
-                
-                const rankingData = sortedPlayers.map((player, index) => {
-                    return [
-                        `${index + 1}º`,
-                        player.name,
-                        player.points || 0,
-                        player.goldWins || 0,
-                        player.silverWins || 0,
-                        player.coveiroWins || 0
-                    ];
-                });
+                unsubscribeRankingsList = onSnapshot(rankingsDocRef, async (docSnap) => {
+                    let list = [];
+                    if (docSnap.exists()) {
+                        list = docSnap.data().list || [];
+                    }
 
-                doc.autoTable({
-                    startY: 25,
-                    head: rankingHeaders,
-                    body: rankingData,
-                    theme: 'striped',
-                    styles: { fontSize: 10, cellPadding: 2 },
-                    headStyles: { fillColor: [8, 145, 170] }, // cyan-600
-                    columnStyles: { 0: { cellWidth: 15, halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'center' } },
-                });
-
-                doc.save(`Ranking_${rankingName.replace(/\s/g, '_')}.pdf`);
-            };
-
-
-            // 3. Imprime o resumo final do campeonato
-            const handlePrintChampionshipPDF = () => {
-                const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
-                if (!champInfo) return showModal("Erro", "Campeonato não encontrado.");
-
-                const doc = new window.jspdf.jsPDF();
-                const pageWidth = doc.internal.pageSize.getWidth();
-                let yPos = 15;
-
-                // Título
-                doc.setFontSize(22);
-                doc.text(`🏆 Resumo Final: ${champInfo.name}`, pageWidth / 2, yPos, { align: 'center' });
-                yPos += 10;
-                
-                // Vencedores
-                doc.setFontSize(14);
-                doc.text('Resultados do Mata-Mata', 14, yPos);
-                yPos += 5;
-                
-                const winnersData = [
-                    ['Série', 'Campeão', 'Vice-Campeão', 'Pontos Vencedor'],
-                    [
-                        '🥇 Ouro',
-                        champInfo.winnerGold?.name || 'Aguardando',
-                        champInfo.runnerUpGold?.name || 'Aguardando',
-                        champInfo.pointsConfig.goldWinner
-                    ],
-                    [
-                        '🥈 Prata',
-                        champInfo.winnerSilver?.name || 'Aguardando',
-                        champInfo.runnerUpSilver?.name || 'Aguardando',
-                        champInfo.pointsConfig.silverWinner
-                    ],
-                ];
-                
-                doc.autoTable({
-                    startY: yPos,
-                    head: [winnersData[0]],
-                    body: winnersData.slice(1),
-                    theme: 'grid',
-                    styles: { fontSize: 10, cellPadding: 2 },
-                    headStyles: { fillColor: [8, 145, 170] }, // cyan-600
-                });
-
-                yPos = doc.autoTable.previous.finalY + 10;
-                
-                // Chave Ouro
-                yPos = printBracketToPDF(doc, activeChampionship.goldBracket, 'Série Ouro', yPos, true);
-                
-                // Chave Prata
-                yPos = printBracketToPDF(doc, activeChampionship.silverBracket, 'Série Prata', yPos, false);
-                
-                // Prêmio Coveiro
-                const globalStats = getGlobalTournamentStats(activeChampionship);
-                const minGames = globalStats.length > 0 ? globalStats[0].gamesWon : 0;
-                const coveiros = globalStats.filter(p => p.gamesWon === minGames).map(c => c.name).join(' / ');
-                
-                doc.setFontSize(14);
-                doc.text('👻 Prêmio Coveiro', 14, yPos);
-                yPos += 5;
-
-                doc.autoTable({
-                    startY: yPos,
-                    head: [['Vencedor(es)', 'Total de Games no Torneio']],
-                    body: [[coveiros, `${minGames} games`]],
-                    theme: 'grid',
-                    styles: { fontSize: 10, cellPadding: 2 },
-                    headStyles: { fillColor: [220, 38, 38] }, // rose-600
-                });
-
-                doc.save(`Resultado_${champInfo.name.replace(/\s/g, '_')}.pdf`);
-            };
-
-            // Helper para imprimir uma chave (Bracket) no PDF
-            const printBracketToPDF = (doc, bracket, title, startY, isGold) => {
-                if (!bracket || bracket.length === 0) return startY;
-                
-                const rounds = {};
-                bracket.forEach(match => {
-                    if (!rounds[match.round]) rounds[match.round] = [];
-                    rounds[match.round].push(match);
-                });
-                
-                const maxRound = Math.max(...bracket.map(m => m.round));
-                let currentY = startY;
-
-                doc.addPage();
-                doc.setFontSize(16);
-                doc.text(`Chave: ${title}`, 14, currentY);
-                currentY += 8;
-
-                Object.keys(rounds).sort((a,b) => a-b).forEach(roundNum => {
-                    const roundTitle = Number(roundNum) === maxRound ? 'Final'
-                        : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
-                        : Number(roundNum) === 1 && bracket.length > 2 ? 'Play-In (Rodada 1)' // Adiciona Play-In
-                        : `Rodada ${roundNum}`;
-
-                    doc.setFontSize(12);
-                    doc.text(`- ${roundTitle} -`, 14, currentY);
-                    currentY += 5;
-
-                    const matchHeaders = [['Partida', 'Dupla 1', 'Dupla 2', 'Vencedor', 'Placar']];
-                    const matchData = rounds[roundNum].map(match => {
-                        const pair1Name = match.pairs[0]?.name || '---';
-                        const pair2Name = match.pairs[1]?.name || '---';
-                        const winnerName = match.winner?.name || 'Aguardando';
-                        
-                        let scoreText = '';
-                        // NOVO: Regra do Bye
-                        const isByeMatch = (match.pairs[0] && !match.pairs[1]) || (!match.pairs[0] && match.pairs[1]);
-                        
-                        if (isByeMatch) {
-                            scoreText = 'BYE (6-0)';
-                        } else {
-                            scoreText = match.score[0] !== null ? `${match.score[0]} - ${match.score[1]}` : 'A Confirmar';
+                    // Se for a primeira vez e a lista estiver vazia, cria um ranking padrão
+                    if (list.length === 0) {
+                        try {
+                            const defaultRanking = { id: "ranking_geral", name: "Ranking Geral" };
+                            await setDoc(rankingsDocRef, { list: [defaultRanking] });
+                            allRankings = [defaultRanking];
+                        } catch (error) {
+                            console.error("Erro ao criar ranking padrão:", error);
+                            showModal("Erro Crítico", "Não foi possível inicializar a lista de rankings.");
+                            return;
                         }
-                        
-                        // Retorna os dados da linha da tabela
-                        return [
-                            `Match ${match.id}`,
-                            pair1Name,
-                            pair2Name,
-                            winnerName,
-                            scoreText
-                        ];
-                    });
+                    } else {
+                        allRankings = list;
+                    }
 
-                    doc.autoTable({
-                        startY: currentY,
-                        head: matchHeaders,
-                        body: matchData,
-                        theme: 'grid',
-                        styles: { fontSize: 9, cellPadding: 1 },
-                        headStyles: { fillColor: isGold ? [245, 158, 11] : [107, 114, 128] }, // orange-500 ou gray-500
-                    });
+                    // Se nenhum ranking estiver selecionado no appState, OU se o ranking selecionado
+                    // foi excluído, seleciona o primeiro da lista
+                    const selectedRankingExists = allRankings.some(r => r.id === appState.currentRankingId);
 
-                    currentY = doc.autoTable.previous.finalY + 5;
+                    if ((!appState.currentRankingId || !selectedRankingExists) && allRankings.length > 0) {
+                        appState.currentRankingId = allRankings[0].id;
+                    } else if (allRankings.length === 0) {
+                        appState.currentRankingId = null; // Nenhum ranking existe
+                    }
+
+                    // Esta chamada é crucial para que o `globalPlayers` seja preenchido na primeira carga
+                    listenToGlobalPlayers();
+
+                    // Re-renderiza a tela atual (pode ser a 'championshipList' ou 'globalRanking' que dependem dessa lista)
+                    // Não chama o render() se estivermos no modo Telão, pois o 'navigateTo' cuidará disso.
+                    if (!appState.isTelaoMode) {
+                        render();
+                    }
+
+                }, (error) => {
+                    console.error("Erro ao carregar lista de rankings:", error);
+                    showModal("Erro Crítico", "Não foi possível carregar a lista de rankings.");
                 });
-                
-                return currentY;
-            }
+            };
 
+            // Ponto de entrada da aplicação
+            onAuthStateChanged(auth, async (user) => {
+                if (!user) {
+                    try {
+                        await signInAnonymously(auth);
+                    } catch (error) {
+                        console.error("Erro na autenticação anônima:", error);
+                        let errorMessage = "Não foi possível conectar ao Firebase. Verifique sua conexão.";
+                        if (error.code === 'auth/configuration-not-found') {
+                            errorMessage = "Erro de Autenticação: O 'Login Anônimo' (Anonymous) não está ATIVADO no seu painel do Firebase.";
+                        }
+                        showModal("Erro de Autenticação", errorMessage);
+                        return;
+                    }
+                }
 
-            /* =============================================================================
-               LÓGICA DE FIREBASE (LISTENERS - FIM DO SCRIPT)
-               ============================================================================= */
-            
-            // ... (o final do script permanece o mesmo)
-            
-            // ------------------
-            // FIM DO SCRIPT JS
-            // ------------------
+                if (user && !appState.isAuthReady) {
+
+                    const effectiveUserId = MESTRE_USER_ID; 
+
+                    appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
+                    userIdFooter.textContent = effectiveUserId; // Mostra o ID Mestre no rodapé
+
+                    // Lógica de Roteamento (Normal vs Telão)
+
+                    // 1. Verifica os parâmetros da URL
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const telaoChampId = urlParams.get('champId');
+
+                    // 2. Inicia os listeners globais (necessários para ambos os modos)
+                    listenToChampionships();
+                    listenToRankingsList(); // Esta função vai chamar listenToGlobalPlayers()
+
+                    if (urlParams.has('telao') && telaoChampId) {
+                        // --- MODO TELÃO ---
+                        appState.isTelaoMode = true;
+                        appState.isAdmin = false; // Telão é sempre visitante
+
+                        // Adiciona estilos para a view limpa
+                        const telaoStyles = document.createElement('style');
+                        telaoStyles.innerHTML = `
+                            body { background-color: #FFFAF0; } /* Fundo 'Areia' (amber-50) */
+                            /* Ajusta o container para telas largas, mantendo um padding */
+                            #app-container { max-width: 100%; padding: 1rem 2rem; }
+                            header, footer { display: none !important; }
+                        `;
+                        document.head.appendChild(telaoStyles);
+
+                        // Navega direto para o telão
+                        navigateTo('telaoView', telaoChampId);
+
+                    } else {
+                        // --- MODO NORMAL ---
+                        appState.isTelaoMode = false;
+                        navigateTo('login');
+                    }
+                }
+            });
+
         </script>
     </body>
     </html>
