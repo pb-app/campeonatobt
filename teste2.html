@@ -1899,6 +1899,137 @@
                 await checkAndFinalizeChampionship(newChampData);
             }
         };
+
+        /* =============================================================================
+           Lógica de Cálculo de Ranking (MODIFICADA para Reversão de Pontos)
+           ============================================================================= */
+        
+        // Novo: Calcula a contribuição total de pontos (incluindo participação) e vitórias para CADA jogador neste campeonato.
+        const calculateChampionshipPoints = (champData, winners, pointsConfig, coveiros) => {
+            const playerPointsMap = new Map();
+
+            // 1. Inicializa jogadores com a pontuação de PARTICIPAÇÃO (base)
+            for (const player of champData.players) {
+                playerPointsMap.set(player.id, {
+                    name: player.name,
+                    points: pointsConfig.PARTICIPATION, // Pontos iniciais
+                    goldWins: 0,
+                    silverWins: 0,
+                    coveiroWins: 0 
+                });
+            }
+
+            // Helper para somar pontos/vitórias
+            const safeUpdate = (playerId, key, value, pointsToAdd) => {
+                const p = playerPointsMap.get(playerId);
+                if (p) {
+                    if (key === 'points') {
+                        p.points += pointsToAdd;
+                    } else {
+                        p[key] += value;
+                    }
+                }
+            };
+
+            // 2. Adiciona Pontos de Vencedor/Vice (O valor total menos a participação, para não contar a participação duas vezes)
+            
+            // Gold Winner
+            if (winners.goldWinner) {
+                const pointsToAdd = pointsConfig.GOLD_WINNER - pointsConfig.PARTICIPATION;
+                for (const player of winners.goldWinner.players) {
+                    safeUpdate(player.id, 'points', 0, pointsToAdd);
+                    safeUpdate(player.id, 'goldWins', 1, 0);
+                }
+            }
+            // Gold Runner-up
+            if (winners.goldRunnerUp) {
+                 const pointsToAdd = pointsConfig.GOLD_RUNNERUP - pointsConfig.PARTICIPATION;
+                for (const player of winners.goldRunnerUp.players) {
+                     safeUpdate(player.id, 'points', 0, pointsToAdd);
+                }
+            }
+            // Silver Winner
+            if (winners.silverWinner) {
+                 const pointsToAdd = pointsConfig.SILVER_WINNER - pointsConfig.PARTICIPATION;
+                for (const player of winners.silverWinner.players) {
+                     safeUpdate(player.id, 'points', 0, pointsToAdd);
+                     safeUpdate(player.id, 'silverWins', 1, 0);
+                }
+            }
+            // Silver Runner-up
+            if (winners.silverRunnerUp) {
+                 const pointsToAdd = pointsConfig.SILVER_RUNNERUP - pointsConfig.PARTICIPATION;
+                 for (const player of winners.silverRunnerUp.players) {
+                     safeUpdate(player.id, 'points', 0, pointsToAdd);
+                }
+            }
+
+            // 3. Adiciona estatísticas de Coveiro
+            if (coveiros && coveiros.length > 0) {
+                for (const coveiro of coveiros) {
+                    const p = playerPointsMap.get(coveiro.id);
+                    if (p) { p.coveiroWins = 1; }
+                }
+            }
+
+            // Retorna o Map pronto para aplicação/armazenamento
+            return playerPointsMap; 
+        };
+
+
+        // Novo: Aplica ou reverte pontos no ranking global (multiplicador 1 para aplicar, -1 para reverter)
+        const modifyGlobalRanking = async (pointsMap, rankingId, multiplier = 1) => {
+            await runTransaction(db, async (transaction) => {
+                
+                // 1. FASE DE LEITURA (Reads - Deve ocorrer antes de qualquer write)
+                const playerDocsData = new Map();
+                for (const [playerId] of pointsMap.entries()) {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                    const playerDoc = await transaction.get(playerRef); 
+                    playerDocsData.set(playerId, playerDoc); 
+                }
+
+                // 2. FASE DE ESCRITA (Writes)
+                for (const [playerId, contribution] of pointsMap.entries()) {
+                    const playerDoc = playerDocsData.get(playerId); 
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
+                    
+                    // Aplica ou reverte com base no multiplicador
+                    const pointsChange = (contribution.points || 0) * multiplier;
+                    const goldChange = (contribution.goldWins || 0) * multiplier;
+                    const silverChange = (contribution.silverWins || 0) * multiplier;
+                    const coveiroChange = (contribution.coveiroWins || 0) * multiplier;
+
+                    if (!playerDoc.exists()) {
+                        // Se o jogador não existe e o multiplicador é de adição (1), cria.
+                        if (multiplier === 1) {
+                            transaction.set(playerRef, {
+                                name: contribution.name,
+                                points: pointsChange,
+                                goldWins: goldChange,
+                                silverWins: silverChange,
+                                coveiroWins: coveiroChange 
+                            });
+                        }
+                    } else {
+                        const oldData = playerDoc.data();
+                        
+                        // Garante que o nome seja sempre o mais atualizado
+                        const nameToUse = oldData.name || contribution.name;
+
+                        // Aplica a mudança, garantindo que os contadores não fiquem negativos (importante para a reversão)
+                        transaction.update(playerRef, {
+                            name: nameToUse, 
+                            points: Math.max(0, (oldData.points || 0) + pointsChange),
+                            goldWins: Math.max(0, (oldData.goldWins || 0) + goldChange),
+                            silverWins: Math.max(0, (oldData.silverWins || 0) + silverChange),
+                            coveiroWins: Math.max(0, (oldData.coveiroWins || 0) + coveiroChange) 
+                        });
+                    }
+                }
+            });
+        };
+
         const checkAndFinalizeChampionship = async (champData) => {
             if (!champData.goldBracket || !champData.silverBracket || champData.goldBracket.length === 0 || champData.silverBracket.length === 0) {
                 return; 
@@ -1914,13 +2045,17 @@
                 const champDoc = await getDoc(champRef);
                 if (!champDoc.exists()) return; 
                 const champDocData = champDoc.data();
+                
+                // MUDANÇA PRINCIPAL: Captura o status e a contribuição de ranking anterior
                 const wasAlreadyFinished = (champDocData.status === 'finished');
+                
                 const rankingId = champDocData.rankingId;
                 if (!rankingId) {
                     showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
                     console.error("Erro Crítico: Campeonato sem rankingId.");
                     return;
                 }
+                
                 try {
                     const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
                     const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
@@ -1928,96 +2063,56 @@
                     const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
                     const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
                     const effectivePoints = champDocData.pointsConfig || DEFAULT_RANKING_POINTS;
+                    
+                    // 1. Calcula a NOVA contribuição
+                    const newContributionMap = calculateChampionshipPoints(
+                        champData, 
+                        { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, 
+                        effectivePoints, 
+                        coveiros
+                    );
+
+                    // 2. SALVA os dados principais do campeonato (status, vencedores)
                     await setDoc(champRef, {
                         status: 'finished',
                         winnerGold: goldWinner.name, 
                         winnerSilver: silverWinner.name
                     }, { merge: true });
-                    if (!wasAlreadyFinished) {
-                        showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
-                        await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, effectivePoints, rankingId);
-                        hideModal();
-                        showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
+
+                    if (wasAlreadyFinished) {
+                        // RE-APLICAÇÃO DE RANKING (Correção de Placar)
+                        showModal("Ajustando...", "Placar corrigido. Revertendo pontuação antiga e aplicando a nova ao ranking. Aguarde...");
+                        
+                        // A. REVERTER PONTUAÇÃO ANTIGA (Obtida do documento do Campeonato)
+                        const oldContributionObject = champDocData.rankingContribution;
+                        if (oldContributionObject) {
+                            // Converte o objeto simples do Firestore de volta para Map
+                            const mapToRevert = new Map(Object.entries(oldContributionObject).map(([key, value]) => [key, value]));
+                            await modifyGlobalRanking(mapToRevert, rankingId, -1); // Multiplicador -1 (Reverter/Subtrair)
+                        } else {
+                            console.warn("Championship was marked finished but had no rankingContribution to revert.");
+                        }
                     } else {
-                         showModal("Placar Atualizado", `O placar final foi alterado. O ranking global NÃO foi recalculado para evitar duplicidade.`);
+                        // PRIMEIRA APLICAÇÃO DE RANKING
+                        showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
                     }
+                    
+                    // 3. APLICA NOVA PONTUAÇÃO (sempre aplica a nova, seja a primeira vez ou uma correção)
+                    await modifyGlobalRanking(newContributionMap, rankingId, 1); // Multiplicador 1 (Aplicar/Adicionar)
+
+                    // 4. SALVA a nova contribuição no documento do Campeonato (para futuras reversões)
+                    // Transforma o Map em Objeto simples para salvar no Firestore
+                    const contributionObject = Object.fromEntries(newContributionMap);
+                    await setDoc(champRef, { rankingContribution: contributionObject }, { merge: true });
+
+                    hideModal();
+                    showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
+
                 } catch (error) {
-                    console.error("Erro ao finalizar e aplicar ranking:", error);
-                    showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes.");
+                    console.error("Erro ao finalizar/aplicar/reaplicar ranking:", error);
+                    showModal("Erro Crítico", "Não foi possível aplicar/ajustar o ranking. Verifique o console para detalhes.");
                 }
             }
-        };
-        const updateGlobalRanking = async (champData, winners, pointsConfig, rankingId) => {
-            await runTransaction(db, async (transaction) => {
-                const playerPointsMap = new Map();
-                for (const player of champData.players) {
-                    playerPointsMap.set(player.id, {
-                        name: player.name,
-                        points: pointsConfig.participation,
-                        goldWins: 0,
-                        silverWins: 0,
-                        coveiroWins: 0 
-                    });
-                }
-                if (winners.goldWinner) {
-                    for (const player of winners.goldWinner.players) {
-                        const p = playerPointsMap.get(player.id);
-                        if (p) { p.points += pointsConfig.goldWinner; p.goldWins = 1; }
-                    }
-                }
-                if (winners.goldRunnerUp) {
-                    for (const player of winners.goldRunnerUp.players) {
-                        const p = playerPointsMap.get(player.id);
-                         if (p) p.points += pointsConfig.goldRunnerUp;
-                    }
-                }
-                if (winners.silverWinner) {
-                    for (const player of winners.silverWinner.players) {
-                        const p = playerPointsMap.get(player.id);
-                         if (p) { p.points += pointsConfig.silverWinner; p.silverWins = 1; }
-                    }
-                }
-                if (winners.silverRunnerUp) {
-                     for (const player of winners.silverRunnerUp.players) {
-                        const p = playerPointsMap.get(player.id);
-                         if (p) p.points += pointsConfig.silverRunnerUp;
-                    }
-                }
-                if (winners.coveiros && winners.coveiros.length > 0) {
-                    for (const coveiro of winners.coveiros) {
-                        const p = playerPointsMap.get(coveiro.id);
-                        if (p) { p.coveiroWins = 1; }
-                    }
-                }
-                const playerDocsData = new Map();
-                for (const [playerId, data] of playerPointsMap.entries()) {
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
-                    const playerDoc = await transaction.get(playerRef); 
-                    playerDocsData.set(playerId, playerDoc); 
-                }
-                for (const [playerId, data] of playerPointsMap.entries()) {
-                    const playerDoc = playerDocsData.get(playerId); 
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
-                    if (!playerDoc.exists()) {
-                        transaction.set(playerRef, {
-                            name: data.name,
-                            points: data.points,
-                            goldWins: data.goldWins,
-                            silverWins: data.silverWins,
-                            coveiroWins: data.coveiroWins 
-                        });
-                    } else {
-                        const oldData = playerDoc.data();
-                        transaction.update(playerRef, {
-                            name: data.name, 
-                            points: (oldData.points || 0) + data.points,
-                            goldWins: (oldData.goldWins || 0) + data.goldWins,
-                            silverWins: (oldData.silverWins || 0) + data.silverWins,
-                            coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWins 
-                        });
-                    }
-                }
-            });
         };
         const getRankings = (group) => {
             const playerStats = {};
