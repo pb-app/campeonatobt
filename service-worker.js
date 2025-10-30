@@ -1,7 +1,7 @@
 // service-worker.js
 
 // ATENÇÃO: Mude a versão do cache (ex: v4.0.9) sempre que fizer deploy de novos arquivos
-const CACHE_NAME = 'ranking-bt-v4.0.9';
+const CACHE_NAME = 'ranking-bt-v5.0.0';
 
 // Arquivos principais do app (App Shell)
 // ADICIONEI 'index.html' e atualizei para 'teste2.html' (que você usa)
