@@ -2470,6 +2470,35 @@ const matchesHtml = rounds[roundNum].map(match => {
                     handleConfirmKnockoutScore(bracketType, matchId);
                     return;
                 }
+                // Ativa o modo mata-mata e gera as chaves
+const handleStartKnockoutTournament = async () => {
+    const selectedPairs = getSelectedPairs();
+
+    if (selectedPairs.length < 2) {
+        showModal("Número Insuficiente", "Selecione pelo menos 2 duplas para iniciar o mata-mata.");
+        return;
+    }
+
+    // 1. Gera a chave de Ouro (com todas as duplas)
+    // NOVO: A função createBracket agora lida com o cálculo e distribuição dos BYEs!
+    const goldBracket = createBracket(selectedPairs);
+
+    // 2. Define o status
+    activeChampionship.status = 'knockout';
+    activeChampionship.knockoutStarted = true;
+    activeChampionship.knockoutStage = 'gold'; // Ouro é o padrão
+
+    // 3. Salva as chaves
+    activeChampionship.goldBracket = goldBracket;
+    activeChampionship.silverBracket = []; // Inicia vazio, será preenchida se houver eliminados
+
+    // 4. Salva o campeonato e atualiza a UI
+    await saveActiveChampionship(activeChampionship);
+    
+    // NOVO: Força o re-render
+    renderKnockoutView();
+    // Alternativamente: renderApp(activeChampionship);
+};
                 
                 // Se o torneio JÁ ACABOU, pede confirmação
                 const val0 = document.getElementById(`k-${matchId}-s0`).value;
