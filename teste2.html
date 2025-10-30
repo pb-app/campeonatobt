@@ -125,44 +125,6 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #6B7280; /* bg-gray-500 */
         }
-        <style>
-/* ... Seus estilos existentes ... */
-
-/* --- INÍCIO: CSS para Suporte a BYE (Folga) (REQUERIDO) --- */
-
-.match-bye {
-    background-color: #f7f7f7; /* Um cinza claro para diferenciar */
-    border: 1px dashed #ccc; /* Borda tracejada */
-    opacity: 0.85; /* Levemente transparente */
-}
-
-.pair-bye {
-    font-weight: bold;
-    color: #1a73e8; /* Cor azul para indicar o avanço */
-    padding: 5px;
-    border-bottom: 1px solid #ddd;
-}
-
-.pair-bye-message {
-    font-size: 0.8em;
-    color: #555;
-    margin-top: 5px;
-    padding: 5px;
-    background-color: #e8f0fe; /* Fundo azul bem claro */
-    border-radius: 3px;
-    text-align: center;
-}
-
-/* Ajuste sutil na classe 'winner' para garantir a cor */
-.pair.winner {
-    background-color: #d4edda;
-    color: #155724;
-    font-weight: bold;
-    border-left: 5px solid #155724;
-}
-
-/* --- FIM: CSS para Suporte a BYE (Folga) (REQUERIDO) --- */
-</style>
     </style>
 </head>
 <body class="text-gray-900"> <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -1476,113 +1438,31 @@
                 </div>
                 ` : '';
 
-               // SUBSTITUA SOMENTE O CORPO DO .map() DENTRO DE renderBracket
-const matchesHtml = rounds[roundNum].map(match => {
-    const pair1 = match.pairs[0];
-    const pair2 = match.pairs[1];
-    const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
-    const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
-    const score1 = match.score[0];
-    const score2 = match.score[1];
-    const hasScore = score1 !== null && score2 !== null;
+                const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
+                    const roundTitle = Number(roundNum) === maxRound ? 'Final'
+                        : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
+                        : Number(roundNum) === maxRound - 2 ? 'Quartas de Final'
+                        : `Rodada ${roundNum}`;
 
-    // NOVO: Adiciona classe de estilo para Byes
-    const matchClass = match.isBye ? 'match-bye' : 'bg-amber-50 border border-amber-200';
-    
-    // NOVO: Define se a dupla é uma Folga (Bye)
-    const isPair1Bye = pair1 && pair1.id === 'BYE';
-    const isPair2Bye = pair2 && pair2.id === 'BYE';
+                    const matchesHtml = rounds[roundNum].map(match => {
+                        const pair1 = match.pairs[0]; 
+                        const pair2 = match.pairs[1]; 
+                        const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
+                        const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
+                        const score1 = match.score[0];
+                        const score2 = match.score[1];
+                        const hasScore = score1 !== null && score2 !== null;
 
-    // NOVO: Renderiza a mensagem de avanço se for Bye
-    if (match.isBye) {
-        const winningPair = match.winner;
-        const winnerName = winningPair ? winningPair.name : 'Vencedor Indefinido';
-        
-        return `
-        <div class="rounded-lg shadow-sm p-4 ${matchClass}">
-            <div class="pair-bye-message">
-                ${isPair1Bye ? `Dupla ${pair2.name} avança por Folga (Bye).` : `Dupla ${pair1.name} avança por Folga (Bye).`}
-            </div>
-            
-            <div class="flex flex-col gap-1 mt-3">
-                <div class="pair pair1 ${isPair1Bye ? 'pair-bye' : 'bg-white font-bold'} rounded p-2 text-sm">
-                    ${pair1 ? pair1.name : 'Aguardando...'}
-                </div>
-                <div class="text-center text-xs text-gray-500">
-                    → Vencedor avança para a próxima rodada.
-                </div>
-                <div class="pair pair2 ${isPair2Bye ? 'pair-bye' : 'bg-white font-bold'} rounded p-2 text-sm">
-                    ${pair2 ? pair2.name : 'Aguardando...'}
-                </div>
-            </div>
-        </div>
-        `;
-    }
+                        // NOVO: Desabilita inputs se NÃO for admin
+                        const isDisabled = !appState.isAdmin ? 'disabled' : '';
+                        const adminButtonsClass = appState.isAdmin ? '' : 'hidden';
 
-    // Código original para partidas normais continua abaixo:
-    const isDisabled = !appState.isAdmin ? 'disabled' : '';
-    const adminButtonsClass = appState.isAdmin ? '' : 'hidden';
+                        // NOVO: Botão de Edição (✏️)
+                        // Aparece se o jogo JÁ tiver placar, ou se o torneio estiver finalizado
+                        const showEditButton = (hasScore || isFinished);
+                        const showConfirmButton = !showEditButton && pair1 && pair2; // Só mostra check se tiver 2 duplas
 
-    // NOVO: Botão de Edição (✏️)
-    const showEditButton = (hasScore || isFinished);
-    const showConfirmButton = !showEditButton && pair1 && pair2;
-
-    return `
-    <div class="rounded-lg shadow-sm p-4 ${matchClass}">
-        <div class="flex justify-between items-center mb-2">
-            <span class="font-medium text-sm ${isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
-                ${pair1 ? pair1.name : 'Aguardando...'}
-            </span>
-            <input
-                type="number"
-                min="0"
-                value="${score1 === null ? '' : score1}"
-                id="k-${match.id}-s0"
-                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
-                ${isDisabled}
-            />
-        </div>
-        
-        <div class="flex items-center my-2">
-            <div class="flex-grow border-t border-gray-300"></div>
-            <span class="mx-2 text-xs text-gray-500">vs</span>
-            <div class="flex-grow border-t border-gray-300"></div>
-        </div>
-
-        <div class="flex justify-between items-center">
-            <span class="font-medium text-sm ${isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
-                ${pair2 ? pair2.name : 'Aguardando...'}
-            </span>
-            <input
-                type="number"
-                min="0"
-                value="${score2 === null ? '' : score2}"
-                id="k-${match.id}-s1"
-                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
-                ${isDisabled}
-            />
-        </div>
-        
-        <div class="text-center mt-3 ${adminButtonsClass}">
-            <button 
-                class="confirm-knockout-score-btn p-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all ${showConfirmButton ? '' : 'hidden'}"
-                data-bracket-type="${bracketType}"
-                data-match-id="${match.id}"
-                title="Confirmar Placar">
-                ${icons.check}
-            </button>
-            
-            <button 
-                class="edit-knockout-score-btn p-2 w-full bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-md transition-all ${showEditButton ? '' : 'hidden'}"
-                data-bracket-type="${bracketType}"
-                data-match-id="${match.id}"
-                title="Editar Placar">
-                ${icons.edit}
-            </button>
-        </div>
-    </div>
-    `;
-}).join('');
+                        return `
                         <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-medium text-sm ${isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
@@ -1877,79 +1757,18 @@ const matchesHtml = rounds[roundNum].map(match => {
                         : Number(roundNum) === maxRound - 2 ? 'Quartas de Final'
                         : `Rodada ${roundNum}`;
 
-                   // SUBSTITUA SOMENTE O CORPO DO .map() DENTRO DE renderBracket_ReadOnly
-const matchesHtml = rounds[roundNum].map(match => {
-    const pair1 = match.pairs[0];
-    const pair2 = match.pairs[1];
-    const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
-    const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
-    const score1 = match.score[0];
-    const score2 = match.score[1];
-    
-    // NOVO: Adiciona classe de estilo para Byes
-    const matchClass = match.isBye ? 'match-bye' : 'bg-amber-100 border border-amber-200';
+                    const matchesHtml = rounds[roundNum].map(match => {
+                        const pair1 = match.pairs[0]; 
+                        const pair2 = match.pairs[1]; 
+                        const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
+                        const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
+                        const score1 = match.score[0];
+                        const score2 = match.score[1];
 
-    // NOVO: Define se a dupla é uma Folga (Bye)
-    const isPair1Bye = pair1 && pair1.id === 'BYE';
-    const isPair2Bye = pair2 && pair2.id === 'BYE';
+                        const winnerClass1 = isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
+                        const winnerClass2 = isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
 
-    // NOVO: Renderiza a mensagem de avanço se for Bye
-    if (match.isBye) {
-        const winnerName = match.winner ? match.winner.name : 'Vencedor Indefinido';
-        
-        return `
-        <div class="rounded-lg shadow-sm p-4 text-center ${matchClass}">
-            <div class="pair-bye-message text-base">
-                ${isPair1Bye ? `Dupla ${pair2.name} avança por Folga (Bye).` : `Dupla ${pair1.name} avança por Folga (Bye).`}
-            </div>
-            
-            <div class="flex flex-col gap-1 mt-3">
-                <div class="pair pair1 ${isPair1Bye ? 'pair-bye text-xl' : 'bg-white font-bold text-lg'} rounded p-2">
-                    ${pair1 ? pair1.name : 'Aguardando...'}
-                </div>
-                <div class="text-center text-sm text-gray-500">
-                    → Vencedor avança para a próxima rodada.
-                </div>
-                <div class="pair pair2 ${isPair2Bye ? 'pair-bye text-xl' : 'bg-white font-bold text-lg'} rounded p-2">
-                    ${pair2 ? pair2.name : 'Aguardando...'}
-                </div>
-            </div>
-        </div>
-        `;
-    }
-
-    // Código original para partidas normais continua abaixo:
-    const winnerClass1 = isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
-    const winnerClass2 = isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
-
-    return `
-    <div class="rounded-lg shadow-sm p-4 ${matchClass}">
-        <div class="flex justify-between items-center mb-2">
-            <span class="font-medium text-lg ${winnerClass1}">
-                ${pair1 ? pair1.name : 'Aguardando...'}
-            </span>
-            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
-                ${score1 === null ? '-' : score1}
-            </span>
-        </div>
-        
-        <div class="flex items-center my-2">
-            <div class="flex-grow border-t border-gray-300"></div>
-            <span class="mx-2 text-sm text-gray-500">vs</span>
-            <div class="flex-grow border-t border-gray-300"></div>
-        </div>
-
-        <div class="flex justify-between items-center">
-            <span class="font-medium text-lg ${winnerClass2}">
-                ${pair2 ? pair2.name : 'Aguardando...'}
-            </span>
-            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
-                ${score2 === null ? '-' : score2}
-            </span>
-        </div>
-    </div>
-    `;
-}).join('');
+                        return `
                         <div class="bg-amber-100 rounded-lg shadow-sm border border-amber-200 p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-medium text-lg ${winnerClass1}">
@@ -2470,35 +2289,6 @@ const matchesHtml = rounds[roundNum].map(match => {
                     handleConfirmKnockoutScore(bracketType, matchId);
                     return;
                 }
-                // Ativa o modo mata-mata e gera as chaves
-const handleStartKnockoutTournament = async () => {
-    const selectedPairs = getSelectedPairs();
-
-    if (selectedPairs.length < 2) {
-        showModal("Número Insuficiente", "Selecione pelo menos 2 duplas para iniciar o mata-mata.");
-        return;
-    }
-
-    // 1. Gera a chave de Ouro (com todas as duplas)
-    // NOVO: A função createBracket agora lida com o cálculo e distribuição dos BYEs!
-    const goldBracket = createBracket(selectedPairs);
-
-    // 2. Define o status
-    activeChampionship.status = 'knockout';
-    activeChampionship.knockoutStarted = true;
-    activeChampionship.knockoutStage = 'gold'; // Ouro é o padrão
-
-    // 3. Salva as chaves
-    activeChampionship.goldBracket = goldBracket;
-    activeChampionship.silverBracket = []; // Inicia vazio, será preenchida se houver eliminados
-
-    // 4. Salva o campeonato e atualiza a UI
-    await saveActiveChampionship(activeChampionship);
-    
-    // NOVO: Força o re-render
-    renderKnockoutView();
-    // Alternativamente: renderApp(activeChampionship);
-};
                 
                 // Se o torneio JÁ ACABOU, pede confirmação
                 const val0 = document.getElementById(`k-${matchId}-s0`).value;
@@ -2541,83 +2331,26 @@ const handleStartKnockoutTournament = async () => {
                 );
             };
             
-           // (Handler do Botão ✅)
-const handleConfirmKnockoutScore = (bracketType, matchId) => {
-    const val0 = document.getElementById(`k-${matchId}-s0`).value;
-    const val1 = document.getElementById(`k-${matchId}-s1`).value;
+            // (Handler do Botão ✅)
+            const handleConfirmKnockoutScore = (bracketType, matchId) => {
+                const val0 = document.getElementById(`k-${matchId}-s0`).value;
+                const val1 = document.getElementById(`k-${matchId}-s1`).value;
 
-    const score0 = val0 === '' ? null : parseInt(val0, 10);
-    const score1 = val1 === '' ? null : parseInt(val1, 10);
+                const score0 = val0 === '' ? null : parseInt(val0, 10);
+                const score1 = val1 === '' ? null : parseInt(val1, 10);
 
-    if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
-        showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
-        return;
-    }
-    if (score0 === score1) {
-        showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
-        return;
-    }
-    
-    // NOVO: Chama a nova função lógica que gerencia o avanço, incluindo BYE.
-    handleUpdateMatch(matchId, score0, score1);
-};
-
-// (Handler do Botão ✏️)
-const handleEditKnockoutScore = (bracketType, matchId) => {
-    const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
-    const isFinished = champInfo?.status === 'finished';
-
-    // Se o torneio não acabou, apenas trata como confirmação
-    if (!isFinished) {
-        handleConfirmKnockoutScore(bracketType, matchId);
-        return;
-    }
-    
-    // Se o torneio JÁ ACABOU, pede confirmação para recalcular (lógica antiga, mantida)
-    const val0 = document.getElementById(`k-${matchId}-s0`).value;
-    const val1 = document.getElementById(`k-${matchId}-s1`).value;
-    const score0 = val0 === '' ? null : parseInt(val0, 10);
-    const score1 = val1 === '' ? null : parseInt(val1, 10);
-
-    if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
-        showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
-        return;
-    }
-    if (score0 === score1) {
-        showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
-        return;
-    }
-    
-    const confirmationButtons = [
-        {
-            id: 'modal-cancel-btn',
-            text: 'Cancelar',
-            className: 'w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-5 rounded-lg shadow-sm transition-all',
-            handler: hideModal
-        },
-        {
-            id: 'modal-confirm-edit-btn',
-            text: 'Confirmar e Recalcular',
-            className: 'w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all',
-            handler: () => {
-                // Salva a edição e dispara o recálculo do ranking
-                // NOVO: Chama a nova função lógica de atualização.
-                handleUpdateMatch(matchId, score0, score1); 
-                // A lógica de Recalculate precisa ser feita APÓS o handleUpdateMatch.
-                // A função `handleConfirmKnockoutScore_Logic` (antiga) não é mais necessária,
-                // mas vamos emular o efeito de recálculo aqui, usando a função finalizadora.
-                checkAndFinalizeChampionship(activeChampionship, true); 
-                hideModal();
-            }
-        }
-    ];
-
-    showModal(
-        "Atenção: Torneio Finalizado", 
-        "Você está editando o placar de um torneio que já foi finalizado. Isso irá recalcular os vencedores e ajustar o Ranking Global.<br><br>Deseja continuar?",
-        confirmationButtons
-    );
-};
+                if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                    showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                    return;
+                }
+                if (score0 === score1) {
+                    showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
+                    return;
+                }
+                
+                // Apenas salva, sem forçar recálculo
+                handleConfirmKnockoutScore_Logic(bracketType, matchId, score0, score1, false);
+            };
 
             // (Função Lógica)
             const handleConfirmKnockoutScore_Logic = async (bracketType, matchId, score0, score1, forceRecalculate) => {
@@ -2997,201 +2730,63 @@ const handleEditKnockoutScore = (bracketType, matchId) => {
                 });
 
                 // 4. Retorna a lista ordenada por games (do menor para o maior)
-              };
+                return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
+            };
 
 
             // Cria a estrutura de chave de mata-mata (apenas potências de 2)
-            /* =============================================================================
-   Funções Utilitárias (Cálculos de Grupos e Chaves) - (continuação)
-   ============================================================================= */
+            const createBracket = (bracketPairs) => {
+                // Sorteio aleatório das duplas (cumprindo requisito)
+                const shuffledPairs = [...bracketPairs].sort(() => 0.5 - Math.random());
+                const bracket = [];
+                const numPairs = bracketPairs.length;
 
-// Cria a estrutura de chave de mata-mata (AGORA COM SUPORTE A BYE)
-const createBracket = (bracketPairs) => {
-    // Sorteio aleatório das duplas (cumprindo requisito)
-    const shuffledPairs = [...bracketPairs].sort(() => 0.5 - Math.random());
-    const bracket = [];
-    const numPairs = bracketPairs.length;
-    const isPowerOfTwo = (num) => num > 0 && (num & (num - 1)) === 0;
+                // Se o número de duplas não for uma potência de 2, retorna vazio (será bloqueado antes)
+                if (![2, 4, 8, 16, 32].includes(numPairs)) return [];
 
-    // 1. Determina o tamanho ideal da chave (próxima potência de 2)
-    let totalSlots = 2;
-    while (totalSlots < numPairs) {
-        totalSlots *= 2;
-    }
-    const numByes = totalSlots - numPairs;
-    const numRounds = Math.log2(totalSlots);
+                const numRounds = Math.log2(numPairs); // log2(4) = 2 rodadas
 
-    // 2. Prepara a lista de duplas e a lista de BYEs (folgas)
-    const teamsWithByes = [];
-    let pairsCursor = 0;
-    
-    // Distribui os BYEs nas vagas de maior prioridade (normalmente as primeiras e últimas)
-    for (let i = 0; i < totalSlots; i++) {
-        if (numByes > 0 && (i < numByes / 2 || i >= totalSlots - numByes / 2)) {
-            // Se houver Byes, as primeiras N/2 e últimas N/2 vagas da chave
-            // serão Byes, onde N é o número de Byes.
-            teamsWithByes.push({ id: 'BYE', name: 'Folga (BYE)', players: [] });
-        } else if (pairsCursor < shuffledPairs.length) {
-            // Preenche as vagas restantes com as duplas
-            teamsWithByes.push(shuffledPairs[pairsCursor]);
-            pairsCursor++;
-        } else {
-            // Preenche o resto com Byes (caso o calculo acima não seja exato, ou por segurança)
-            teamsWithByes.push({ id: 'BYE', name: 'Folga (BYE)', players: [] });
-        }
-    }
-    
-    // 3. Embaralha a ordem das duplas (mantendo BYEs nos slots sorteados)
-    // Para simplificar, vamos manter a ordem calculada acima e apenas sortear as duplas reais.
-    // O algoritmo de 'seeding' tradicional é complexo, então para este projeto, 
-    // manteremos o sorteio puro das duplas, e os BYEs nos slots calculados.
+                // Loop crescente (Rodada 1, Rodada 2, ...)
+                for (let r = 1; r <= numRounds; r++) { // r=1 (Semi), r=2 (Final)
 
-    // 4. Cria a estrutura da chave
-    // Loop crescente (Rodada 1, Rodada 2, ...)
-    for (let r = 1; r <= numRounds; r++) {
+                    const matchesInRound = numPairs / Math.pow(2, r); 
 
-        const matchesInRound = totalSlots / Math.pow(2, r);
+                    for (let m = 0; m < matchesInRound; m++) { 
+                        const matchId = `R${r}_M${m+1}`;
+                        let nextMatchId = null;
+                        let nextMatchSlot = null; 
 
-        for (let m = 0; m < matchesInRound; m++) {
-            const matchId = `R${r}_M${m + 1}`;
-            let nextMatchId = null;
-            let nextMatchSlot = null;
+                        if (r < numRounds) { // Se não for a rodada final
+                            const nextRoundMatchIndex = Math.floor(m / 2); 
+                            nextMatchId = `R${r+1}_M${nextRoundMatchIndex+1}`;
+                            nextMatchSlot = m % 2; 
+                        }
 
-            if (r < numRounds) { // Se não for a rodada final
-                const nextRoundMatchIndex = Math.floor(m / 2);
-                nextMatchId = `R${r + 1}_M${nextRoundMatchIndex + 1}`;
-                nextMatchSlot = m % 2;
-            }
+                        const match = {
+                            id: matchId,
+                            round: r, 
+                            pairs: [null, null], 
+                            score: [null, null],
+                            winner: null,
+                            nextMatchId: nextMatchId,
+                            nextMatchSlot: nextMatchSlot,
+                        };
 
-            const match = {
-                id: matchId,
-                round: r,
-                pairs: [null, null],
-                score: [null, null],
-                winner: null,
-                nextMatchId: nextMatchId,
-                nextMatchSlot: nextMatchSlot,
-                isBye: false, // NOVO: Flag para Byes
-            };
-            
-            // Preenche a Rodada 1 com as duplas (e Byes) da lista teamsWithByes
-            if (r === 1) {
-                const index1 = m * 2;
-                const index2 = m * 2 + 1;
-                const pair1 = teamsWithByes[index1] || null;
-                const pair2 = teamsWithByes[index2] || null;
+                        // Preenche a Rodada 1 com as duplas sorteadas
+                        if (r === 1) {
+                            const index1 = m * 2;
+                            const index2 = m * 2 + 1;
+                            match.pairs[0] = shuffledPairs[index1] || null;
+                            match.pairs[1] = shuffledPairs[index2] || null;
+                        }
 
-                match.pairs[0] = pair1;
-                match.pairs[1] = pair2;
-
-                // Lógica de BYE: Se um lado é BYE
-                if (pair1 && pair2 && (pair1.id === 'BYE' || pair2.id === 'BYE')) {
-                    match.isBye = true;
-                    // O vencedor do BYE é a dupla que não é BYE (ou null se for BYE vs BYE)
-                    if (pair1.id !== 'BYE' && pair2.id === 'BYE') {
-                        match.winner = pair1;
-                    } else if (pair2.id !== 'BYE' && pair1.id === 'BYE') {
-                        match.winner = pair2;
-                    } else {
-                         // BYE vs BYE -> Não deve acontecer se a lógica de cálculo for correta
-                         match.winner = null; 
+                        bracket.push(match);
                     }
                 }
-            }
 
-            bracket.push(match);
-        }
-    }
+                return bracket;
+            };
 
-    // 5. Processa os BYEs automaticamente (avança o vencedor)
-    for (const match of bracket) {
-        if (match.isBye && match.winner && match.nextMatchId) {
-            const nextMatch = bracket.find(m => m.id === match.nextMatchId);
-            if (nextMatch) {
-                nextMatch.pairs[match.nextMatchSlot] = match.winner;
-            }
-        }
-    }
-
-    return bracket;
-};
-
-
-// ADICIONE ESTA FUNÇÃO COMPLETA (handleUpdateMatch)
-// Ela contém a nova validação de BYE
-const handleUpdateMatch = async (matchId, score1, score2) => {
-    // 1. Encontra a chave e o jogo
-    const bracketType = matchId.startsWith('Ouro') ? 'gold' : 'silver';
-    const bracketKey = bracketType === 'gold' ? 'goldBracket' : 'silverBracket';
-
-    // Acessa a lista de jogos, se for a primeira vez, usa activeChampionship.goldBracket
-    const bracketList = activeChampionship[bracketKey];
-    const targetMatch = bracketList.find(m => m.id === matchId);
-
-    if (!targetMatch) return;
-    
-    // **NOVA LÓGICA DE BLOQUEIO DE BYE (PONTO C)**
-    if (targetMatch.isBye) {
-        showModal("Ação Bloqueada", "Esta partida é uma Folga (Bye) e o avanço já foi processado automaticamente.");
-        return;
-    }
-
-    // Converte scores para número e valida
-    const s1 = parseInt(score1, 10);
-    const s2 = parseInt(score2, 10);
-
-    if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) {
-        showModal("Erro de Placar", "Os scores devem ser números inteiros não negativos.");
-        return;
-    }
-
-    if (s1 === s2) {
-        showModal("Erro de Placar", "Partidas de mata-mata não podem terminar empatadas.");
-        return;
-    }
-    
-    // 2. Define o vencedor e perdedor
-    const winnerPair = s1 > s2 ? targetMatch.pairs[0] : targetMatch.pairs[1];
-    
-    // 3. Atualiza o jogo atual
-    targetMatch.score = [s1, s2];
-    targetMatch.winner = winnerPair; // O vencedor já está definido
-
-    // 4. Avança o vencedor para o próximo jogo
-    if (targetMatch.nextMatchId) {
-        const nextMatch = bracketList.find(m => m.id === targetMatch.nextMatchId);
-        
-        if (nextMatch) {
-            // Usa match.nextMatchSlot (0 ou 1) para saber onde colocar a dupla
-            nextMatch.pairs[targetMatch.nextMatchSlot] = winnerPair;
-
-             // Se o próximo jogo se tornou um BYE (ex: foi preenchido o último slot, mas o outro é BYE)
-             const p1 = nextMatch.pairs[0];
-             const p2 = nextMatch.pairs[1];
-
-             if (p1 && p2 && (p1.id === 'BYE' || p2.id === 'BYE')) {
-                 nextMatch.isBye = true;
-                 if (p1.id !== 'BYE') {
-                     nextMatch.winner = p1;
-                 } else if (p2.id !== 'BYE') {
-                     nextMatch.winner = p2;
-                 }
-                 // Aciona a lógica de avanço de BYE (recursivamente para o próximo)
-                 if (nextMatch.winner && nextMatch.nextMatchId) {
-                      const nextNextMatch = bracketList.find(m => m.id === nextMatch.nextMatchId);
-                      if (nextNextMatch) {
-                            nextNextMatch.pairs[nextMatch.nextMatchSlot] = nextMatch.winner;
-                      }
-                 }
-             }
-        }
-    }
-
-    // 5. Salva e verifica a finalização (com a flag forceRecalculate=false)
-    await saveActiveChampionship(activeChampionship);             return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
- 
-    await checkAndFinalizeChampionship(activeChampionship, false);
-};
 
             /* =============================================================================
                Funções de PDF
