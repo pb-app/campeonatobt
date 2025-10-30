@@ -60,7 +60,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v4.0.6 (Fix)</p>
+            <p>App de Ranking v4.0.7 (Bye Fix)</p>
         </footer>
 
     </div>
@@ -507,13 +507,18 @@
                         return `<div class="flex justify-between items-center bg-amber-50 p-3 rounded-lg animate-fade-in-sm border border-amber-200"><span class="text-gray-800 font-medium">${player.name}</span>${deleteButton}</div>`;
                     }).join('');
                 const playerCount = activeChampionship.players.length;
-                const isMultipleOfFour = playerCount % 4 === 0;
+                
+                // MANTIDO: O campeonato de duplas deve ter um número de jogadores que seja múltiplo de 4
+                // para garantir que cada grupo de 4 gere 2 duplas (Ouro e Prata) de forma limpa.
+                const isMultipleOfFour = playerCount % 4 === 0; 
                 const minPlayersForGroups = 4;
                 const canGenerate = playerCount >= minPlayersForGroups && isMultipleOfFour;
+                
                 const generateButtonHtml = playerCount >= minPlayersForGroups ? `
                     <div class="mt-8 text-center"><button id="generate-champ-btn" type="button" ${!canGenerate ? 'disabled' : ''} class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">${icons.swords} Gerar Grupos</button>
-                        ${!canGenerate ? `<p class="text-rose-600 text-sm mt-3">O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.</p>` : ''}
+                        ${!canGenerate ? `<p class="text-rose-600 text-sm mt-3">O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.</p>` : `<p class="text-gray-500 text-sm mt-3">Pronto para gerar grupos. Chaves Mata-Mata serão criadas com *Byes* (folgas) se necessário.</p>`}
                     </div>` : `<p class="text-gray-500 text-sm mt-3 text-center">Mínimo de ${minPlayersForGroups} jogadores para começar.</p>`;
+                
                 const playersInTournamentIds = new Set(activeChampionship.players.map(p => p.id));
                 const availablePlayersFromRanking = globalPlayers.filter(p => !playersInTournamentIds.has(p.id));
                 const existingPlayersOptions = availablePlayersFromRanking.length > 0 ? availablePlayersFromRanking.map(p => `<option value="${p.id}">${p.name}</option>`).join('') : '<option disabled>Nenhum jogador disponível no ranking</option>';
@@ -1228,11 +1233,8 @@
                     return;
                 }
                 const numGroups = playerCount / 4;
-                const numDuplas = numGroups * 2;
-                if (![2, 4, 8, 16, 32].includes(numDuplas)) {
-                     showModal("Regra da Chave", `A regra atual de mata-mata só suporta 2, 4, 8, 16 ou 32 duplas. Com ${playerCount} jogadores, você terá ${numDuplas} duplas. Por favor, ajuste o número de jogadores (ex: 8 ou 16 jogadores).`);
-                     return;
-                }
+                // FIX: Removendo a validação estrita de potência de 2 aqui. O createBracket fará a adição de Byes.
+                
                 if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Os ${numGroups} melhores do ranking serão os "Cabeças de Chave" e o restante será sorteado.`)) { return; }
                 try {
                     const globalPlayersMap = new Map(globalPlayers.map(p => [p.id, p.points || 0]));
@@ -1377,10 +1379,7 @@
                     silverSeriesPairs.push(silverPair);
                 });
                 
-                if (![2, 4, 8, 16, 32].includes(goldSeriesPairs.length) || ![2, 4, 8, 16, 32].includes(silverSeriesPairs.length)) {
-                     showModal("Erro de Geração", `A regra atual de mata-mata (sem Byes) exige que o número de duplas seja 2, 4, 8, 16 ou 32. Chave Ouro tem ${goldSeriesPairs.length} e Prata tem ${silverSeriesPairs.length}. Ajuste o número de jogadores antes de finalizar.`);
-                     return;
-                }
+                // FIX: Removendo a validação estrita de potência de 2 aqui. O createBracket fará a adição de Byes.
 
                 try {
                     const goldBracket = createBracket(goldSeriesPairs);
