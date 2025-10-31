@@ -126,7 +126,7 @@
             </main>
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v4.0.4 (Final)</p>
+            <p>App de Ranking v4.0.5 (Final)</p>
         </footer>
     </div>
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1075,18 +1075,53 @@
             });
             const maxRound = Math.max(...bracket.map(m => m.round));
             const final = bracket.find(m => m.round === maxRound);
+            const semiFinals = bracket.filter(m => m.round === maxRound - 1);
+            
             const champion = final?.winner; 
+            const runnerUp = final?.pairs.find(p => p && p.id !== champion?.id);
+
+            let thirdPlace = null;
+            if (champion && semiFinals.length === 2) {
+                // Encontra a semifinal que o campeão jogou
+                const championSemi = semiFinals.find(sf => 
+                    sf.pairs.some(p => p && p.id === champion.id)
+                );
+                // O terceiro lugar é o perdedor da semifinal do campeão
+                if(championSemi) {
+                    thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
+                }
+            }
+
             const isGold = bracketType === 'goldBracket';
             const cardStyle = isGold 
                 ? 'bg-gradient-to-r from-yellow-300 via-orange-400 to-orange-500 text-white' 
                 : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900';
+            
             const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
+            const runnerUpStyle = isGold ? 'text-lg font-bold text-white opacity-90' : 'text-lg font-bold text-gray-700';
+            const thirdPlaceStyle = isGold ? 'text-base font-medium text-white opacity-80' : 'text-base font-medium text-gray-600';
+
             const championHtml = champion ? `
-            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
-                <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">Campeões</h4>
-                <p class="${championNameStyle}">${champion.name}</p>
+            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in space-y-2">
+                <div>
+                    <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">🥇 1º Lugar</h4>
+                    <p class="${championNameStyle}">${champion.name}</p>
+                </div>
+                ${runnerUp ? `
+                <div>
+                    <h5 class="text-lg font-bold uppercase tracking-wider ${runnerUpStyle}">🥈 2º Lugar</h5>
+                    <p class="${runnerUpStyle}">${runnerUp.name}</p>
+                </div>
+                ` : ''}
+                ${thirdPlace ? `
+                <div>
+                    <h6 class="text-base font-medium uppercase tracking-wider ${thirdPlaceStyle}">🥉 3º Lugar</h6>
+                    <p class="${thirdPlaceStyle}">${thirdPlace.name}</p>
+                </div>
+                ` : ''}
             </div>
             ` : '';
+
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
                 const roundTitle = Number(roundNum) === maxRound ? 'Final'
                     : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
@@ -1101,7 +1136,8 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     const isBye = pair2 === 'BYE' || pair1 === 'BYE';
-                    const isDisabled = (!pair1 || !pair2 || pair2 === 'BYE' || pair1 === 'BYE' || !appState.isAdmin) ? 'disabled' : '';
+                    const isDisabled = (!pair1 || !pair2 || pair2 === 'BYE' || pair1 === 'BYE' || !appState.isAdmin || (isFinished && !appState.isAdmin)) ? 'disabled' : ''; // Bloqueia se finalizado E não for admin
+                    
                     if (isBye) {
                         const byePair = pair1 === 'BYE' ? pair2 : pair1;
                         const winnerClass = 'text-emerald-600 font-bold';
@@ -1117,6 +1153,11 @@
                         </div>
                         `;
                     }
+
+                    // Permite admin editar mesmo finalizado, esconde botão se já tiver vencedor
+                    const showConfirmButton = appState.isAdmin && !match.winner; 
+                    const inputDisabled = (isFinished && !appState.isAdmin) || (!pair1 || !pair2);
+
                     return `
                     <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
                         <div class="flex justify-between items-center mb-2">
@@ -1128,8 +1169,8 @@
                                 min="0"
                                 value="${score1 === null ? '' : score1}"
                                 id="k-${match.id}-s0"
-                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
-                                ${isDisabled}
+                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabled ? 'opacity-70' : ''}"
+                                ${inputDisabled ? 'disabled' : ''}
                             />
                         </div>
                         
@@ -1147,11 +1188,11 @@
                                 min="0"
                                 value="${score2 === null ? '' : score2}"
                                 id="k-${match.id}-s1"
-                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
-                                ${isDisabled}
+                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabled ? 'opacity-70' : ''}"
+                                ${inputDisabled ? 'disabled' : ''}
                             />
                         </div>
-                        <div class="text-center mt-3 ${isDisabled ? 'hidden' : ''}">
+                        <div class="text-center mt-3 ${!showConfirmButton ? 'hidden' : ''}">
                             <button 
                                 class="confirm-knockout-score-btn p-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all"
                                 data-bracket-type="${bracketType}"
@@ -1339,18 +1380,51 @@
             });
             const maxRound = Math.max(...bracket.map(m => m.round));
             const final = bracket.find(m => m.round === maxRound);
+            const semiFinals = bracket.filter(m => m.round === maxRound - 1);
+
             const champion = final?.winner; 
+            const runnerUp = final?.pairs.find(p => p && p.id !== champion?.id);
+
+            let thirdPlace = null;
+            if (champion && semiFinals.length === 2) {
+                const championSemi = semiFinals.find(sf => 
+                    sf.pairs.some(p => p && p.id === champion.id)
+                );
+                if(championSemi) {
+                    thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
+                }
+            }
+
             const isGold = bracketType === 'goldBracket';
             const cardStyle = isGold 
                 ? 'bg-gradient-to-r from-yellow-300 via-orange-400 to-orange-500 text-white' 
                 : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900';
+            
             const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
+            const runnerUpStyle = isGold ? 'text-lg font-bold text-white opacity-90' : 'text-lg font-bold text-gray-700';
+            const thirdPlaceStyle = isGold ? 'text-base font-medium text-white opacity-80' : 'text-base font-medium text-gray-600';
+
             const championHtml = champion ? `
-            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
-                <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">Campeões</h4>
-                <p class="${championNameStyle}">${champion.name}</p>
+            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in space-y-2">
+                <div>
+                    <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">🥇 1º Lugar</h4>
+                    <p class="${championNameStyle}">${champion.name}</p>
+                </div>
+                ${runnerUp ? `
+                <div>
+                    <h5 class="text-lg font-bold uppercase tracking-wider ${runnerUpStyle}">🥈 2º Lugar</h5>
+                    <p class="${runnerUpStyle}">${runnerUp.name}</p>
+                </div>
+                ` : ''}
+                ${thirdPlace ? `
+                <div>
+                    <h6 class="text-base font-medium uppercase tracking-wider ${thirdPlaceStyle}">🥉 3º Lugar</h6>
+                    <p class="${thirdPlaceStyle}">${thirdPlace.name}</p>
+                </div>
+                ` : ''}
             </div>
             ` : '';
+
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
                 const roundTitle = Number(roundNum) === maxRound ? 'Final'
                     : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
@@ -1887,10 +1961,23 @@
             const bracketToUpdate = newChampData[bracketType];
             const match = bracketToUpdate.find(m => m.id === matchId);
             if (match) {
+                // Se já houver um vencedor, precisamos reverter o avanço dele na próxima chave
+                if (match.winner && match.nextMatchId) {
+                    const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
+                    // Se o vencedor antigo estava no próximo jogo, remove-o
+                    if (nextMatch && nextMatch.pairs[match.nextMatchSlot]?.id === match.winner.id) {
+                        nextMatch.pairs[match.nextMatchSlot] = null;
+                        nextMatch.winner = null; 
+                        nextMatch.score = [null, null];
+                        // TODO: Reverter em cascata (se a final for alterada)
+                    }
+                }
+
                 match.score[0] = score0;
                 match.score[1] = score1;
                 if (score0 > score1) match.winner = match.pairs[0]; 
                 else if (score1 > score0) match.winner = match.pairs[1];
+
                 if (match.winner && match.nextMatchId) {
                     const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
                     if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
@@ -2143,18 +2230,43 @@
                 const finalResults = [];
                 const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
                 const goldFinal = activeChampionship.goldBracket.find(m => m.round === maxRoundGold);
+                const goldSemiFinals = activeChampionship.goldBracket.filter(m => m.round === maxRoundGold - 1);
+                
                 if (goldFinal?.winner) {
                     finalResults.push(['🥇 Campeões Ouro', goldFinal.winner.name]);
-                    const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldFinal.winner.id);
-                    if (goldRunnerUp) finalResults.push(['Vice Ouro', goldRunnerUp.name]);
+                    const goldRunnerUp = goldFinal.pairs.find(p => p && p.id !== goldFinal.winner.id);
+                    if (goldRunnerUp) finalResults.push(['🥈 2º Lugar Ouro', goldRunnerUp.name]);
+
+                    if (goldSemiFinals.length === 2) {
+                        const championSemi = goldSemiFinals.find(sf => 
+                            sf.pairs.some(p => p && p.id === goldFinal.winner.id)
+                        );
+                        if(championSemi) {
+                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== goldFinal.winner.id);
+                            if (thirdPlace) finalResults.push(['🥉 3º Lugar Ouro', thirdPlace.name]);
+                        }
+                    }
                 }
                 const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
                 const silverFinal = activeChampionship.silverBracket.find(m => m.round === maxRoundSilver);
+                const silverSemiFinals = activeChampionship.silverBracket.filter(m => m.round === maxRoundSilver - 1);
+                
                 if (silverFinal?.winner) {
                     finalResults.push(['🥈 Campeões Prata', silverFinal.winner.name]);
-                    const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverFinal.winner.id);
-                    if (silverRunnerUp) finalResults.push(['Vice Prata', silverRunnerUp.name]);
+                    const silverRunnerUp = silverFinal.pairs.find(p => p && p.id !== silverFinal.winner.id);
+                    if (silverRunnerUp) finalResults.push(['2º Lugar Prata', silverRunnerUp.name]);
+                    
+                    if (silverSemiFinals.length === 2) {
+                        const championSemi = silverSemiFinals.find(sf => 
+                            sf.pairs.some(p => p && p.id === silverFinal.winner.id)
+                        );
+                        if(championSemi) {
+                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== silverFinal.winner.id);
+                            if (thirdPlace) finalResults.push(['3º Lugar Prata', thirdPlace.name]);
+                        }
+                    }
                 }
+
                 const stats = getGlobalTournamentStats(activeChampionship);
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
