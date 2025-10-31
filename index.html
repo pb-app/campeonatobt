@@ -126,7 +126,7 @@
             </main>
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v4.0.5 (Final)</p>
+            <p>App de Ranking v4.0.6 (Final)</p>
         </footer>
     </div>
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1136,7 +1136,6 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     const isBye = pair2 === 'BYE' || pair1 === 'BYE';
-                    const isDisabled = (!pair1 || !pair2 || pair2 === 'BYE' || pair1 === 'BYE' || !appState.isAdmin || (isFinished && !appState.isAdmin)) ? 'disabled' : ''; // Bloqueia se finalizado E não for admin
                     
                     if (isBye) {
                         const byePair = pair1 === 'BYE' ? pair2 : pair1;
@@ -1154,9 +1153,9 @@
                         `;
                     }
 
-                    // Permite admin editar mesmo finalizado, esconde botão se já tiver vencedor
-                    const showConfirmButton = appState.isAdmin && !match.winner; 
-                    const inputDisabled = (isFinished && !appState.isAdmin) || (!pair1 || !pair2);
+                    // Permite admin editar mesmo finalizado, botão fica sempre visível se for admin
+                    const showConfirmButton = appState.isAdmin && pair1 && pair2 && pair1 !== 'BYE' && pair2 !== 'BYE';
+                    const inputDisabled = !appState.isAdmin || (!pair1 || !pair2) || pair1 === 'BYE' || pair2 === 'BYE';
 
                     return `
                     <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
@@ -1610,7 +1609,6 @@
                 }));
 
                 const sortedTournamentPlayers = tournamentPlayersWithPoints.sort((a, b) => b.points - a.points);
-
                 const seededPlayers = sortedTournamentPlayers.slice(0, numGroups);
                 const unseededPlayers = sortedTournamentPlayers.slice(numGroups);
 
@@ -2532,7 +2530,7 @@
         });
     </script>
     <div class="aviso-rodape text-center text-xs text-gray-500 py-3 bg-gray-100 mt-8">
-        .....................................................
+        ............................ ............................
     </div>
 </body>
 </html>
