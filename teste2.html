@@ -126,7 +126,7 @@
             </main>
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v4.0.5 (Final)</p>
+            <p>App de Ranking v4.1.0</p>
         </footer>
     </div>
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1155,9 +1155,8 @@
                     }
 
                     // Permite admin editar mesmo finalizado, esconde botão se já tiver vencedor
-                    const showConfirmButton = appState.isAdmin && !match.winner; 
+                    const showConfirmButton = appState.isAdmin; 
                     const inputDisabled = (isFinished && !appState.isAdmin) || (!pair1 || !pair2);
-
                     return `
                     <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
                         <div class="flex justify-between items-center mb-2">
@@ -1483,7 +1482,7 @@
                 }).join('');
                 return `
                 <div class="flex flex-col space-y-6 w-full max-w-xs">
-                    <h4 class="text-xl font-semibold text-gray-800">${roundTitle}</h4>
+                    <h4 classZ="text-xl font-semibold text-gray-800">${roundTitle}</h4>
                     ${matchesHtml}
                 </div>
                 `;
@@ -1961,27 +1960,53 @@
             const bracketToUpdate = newChampData[bracketType];
             const match = bracketToUpdate.find(m => m.id === matchId);
             if (match) {
-                // Se já houver um vencedor, precisamos reverter o avanço dele na próxima chave
-                if (match.winner && match.nextMatchId) {
-                    const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
-                    // Se o vencedor antigo estava no próximo jogo, remove-o
-                    if (nextMatch && nextMatch.pairs[match.nextMatchSlot]?.id === match.winner.id) {
-                        nextMatch.pairs[match.nextMatchSlot] = null;
-                        nextMatch.winner = null; 
-                        nextMatch.score = [null, null];
-                        // TODO: Reverter em cascata (se a final for alterada)
-                    }
-                }
-
+                const oldWinnerId = match.winner ? match.winner.id : null;
+                
                 match.score[0] = score0;
                 match.score[1] = score1;
                 if (score0 > score1) match.winner = match.pairs[0]; 
                 else if (score1 > score0) match.winner = match.pairs[1];
 
+                const newWinnerId = match.winner ? match.winner.id : null;
+
+                // Se o vencedor mudou, precisamos propagar a mudança
+                if (oldWinnerId !== newWinnerId) {
+                    let currentMatch = match;
+                    let nextMatch = bracketToUpdate.find(m => m.id === currentMatch.nextMatchId);
+                    
+                    while (nextMatch) {
+                        // 1. Remove o vencedor antigo (oldWinnerId) da próxima partida
+                        const oldPairIndex = nextMatch.pairs.findIndex(p => p && p.id === oldWinnerId);
+                        if (oldPairIndex !== -1) {
+                            nextMatch.pairs[oldPairIndex] = null;
+                        }
+
+                        // 2. Adiciona o novo vencedor (newWinnerId) na próxima partida
+                        if (newWinnerId) {
+                            nextMatch.pairs[currentMatch.nextMatchSlot] = match.winner;
+                        }
+
+                        // 3. Reseta os placares e vencedores das próximas partidas
+                        nextMatch.score = [null, null];
+                        nextMatch.winner = null;
+
+                        // Prepara para a próxima iteração
+                        currentMatch = nextMatch;
+                        nextMatch = bracketToUpdate.find(m => m.id === currentMatch.nextMatchId);
+                        
+                        // O 'oldWinnerId' para a próxima iteração é o vencedor que estava lá
+                        oldWinnerId = currentMatch.winner ? currentMatch.winner.id : null;
+                        // O 'newWinnerId' para a próxima iteração é nulo, pois estamos apenas limpando
+                        newWinnerId = null; 
+                    }
+                }
+                
+                // Agora, propaga o novo vencedor (se houver)
                 if (match.winner && match.nextMatchId) {
                     const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
                     if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
                 }
+
                 await saveActiveChampionship(newChampData); 
                 await checkAndFinalizeChampionship(newChampData);
             }
@@ -1996,13 +2021,15 @@
             const silverFinal = champData.silverBracket.find(m => m.round === maxRoundSilver);
             const goldWinner = goldFinal?.winner; 
             const silverWinner = silverFinal?.winner; 
+            
+            const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+            const champDoc = await getDoc(champRef);
+            if (!champDoc.exists()) return; 
+            const champDocData = champDoc.data();
+            const wasAlreadyFinished = (champDocData.status === 'finished');
+            const rankingId = champDocData.rankingId;
+
             if (goldWinner && silverWinner) {
-                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
-                const champDoc = await getDoc(champRef);
-                if (!champDoc.exists()) return; 
-                const champDocData = champDoc.data();
-                const wasAlreadyFinished = (champDocData.status === 'finished');
-                const rankingId = champDocData.rankingId;
                 if (!rankingId) {
                     showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
                     console.error("Erro Crítico: Campeonato sem rankingId.");
@@ -2015,32 +2042,48 @@
                     const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
                     const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
                     const effectivePoints = champDocData.pointsConfig || DEFAULT_RANKING_POINTS;
+                    
                     await setDoc(champRef, {
                         status: 'finished',
                         winnerGold: goldWinner.name, 
                         winnerSilver: silverWinner.name
                     }, { merge: true });
+
                     if (!wasAlreadyFinished) {
                         showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
-                        await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, effectivePoints, rankingId);
+                        await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, effectivePoints, rankingId, false);
                         hideModal();
                         showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
                     } else {
-                         showModal("Placar Atualizado", `O placar final foi alterado. O ranking global NÃO foi recalculado para evitar duplicidade.`);
+                         showModal("Placar Atualizado", `O placar final foi alterado. Se desejar, recalcule o ranking manualmente.`);
                     }
                 } catch (error) {
                     console.error("Erro ao finalizar e aplicar ranking:", error);
                     showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes.");
                 }
+            } else if (wasAlreadyFinished) {
+                 // Se os vencedores foram removidos (edição), reverte o status
+                 console.log("Revertendo status para 'knockout' pois o placar final foi editado.");
+                 await setDoc(champRef, {
+                        status: 'knockout',
+                        winnerGold: null,
+                        winnerSilver: null
+                 }, { merge: true });
+                 
+                 // **MODIFICAÇÃO FUTURA:** Idealmente, aqui deveria ter uma função para REVERTER os pontos do ranking,
+                 // mas isso é complexo. Por enquanto, apenas avisamos.
+                 showModal("Ranking Desatualizado", "O placar final foi removido. O campeonato foi reaberto. Os pontos do ranking NÃO foram revertidos automaticamente.");
             }
         };
-        const updateGlobalRanking = async (champData, winners, pointsConfig, rankingId) => {
+        const updateGlobalRanking = async (champData, winners, pointsConfig, rankingId, isReversal = false) => {
             await runTransaction(db, async (transaction) => {
                 const playerPointsMap = new Map();
+                const multiplier = isReversal ? -1 : 1;
+
                 for (const player of champData.players) {
                     playerPointsMap.set(player.id, {
                         name: player.name,
-                        points: pointsConfig.participation,
+                        points: (pointsConfig.participation || 0) * multiplier,
                         goldWins: 0,
                         silverWins: 0,
                         coveiroWins: 0 
@@ -2049,31 +2092,31 @@
                 if (winners.goldWinner) {
                     for (const player of winners.goldWinner.players) {
                         const p = playerPointsMap.get(player.id);
-                        if (p) { p.points += pointsConfig.goldWinner; p.goldWins = 1; }
+                        if (p) { p.points += (pointsConfig.goldWinner || 0) * multiplier; p.goldWins = 1 * multiplier; }
                     }
                 }
                 if (winners.goldRunnerUp) {
                     for (const player of winners.goldRunnerUp.players) {
                         const p = playerPointsMap.get(player.id);
-                         if (p) p.points += pointsConfig.goldRunnerUp;
+                         if (p) p.points += (pointsConfig.goldRunnerUp || 0) * multiplier;
                     }
                 }
                 if (winners.silverWinner) {
                     for (const player of winners.silverWinner.players) {
                         const p = playerPointsMap.get(player.id);
-                         if (p) { p.points += pointsConfig.silverWinner; p.silverWins = 1; }
+                         if (p) { p.points += (pointsConfig.silverWinner || 0) * multiplier; p.silverWins = 1 * multiplier; }
                     }
                 }
                 if (winners.silverRunnerUp) {
                      for (const player of winners.silverRunnerUp.players) {
                         const p = playerPointsMap.get(player.id);
-                         if (p) p.points += pointsConfig.silverRunnerUp;
+                         if (p) p.points += (pointsConfig.silverRunnerUp || 0) * multiplier;
                     }
                 }
                 if (winners.coveiros && winners.coveiros.length > 0) {
                     for (const coveiro of winners.coveiros) {
                         const p = playerPointsMap.get(coveiro.id);
-                        if (p) { p.coveiroWins = 1; }
+                        if (p) { p.coveiroWins = 1 * multiplier; }
                     }
                 }
                 const playerDocsData = new Map();
@@ -2086,21 +2129,25 @@
                     const playerDoc = playerDocsData.get(playerId); 
                     const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
                     if (!playerDoc.exists()) {
+                        if (isReversal) {
+                            console.warn(`Tentando reverter pontos de ${data.name} (ID: ${playerId}) que não existe no ranking.`);
+                            continue;
+                        }
                         transaction.set(playerRef, {
                             name: data.name,
-                            points: data.points,
-                            goldWins: data.goldWins,
-                            silverWins: data.silverWins,
-                            coveiroWins: data.coveiroWins 
+                            points: Math.max(0, data.points),
+                            goldWins: Math.max(0, data.goldWins),
+                            silverWins: Math.max(0, data.silverWins),
+                            coveiroWins: Math.max(0, data.coveiroWins) 
                         });
                     } else {
                         const oldData = playerDoc.data();
                         transaction.update(playerRef, {
                             name: data.name, 
-                            points: (oldData.points || 0) + data.points,
-                            goldWins: (oldData.goldWins || 0) + data.goldWins,
-                            silverWins: (oldData.silverWins || 0) + data.silverWins,
-                            coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWins 
+                            points: Math.max(0, (oldData.points || 0) + data.points),
+                            goldWins: Math.max(0, (oldData.goldWins || 0) + data.goldWins),
+                            silverWins: Math.max(0, (oldData.silverWins || 0) + data.silverWins),
+                            coveiroWins: Math.max(0, (oldData.coveiroWins || 0) + data.coveiroWins) 
                         });
                     }
                 }
