@@ -162,7 +162,8 @@
             Timestamp,
             getDoc,
             writeBatch,
-            runTransaction
+            runTransaction,
+            deleteDoc
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         const firebaseConfig = {
           apiKey: "AIzaSyDeS-rk8OJKhghv1djVucmR3-erOa-ppMY",
@@ -1781,8 +1782,7 @@
             pairsForBracket.sort(() => 0.5 - Math.random());
             
             const bracket = [];
-            const numRounds = Math.log2(targetSize); 
-
+            const numRounds = Math.log2(targetSize);
             // 3. Prepara a Rodada 1
             let round1Matches = [];
             let nextMatchIndex = 0;
