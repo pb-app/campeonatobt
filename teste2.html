@@ -126,7 +126,7 @@
             </main>
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v4.0.8 (Final)</p>
+            <p>App de Ranking v4.0.9 (Mata-Mata Fix)</p>
         </footer>
     </div>
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1677,7 +1677,6 @@
                 const sortedTournamentPlayers = tournamentPlayersWithPoints.sort((a, b) => b.points - a.points);
                 const seededPlayers = sortedTournamentPlayers.slice(0, numGroups);
                 const unseededPlayers = sortedTournamentPlayers.slice(numGroups);
-
                 const shuffledUnseeded = unseededPlayers.sort(() => 0.5 - Math.random());
 
                 const newGroupsList = []; 
@@ -2008,11 +2007,17 @@
             
             return bracket;
         };
+        
+        // =================================================================
+        // === MODIFICAÇÃO SOLICITADA (handleConfirmKnockoutScore)
+        // === Lógica aprimorada para reverter placares e avanços em cascata.
+        // =================================================================
         const handleConfirmKnockoutScore = async (bracketType, matchId) => {
             const val0 = document.getElementById(`k-${matchId}-s0`).value;
             const val1 = document.getElementById(`k-${matchId}-s1`).value;
             const score0 = val0 === '' ? null : parseInt(val0, 10);
             const score1 = val1 === '' ? null : parseInt(val1, 10);
+
             if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
                 showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
                 return;
@@ -2021,46 +2026,46 @@
                 showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
                 return;
             }
+
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
             const match = bracketToUpdate.find(m => m.id === matchId);
-            
-            // =================================================================
-            // === MODIFICAÇÃO SOLICITADA (1/2): Início da Lógica de Reversão
-            // =================================================================
+
+            if (!match) {
+                console.error("Match not found:", matchId);
+                return;
+            }
+
             // Salva o vencedor *anterior* antes de calcular o novo
             const previousWinner = match.winner ? { ...match.winner } : null;
 
             // Calcula o novo vencedor
-            let newWinner = null;
-            if (score0 > score1) newWinner = match.pairs[0]; 
-            else if (score1 > score0) newWinner = match.pairs[1];
+            const newWinner = (score0 > score1) ? match.pairs[0] : match.pairs[1];
 
             // Verifica se o vencedor realmente mudou (ou se era nulo e agora existe)
             const winnerHasChanged = (!previousWinner && newWinner) || (previousWinner && !newWinner) || (previousWinner && newWinner && previousWinner.id !== newWinner.id);
 
-            // Se o vencedor mudou e *havia* um vencedor anterior, precisamos reverter o avanço dele
-            if (winnerHasChanged && previousWinner && match.nextMatchId) {
-                // Função recursiva para limpar a chave para frente
+            // 1. REVERSÃO: Se o vencedor mudou, limpa a chave para frente
+            if (winnerHasChanged && previousWinner) {
+                
+                // Função recursiva para limpar a chave
                 const clearNextMatches = (currentMatchId, winnerToRemoveId) => {
                     const nextMatch = bracketToUpdate.find(m => m.id === currentMatchId);
                     if (!nextMatch) return; // Chegou ao fim da chave
 
-                    // Verifica se o vencedor antigo estava populando a próxima chave
+                    // Verifica se o vencedor antigo (winnerToRemoveId) estava populando a próxima chave
                     const slotToRemove = nextMatch.pairs.findIndex(p => p && p.id === winnerToRemoveId);
                     
                     if (slotToRemove !== -1) {
-                        // Remove o vencedor antigo da próxima chave
-                        nextMatch.pairs[slotToRemove] = null;
-                        
-                        // Se esse jogo já tinha um vencedor, ele também precisa ser removido da próxima chave
+                        // Salva o vencedor *deste* (nextMatch) jogo, pois ele também será removido
                         const nextWinnerToRemove = nextMatch.winner ? { ...nextMatch.winner } : null;
-                        
-                        // Limpa o placar e o vencedor do próximo jogo
+
+                        // Limpa o slot, o placar e o vencedor do próximo jogo
+                        nextMatch.pairs[slotToRemove] = null;
                         nextMatch.score = [null, null];
                         nextMatch.winner = null;
 
-                        // Se havia um vencedor, propaga a limpeza
+                        // Se havia um vencedor, propaga a limpeza para a frente
                         if (nextWinnerToRemove && nextMatch.nextMatchId) {
                             clearNextMatches(nextMatch.nextMatchId, nextWinnerToRemove.id);
                         }
@@ -2068,55 +2073,72 @@
                 };
                 
                 // Inicia a limpeza recursiva a partir do próximo jogo
-                clearNextMatches(match.nextMatchId, previousWinner.id);
-            }
-            // =================================================================
-            // === MODIFICAÇÃO SOLICITADA (1/2): Fim da Lógica de Reversão
-            // =================================================================
-
-            if (match) {
-                match.score[0] = score0;
-                match.score[1] = score1;
-                match.winner = newWinner; // Atribui o novo vencedor (calculado acima)
-
-                // =================================================================
-                // === MODIFICAÇÃO SOLICITADA (2/2): Lógica de Avanço (mantida)
-                // =================================================================
-                // Avança o *novo* vencedor para o próximo jogo, se ele existir
-                if (match.winner && match.nextMatchId) {
-                    const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
-                    if (nextMatch) {
-                        nextMatch.pairs[match.nextMatchSlot] = match.winner;
-                    }
+                if (match.nextMatchId) {
+                    clearNextMatches(match.nextMatchId, previousWinner.id);
                 }
-                // =================================================================
-                
-                await saveActiveChampionship(newChampData); 
-                await checkAndFinalizeChampionship(newChampData);
             }
+
+            // 2. ATRIBUIÇÃO: Define o novo placar e o novo vencedor no jogo atual
+            match.score[0] = score0;
+            match.score[1] = score1;
+            match.winner = newWinner; 
+
+            // 3. AVANÇO: Avança o *novo* vencedor para o próximo jogo
+            if (match.winner && match.nextMatchId) {
+                const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
+                if (nextMatch) {
+                    nextMatch.pairs[match.nextMatchSlot] = match.winner;
+                }
+            }
+            
+            // 4. SALVAR E VERIFICAR
+            // Salva o estado atualizado
+            await saveActiveChampionship(newChampData); 
+            
+            // Verifica se o campeonato terminou (agora que os vencedores podem ter mudado)
+            // Esta função só finalizará se o torneio AINDA não tiver sido finalizado antes.
+            await checkAndFinalizeChampionship(newChampData, wasFinished);
         };
-        const checkAndFinalizeChampionship = async (champData) => {
+        const checkAndFinalizeChampionship = async (champData, wasAlreadyFinished = false) => {
             if (!champData.goldBracket || !champData.silverBracket || champData.goldBracket.length === 0 || champData.silverBracket.length === 0) {
                 return; 
             }
+            
             const maxRoundGold = Math.max(...champData.goldBracket.map(m => m.round));
             const maxRoundSilver = Math.max(...champData.silverBracket.map(m => m.round));
             const goldFinal = champData.goldBracket.find(m => m.round === maxRoundGold);
             const silverFinal = champData.silverBracket.find(m => m.round === maxRoundSilver);
+            
             const goldWinner = goldFinal?.winner; 
             const silverWinner = silverFinal?.winner; 
+
+            // Se o campeonato ESTIVER finalizado (ambos os vencedores definidos)
             if (goldWinner && silverWinner) {
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                
+                // Se o campeonato JÁ ESTAVA finalizado antes desta alteração de placar
+                if (wasAlreadyFinished) {
+                    // Apenas atualiza os nomes dos vencedores no doc principal
+                    await setDoc(champRef, {
+                        winnerGold: goldWinner.name, 
+                        winnerSilver: silverWinner.name
+                    }, { merge: true });
+                    
+                    showModal("Placar Corrigido", `O placar foi alterado. O ranking global NÃO foi recalculado para evitar duplicidade. Se a alteração mudou os campeões, uma re-pontuação manual pode ser necessária.`);
+                    return;
+                }
+
+                // Se o campeonato ACABOU AGORA (primeira vez que finaliza)
                 const champDoc = await getDoc(champRef);
                 if (!champDoc.exists()) return; 
                 const champDocData = champDoc.data();
-                const wasAlreadyFinished = (champDocData.status === 'finished');
                 const rankingId = champDocData.rankingId;
                 if (!rankingId) {
                     showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
                     console.error("Erro Crítico: Campeonato sem rankingId.");
                     return;
                 }
+
                 try {
                     const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
                     const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
@@ -2124,25 +2146,38 @@
                     const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
                     const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
                     const effectivePoints = champDocData.pointsConfig || DEFAULT_RANKING_POINTS;
+
+                    // Marca o campeonato como 'finished' e salva os vencedores
                     await setDoc(champRef, {
                         status: 'finished',
                         winnerGold: goldWinner.name, 
                         winnerSilver: silverWinner.name
                     }, { merge: true });
-                    if (!wasAlreadyFinished) {
-                        showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
-                        await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, effectivePoints, rankingId);
-                        hideModal();
-                        showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
-                    } else {
-                         showModal("Placar Atualizado", `O placar final foi alterado. O ranking global NÃO foi recalculado para evitar duplicidade. (Se necessário, um recálculo manual deve ser implementado)`);
-                    }
+
+                    // Atualiza o ranking global (SÓ RODA NA PRIMEIRA VEZ)
+                    showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+                    await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, effectivePoints, rankingId);
+                    hideModal();
+                    showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
+                    
                 } catch (error) {
                     console.error("Erro ao finalizar e aplicar ranking:", error);
                     showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes.");
                 }
             }
+            // Se o campeonato NÃO ESTIVER finalizado (ex: admin mudou a semi, e a final ficou vazia)
+            else if (wasAlreadyFinished) {
+                 // O campeonato estava 'finished', mas a edição do admin reabriu a chave
+                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                 await setDoc(champRef, {
+                    status: 'knockout', // Reverte o status para 'em andamento'
+                    winnerGold: null, 
+                    winnerSilver: null
+                }, { merge: true });
+                showModal("Chave Reaberta", "O placar foi alterado e a final foi reaberta. O ranking global NÃO foi recalculado.");
+            }
         };
+
         const updateGlobalRanking = async (champData, winners, pointsConfig, rankingId) => {
             await runTransaction(db, async (transaction) => {
                 const playerPointsMap = new Map();
