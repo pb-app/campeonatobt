@@ -126,7 +126,7 @@
             </main>
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v4.0.4 (Final)</p>
+            <p>App de Ranking v4.0.9 (Finalização Manual)</p>
         </footer>
     </div>
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -773,10 +773,47 @@
                 </div>
                 `;
             }
+
+            // =================================================================
+            // === MUDANÇA: Botão de Finalização Manual
+            // =================================================================
+            let finalizeButtonHtml = '';
+            // Checa se o admin está logado, se o campeonato está no mata-mata, e se AINDA NÃO foi finalizado
+            if (appState.isAdmin && activeChampionship.status === 'knockout' && champInfo?.status !== 'finished') {
+                // Checa se os vencedores das finais Ouro e Prata já existem
+                const maxRoundGold = Math.max(...(activeChampionship.goldBracket || []).map(m => m.round));
+                const goldFinal = (activeChampionship.goldBracket || []).find(m => m.round === maxRoundGold);
+                const goldWinner = goldFinal?.winner;
+
+                const maxRoundSilver = Math.max(...(activeChampionship.silverBracket || []).map(m => m.round));
+                const silverFinal = (activeChampionship.silverBracket || []).find(m => m.round === maxRoundSilver);
+                const silverWinner = silverFinal?.winner;
+
+                // Se ambos os vencedores existirem, mostra o botão
+                if (goldWinner && silverWinner) {
+                    finalizeButtonHtml = `
+                    <div class="bg-emerald-100 border-l-4 border-emerald-500 text-emerald-700 p-6 rounded-lg shadow-lg my-8 text-center animate-fade-in">
+                        <h3 class="text-2xl font-bold mb-4">🏆 Campeonato Pronto para Finalizar!</h3>
+                        <p class="mb-5">As finais Ouro e Prata foram concluídas. Clique abaixo para salvar os resultados e atualizar o Ranking Geral.</p>
+                        <button
+                            id="manual-finalize-btn"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto">
+                            ${icons.trophy}
+                            Finalizar e Lançar no Ranking
+                        </button>
+                    </div>
+                    `;
+                }
+            }
+            // =================================================================
+            // === Fim da Mudança
+            // =================================================================
+
             if (champInfo?.status === 'finished') {
                 html = topButtonsHtml + renderGroupStage() + renderKnockoutView(true);
             } else if (activeChampionship.status === 'knockout') {
-                html = topButtonsHtml + renderGroupStage() + renderKnockoutView(false);
+                // Adicionado o 'finalizeButtonHtml' aqui
+                html = topButtonsHtml + finalizeButtonHtml + renderGroupStage() + renderKnockoutView(false);
             } else if (activeChampionship.status === 'groups') {
                 html = topButtonsHtml + renderGroupStage();
             } else { 
@@ -821,6 +858,15 @@
                         handleConfirmKnockoutScore(bracketType, matchId);
                     });
                 });
+                
+                // =================================================================
+                // === MUDANÇA: Adiciona listener para o novo botão
+                // =================================================================
+                 const manualFinalizeBtn = document.getElementById('manual-finalize-btn');
+                 if (manualFinalizeBtn) {
+                     manualFinalizeBtn.addEventListener('click', handleManualFinalize);
+                 }
+                // =================================================================
             }
             if (appState.isAdmin) {
                 const launchTelaoBtn = document.getElementById('launch-telao-btn');
@@ -1038,6 +1084,7 @@
                 </div>
             `;
         };
+
         const renderKnockoutView = (isFinished) => {
             const goldHtml = renderBracket('Série Ouro 🥇', activeChampionship.goldBracket, 'goldBracket', isFinished);
             const silverHtml = renderBracket('Série Prata 🥈', activeChampionship.silverBracket, 'silverBracket', isFinished);
@@ -1075,18 +1122,53 @@
             });
             const maxRound = Math.max(...bracket.map(m => m.round));
             const final = bracket.find(m => m.round === maxRound);
+            const semiFinals = bracket.filter(m => m.round === maxRound - 1);
+            
             const champion = final?.winner; 
+            const runnerUp = final?.pairs.find(p => p && p.id !== champion?.id);
+
+            let thirdPlace = null;
+            if (champion && semiFinals.length === 2) {
+                // Encontra a semifinal que o campeão jogou
+                const championSemi = semiFinals.find(sf => 
+                    sf.pairs.some(p => p && p.id === champion.id)
+                );
+                // O terceiro lugar é o perdedor da semifinal do campeão
+                if(championSemi) {
+                    thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
+                }
+            }
+
             const isGold = bracketType === 'goldBracket';
             const cardStyle = isGold 
                 ? 'bg-gradient-to-r from-yellow-300 via-orange-400 to-orange-500 text-white' 
                 : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900';
+            
             const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
+            const runnerUpStyle = isGold ? 'text-lg font-bold text-white opacity-90' : 'text-lg font-bold text-gray-700';
+            const thirdPlaceStyle = isGold ? 'text-base font-medium text-white opacity-80' : 'text-base font-medium text-gray-600';
+
             const championHtml = champion ? `
-            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
-                <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">Campeões</h4>
-                <p class="${championNameStyle}">${champion.name}</p>
+            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in space-y-2">
+                <div>
+                    <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">🥇 1º Lugar</h4>
+                    <p class="${championNameStyle}">${champion.name}</p>
+                </div>
+                ${runnerUp ? `
+                <div>
+                    <h5 class="text-lg font-bold uppercase tracking-wider ${runnerUpStyle}">🥈 2º Lugar</h5>
+                    <p class="${runnerUpStyle}">${runnerUp.name}</p>
+                </div>
+                ` : ''}
+                ${thirdPlace ? `
+                <div>
+                    <h6 class="text-base font-medium uppercase tracking-wider ${thirdPlaceStyle}">🥉 3º Lugar</h6>
+                    <p class="${thirdPlaceStyle}">${thirdPlace.name}</p>
+                </div>
+                ` : ''}
             </div>
             ` : '';
+
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
                 const roundTitle = Number(roundNum) === maxRound ? 'Final'
                     : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
@@ -1101,7 +1183,7 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     const isBye = pair2 === 'BYE' || pair1 === 'BYE';
-                    const isDisabled = (!pair1 || !pair2 || pair2 === 'BYE' || pair1 === 'BYE' || !appState.isAdmin) ? 'disabled' : '';
+                    
                     if (isBye) {
                         const byePair = pair1 === 'BYE' ? pair2 : pair1;
                         const winnerClass = 'text-emerald-600 font-bold';
@@ -1117,6 +1199,13 @@
                         </div>
                         `;
                     }
+
+                    // Permite admin editar mesmo finalizado, botão fica sempre visível se for admin
+                    const showConfirmButton = appState.isAdmin && pair1 && pair2 && pair1 !== 'BYE' && pair2 !== 'BYE';
+                    const inputDisabled = !appState.isAdmin || (!pair1 || !pair2) || pair1 === 'BYE' || pair2 === 'BYE';
+
+                    // CORREÇÃO: O ID do input (k-${match.id}-s0) agora é único
+                    // porque match.id (ex: "gold_R1_M1") é único.
                     return `
                     <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
                         <div class="flex justify-between items-center mb-2">
@@ -1128,8 +1217,8 @@
                                 min="0"
                                 value="${score1 === null ? '' : score1}"
                                 id="k-${match.id}-s0"
-                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
-                                ${isDisabled}
+                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabled ? 'opacity-70' : ''}"
+                                ${inputDisabled ? 'disabled' : ''}
                             />
                         </div>
                         
@@ -1147,11 +1236,11 @@
                                 min="0"
                                 value="${score2 === null ? '' : score2}"
                                 id="k-${match.id}-s1"
-                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
-                                ${isDisabled}
+                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabled ? 'opacity-70' : ''}"
+                                ${inputDisabled ? 'disabled' : ''}
                             />
                         </div>
-                        <div class="text-center mt-3 ${isDisabled ? 'hidden' : ''}">
+                        <div class="text-center mt-3 ${!showConfirmButton ? 'hidden' : ''}">
                             <button 
                                 class="confirm-knockout-score-btn p-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all"
                                 data-bracket-type="${bracketType}"
@@ -1339,18 +1428,51 @@
             });
             const maxRound = Math.max(...bracket.map(m => m.round));
             const final = bracket.find(m => m.round === maxRound);
+            const semiFinals = bracket.filter(m => m.round === maxRound - 1);
+
             const champion = final?.winner; 
+            const runnerUp = final?.pairs.find(p => p && p.id !== champion?.id);
+
+            let thirdPlace = null;
+            if (champion && semiFinals.length === 2) {
+                const championSemi = semiFinals.find(sf => 
+                    sf.pairs.some(p => p && p.id === champion.id)
+                );
+                if(championSemi) {
+                    thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
+                }
+            }
+
             const isGold = bracketType === 'goldBracket';
             const cardStyle = isGold 
                 ? 'bg-gradient-to-r from-yellow-300 via-orange-400 to-orange-500 text-white' 
                 : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900';
+            
             const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
+            const runnerUpStyle = isGold ? 'text-lg font-bold text-white opacity-90' : 'text-lg font-bold text-gray-700';
+            const thirdPlaceStyle = isGold ? 'text-base font-medium text-white opacity-80' : 'text-base font-medium text-gray-600';
+
             const championHtml = champion ? `
-            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in">
-                <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">Campeões</h4>
-                <p class="${championNameStyle}">${champion.name}</p>
+            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in space-y-2">
+                <div>
+                    <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">🥇 1º Lugar</h4>
+                    <p class="${championNameStyle}">${champion.name}</p>
+                </div>
+                ${runnerUp ? `
+                <div>
+                    <h5 class="text-lg font-bold uppercase tracking-wider ${runnerUpStyle}">🥈 2º Lugar</h5>
+                    <p class="${runnerUpStyle}">${runnerUp.name}</p>
+                </div>
+                ` : ''}
+                ${thirdPlace ? `
+                <div>
+                    <h6 class="text-base font-medium uppercase tracking-wider ${thirdPlaceStyle}">🥉 3º Lugar</h6>
+                    <p class="${thirdPlaceStyle}">${thirdPlace.name}</p>
+                </div>
+                ` : ''}
             </div>
             ` : '';
+
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
                 const roundTitle = Number(roundNum) === maxRound ? 'Final'
                     : Number(roundNum) === maxRound - 1 ? 'Semi-Final'
@@ -1503,10 +1625,6 @@
             };
             await saveActiveChampionship(newChampData);
         };
-
-        // =================================================================
-        // === MODIFICAÇÃO CHAVE (1/3): handleGenerateChampionship (Remoção da validação de Potência de 2)
-        // =================================================================
         const handleGenerateChampionship = async () => {
             const playerCount = activeChampionship.players.length;
             const isMultypleOfFour = playerCount % 4 === 0;
@@ -1519,10 +1637,6 @@
             const numGroups = playerCount / 4;
             const numDuplas = numGroups * 2; 
             
-            // REMOVIDO: if (![2, 4, 8, 16, 32].includes(numDuplas)) { ... }
-            // A geração de grupos e chaves agora será feita independente da potência de 2,
-            // e a lógica de Byes será aplicada na função handleFinalizeGroups.
-
             if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Os ${numGroups} melhores do ranking serão os "Cabeças de Chave" e o restante será sorteado.`)) {
                 return;
             }
@@ -1536,7 +1650,6 @@
                 }));
 
                 const sortedTournamentPlayers = tournamentPlayersWithPoints.sort((a, b) => b.points - a.points);
-
                 const seededPlayers = sortedTournamentPlayers.slice(0, numGroups);
                 const unseededPlayers = sortedTournamentPlayers.slice(numGroups);
 
@@ -1688,9 +1801,6 @@
                 printWindow.print();
             }, 250);
         };
-        // =================================================================
-        // === MODIFICAÇÃO CHAVE (2/3): handleFinalizeGroups (Implementação da lógica de Byes)
-        // =================================================================
         const handleFinalizeGroups = async () => {
             if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata e bloquear os grupos.")) return;
 
@@ -1730,8 +1840,9 @@
 
             try {
                 // 3. Gerar chaves com a lógica de Byes
-                const goldBracket = createBracketWithByes(rankedGoldPairs);
-                const silverBracket = createBracketWithByes(rankedSilverPairs);
+                // CORREÇÃO: Passando "gold" e "silver" como prefixos
+                const goldBracket = createBracketWithByes(rankedGoldPairs, 'gold');
+                const silverBracket = createBracketWithByes(rankedSilverPairs, 'silver');
 
                 const newChampData = {
                     ...activeChampionship,
@@ -1750,10 +1861,6 @@
                 showModal("Erro", "Ocorreu um erro ao gerar as chaves. " + error.message);
             }
         };
-
-        // =================================================================
-        // === MODIFICAÇÃO CHAVE (3/3): createBracketWithByes (Lógica de Byes)
-        // =================================================================
         const getNextPowerOfTwo = (n) => {
             if (n <= 1) return 2;
             let power = 2;
@@ -1763,7 +1870,8 @@
             return power;
         };
 
-        const createBracketWithByes = (rankedPairs) => {
+        // CORREÇÃO: Adicionado 'prefix' ("gold" ou "silver") para garantir IDs únicos
+        const createBracketWithByes = (rankedPairs, prefix) => {
             const numPairs = rankedPairs.length;
             const targetSize = getNextPowerOfTwo(numPairs);
             const numByes = targetSize - numPairs;
@@ -1796,7 +1904,8 @@
 
             for (let m = 0; m < matchesInRound1; m++) {
                 let match = {
-                    id: `R1_M${m + 1}`,
+                    // CORREÇÃO: ID com prefixo
+                    id: `${prefix}_R1_M${m + 1}`,
                     round: 1, 
                     pairs: [null, null], 
                     score: [null, null],
@@ -1807,7 +1916,8 @@
 
                 // Define o slot do próximo jogo (R2)
                 const nextRoundMatchIndex = Math.floor(m / 2);
-                match.nextMatchId = `R2_M${nextRoundMatchIndex + 1}`;
+                // CORREÇÃO: ID do próximo jogo com prefixo
+                match.nextMatchId = `${prefix}_R2_M${nextRoundMatchIndex + 1}`;
 
                 // Se ainda houver Byes para distribuir
                 if (byeCursor < numByes) {
@@ -1838,13 +1948,15 @@
                 const matchesInRound = targetSize / Math.pow(2, r);
 
                 for (let m = 0; m < matchesInRound; m++) { 
-                    const matchId = `R${r}_M${m+1}`;
+                    // CORREÇÃO: ID com prefixo
+                    const matchId = `${prefix}_R${r}_M${m+1}`;
                     let nextMatchId = null;
                     let nextMatchSlot = null; 
 
                     if (r < numRounds) { 
                         const nextRoundMatchIndex = Math.floor(m / 2); 
-                        nextMatchId = `R${r+1}_M${nextRoundMatchIndex+1}`;
+                        // CORREÇÃO: ID do próximo jogo com prefixo
+                        nextMatchId = `${prefix}_R${r+1}_M${nextRoundMatchIndex+1}`;
                         nextMatchSlot = m % 2; 
                     }
 
@@ -1870,11 +1982,13 @@
             
             return bracket;
         };
+        
         const handleConfirmKnockoutScore = async (bracketType, matchId) => {
             const val0 = document.getElementById(`k-${matchId}-s0`).value;
             const val1 = document.getElementById(`k-${matchId}-s1`).value;
             const score0 = val0 === '' ? null : parseInt(val0, 10);
             const score1 = val1 === '' ? null : parseInt(val1, 10);
+
             if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
                 showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
                 return;
@@ -1883,70 +1997,160 @@
                 showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
                 return;
             }
+
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
             const match = bracketToUpdate.find(m => m.id === matchId);
+
             if (match) {
+                const oldWinnerId = match.winner ? match.winner.id : null;
+                const newWinner = (score0 > score1) ? match.pairs[0] : match.pairs[1];
+                const newWinnerId = newWinner ? newWinner.id : null;
+
+                // Se o vencedor mudou, precisamos limpar o caminho do vencedor antigo
+                if (oldWinnerId && oldWinnerId !== newWinnerId) {
+                    
+                    // Função recursiva para limpar os jogos seguintes
+                    const clearNextMatches = (currentMatchId, winnerToRemoveId) => {
+                        // Encontra o próximo jogo
+                        const nextMatchDef = bracketToUpdate.find(m => m.id === currentMatchId);
+                        if (!nextMatchDef) return; 
+
+                        // Verifica se o vencedor antigo está em algum slot desse próximo jogo
+                        const slotToRemove = nextMatchDef.pairs.findIndex(p => p && p.id === winnerToRemoveId);
+                        
+                        // Se o vencedor antigo estava lá, limpa o slot
+                        if (slotToRemove !== -1) {
+                            nextMatchDef.pairs[slotToRemove] = null;
+                        }
+
+                        // Se o vencedor desse próximo jogo era o vencedor antigo,
+                        // significa que ele já tinha jogado e vencido. Precisamos limpar tudo.
+                        const nextWinnerId = nextMatchDef.winner ? nextMatchDef.winner.id : null;
+                        
+                        if (nextWinnerId && nextWinnerId === winnerToRemoveId) {
+                            nextMatchDef.winner = null;
+                            nextMatchDef.score = [null, null];
+
+                            // Continua a limpeza recursiva para os próximos jogos
+                            if (nextMatchDef.nextMatchId) {
+                                clearNextMatches(nextMatchDef.nextMatchId, winnerToRemoveId);
+                            }
+                        }
+                    };
+
+                    // Inicia a limpeza a partir do próximo jogo
+                    if (match.nextMatchId) {
+                        clearNextMatches(match.nextMatchId, oldWinnerId);
+                    }
+                }
+
+                // Agora, atualiza o placar e o vencedor do jogo ATUAL
                 match.score[0] = score0;
                 match.score[1] = score1;
-                if (score0 > score1) match.winner = match.pairs[0]; 
-                else if (score1 > score0) match.winner = match.pairs[1];
+                match.winner = newWinner; 
+
+                // E avança o NOVO vencedor para o próximo jogo
                 if (match.winner && match.nextMatchId) {
                     const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
-                    if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
-                }
-                await saveActiveChampionship(newChampData); 
-                await checkAndFinalizeChampionship(newChampData);
-            }
-        };
-        const checkAndFinalizeChampionship = async (champData) => {
-            if (!champData.goldBracket || !champData.silverBracket || champData.goldBracket.length === 0 || champData.silverBracket.length === 0) {
-                return; 
-            }
-            const maxRoundGold = Math.max(...champData.goldBracket.map(m => m.round));
-            const maxRoundSilver = Math.max(...champData.silverBracket.map(m => m.round));
-            const goldFinal = champData.goldBracket.find(m => m.round === maxRoundGold);
-            const silverFinal = champData.silverBracket.find(m => m.round === maxRoundSilver);
-            const goldWinner = goldFinal?.winner; 
-            const silverWinner = silverFinal?.winner; 
-            if (goldWinner && silverWinner) {
-                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
-                const champDoc = await getDoc(champRef);
-                if (!champDoc.exists()) return; 
-                const champDocData = champDoc.data();
-                const wasAlreadyFinished = (champDocData.status === 'finished');
-                const rankingId = champDocData.rankingId;
-                if (!rankingId) {
-                    showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
-                    console.error("Erro Crítico: Campeonato sem rankingId.");
-                    return;
-                }
-                try {
-                    const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
-                    const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
-                    const stats = getGlobalTournamentStats(champData);
-                    const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
-                    const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
-                    const effectivePoints = champDocData.pointsConfig || DEFAULT_RANKING_POINTS;
-                    await setDoc(champRef, {
-                        status: 'finished',
-                        winnerGold: goldWinner.name, 
-                        winnerSilver: silverWinner.name
-                    }, { merge: true });
-                    if (!wasAlreadyFinished) {
-                        showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
-                        await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, effectivePoints, rankingId);
-                        hideModal();
-                        showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
-                    } else {
-                         showModal("Placar Atualizado", `O placar final foi alterado. O ranking global NÃO foi recalculado para evitar duplicidade.`);
+                    if (nextMatch) {
+                        // Coloca o novo vencedor no slot correto do próximo jogo
+                        nextMatch.pairs[match.nextMatchSlot] = match.winner;
                     }
-                } catch (error) {
-                    console.error("Erro ao finalizar e aplicar ranking:", error);
-                    showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes.");
                 }
+                
+                // Salva todas as mudanças (a chave inteira)
+                await saveActiveChampionship(newChampData); 
+                
+                // =================================================================
+                // === MUDANÇA: Remoção da finalização automática
+                // =================================================================
+                // A função 'checkAndFinalizeChampionship' FOI REMOVIDA daqui.
+                // Ela agora é chamada apenas pelo botão manual 'handleManualFinalize'.
+                // =================================================================
             }
         };
+
+        // =================================================================
+        // === MUDANÇA: Nova função para o botão manual
+        // =================================================================
+        const handleManualFinalize = async () => {
+            const button = document.getElementById('manual-finalize-btn');
+            if(button) button.disabled = true;
+
+            showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+
+            const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+            const champDoc = await getDoc(champRef);
+            if (!champDoc.exists()) {
+                 showModal("Erro Crítico", "Não foi possível encontrar o documento principal do campeonato.");
+                 if(button) button.disabled = false;
+                 return;
+            } 
+            
+            const champDocData = champDoc.data();
+            const rankingId = champDocData.rankingId;
+            if (!rankingId) {
+                showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
+                console.error("Erro Crítico: Campeonato sem rankingId.");
+                if(button) button.disabled = false;
+                return;
+            }
+
+            // Pega os dados mais recentes do activeChampionship (que está em memória)
+            const champData = JSON.parse(JSON.stringify(activeChampionship));
+
+            const maxRoundGold = Math.max(...(champData.goldBracket || []).map(m => m.round));
+            const goldFinal = (champData.goldBracket || []).find(m => m.round === maxRoundGold);
+            const goldWinner = goldFinal?.winner; 
+
+            const maxRoundSilver = Math.max(...(champData.silverBracket || []).map(m => m.round));
+            const silverFinal = (champData.silverBracket || []).find(m => m.round === maxRoundSilver);
+            const silverWinner = silverFinal?.winner;
+
+            // Validação final
+            if (!goldWinner || !silverWinner) {
+                 showModal("Erro", "Não foi possível identificar os vencedores das finais Ouro ou Prata. Verifique os placares.");
+                 if(button) button.disabled = false;
+                 return;
+            }
+
+            try {
+                const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldWinner.id);
+                const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverWinner.id);
+                const stats = getGlobalTournamentStats(champData);
+                const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
+                const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
+                const effectivePoints = champDocData.pointsConfig || DEFAULT_RANKING_POINTS;
+                
+                // Atualiza o Ranking Global
+                await updateGlobalRanking(champData, { goldWinner, goldRunnerUp, silverWinner, silverRunnerUp, coveiros }, effectivePoints, rankingId);
+                
+                // Atualiza o Status do Campeonato (documento principal)
+                await setDoc(champRef, {
+                    status: 'finished',
+                    winnerGold: goldWinner.name, 
+                    winnerSilver: silverWinner.name
+                }, { merge: true });
+
+                // Atualiza o Status (documento data/main)
+                // Isso é importante para o app parar de mostrar o botão "Finalizar"
+                const newChampData = {
+                    ...champData,
+                    status: 'finished',
+                };
+                await saveActiveChampionship(newChampData);
+
+                hideModal();
+                showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
+
+            } catch (error) {
+                console.error("Erro ao finalizar e aplicar ranking:", error);
+                showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes.");
+                if(button) button.disabled = false;
+            }
+        };
+
         const updateGlobalRanking = async (champData, winners, pointsConfig, rankingId) => {
             await runTransaction(db, async (transaction) => {
                 const playerPointsMap = new Map();
@@ -2143,18 +2347,43 @@
                 const finalResults = [];
                 const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
                 const goldFinal = activeChampionship.goldBracket.find(m => m.round === maxRoundGold);
+                const goldSemiFinals = activeChampionship.goldBracket.filter(m => m.round === maxRoundGold - 1);
+                
                 if (goldFinal?.winner) {
                     finalResults.push(['🥇 Campeões Ouro', goldFinal.winner.name]);
-                    const goldRunnerUp = goldFinal.pairs.find(p => p.id !== goldFinal.winner.id);
-                    if (goldRunnerUp) finalResults.push(['Vice Ouro', goldRunnerUp.name]);
+                    const goldRunnerUp = goldFinal.pairs.find(p => p && p.id !== goldFinal.winner.id);
+                    if (goldRunnerUp) finalResults.push(['🥈 2º Lugar Ouro', goldRunnerUp.name]);
+
+                    if (goldSemiFinals.length === 2) {
+                        const championSemi = goldSemiFinals.find(sf => 
+                            sf.pairs.some(p => p && p.id === goldFinal.winner.id)
+                        );
+                        if(championSemi) {
+                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== goldFinal.winner.id);
+                            if (thirdPlace) finalResults.push(['🥉 3º Lugar Ouro', thirdPlace.name]);
+                        }
+                    }
                 }
                 const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
                 const silverFinal = activeChampionship.silverBracket.find(m => m.round === maxRoundSilver);
+                const silverSemiFinals = activeChampionship.silverBracket.filter(m => m.round === maxRoundSilver - 1);
+                
                 if (silverFinal?.winner) {
                     finalResults.push(['🥈 Campeões Prata', silverFinal.winner.name]);
-                    const silverRunnerUp = silverFinal.pairs.find(p => p.id !== silverFinal.winner.id);
-                    if (silverRunnerUp) finalResults.push(['Vice Prata', silverRunnerUp.name]);
+                    const silverRunnerUp = silverFinal.pairs.find(p => p && p.id !== silverFinal.winner.id);
+                    if (silverRunnerUp) finalResults.push(['2º Lugar Prata', silverRunnerUp.name]);
+                    
+                    if (silverSemiFinals.length === 2) {
+                        const championSemi = silverSemiFinals.find(sf => 
+                            sf.pairs.some(p => p && p.id === silverFinal.winner.id)
+                        );
+                        if(championSemi) {
+                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== silverFinal.winner.id);
+                            if (thirdPlace) finalResults.push(['3º Lugar Prata', thirdPlace.name]);
+                        }
+                    }
                 }
+
                 const stats = getGlobalTournamentStats(activeChampionship);
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
@@ -2420,7 +2649,7 @@
         });
     </script>
     <div class="aviso-rodape text-center text-xs text-gray-500 py-3 bg-gray-100 mt-8">
-        Aviso Legal: Todos os direitos reservados 2025.
+        ............................ ............................
     </div>
 </body>
 </html>
