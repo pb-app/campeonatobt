@@ -2027,6 +2027,10 @@
                 return;
             }
 
+            // CORREÇÃO: Pega o status 'finished' ANTES de modificar os dados
+            const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+            const wasFinished = champInfo?.status === 'finished';
+
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
             const match = bracketToUpdate.find(m => m.id === matchId);
@@ -2096,7 +2100,7 @@
             await saveActiveChampionship(newChampData); 
             
             // Verifica se o campeonato terminou (agora que os vencedores podem ter mudado)
-            // Esta função só finalizará se o torneio AINDA não tiver sido finalizado antes.
+            // Passa o status ANTERIOR do campeonato para a função
             await checkAndFinalizeChampionship(newChampData, wasFinished);
         };
         const checkAndFinalizeChampionship = async (champData, wasAlreadyFinished = false) => {
