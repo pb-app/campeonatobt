@@ -126,7 +126,7 @@
             </main>
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v4.0.6 (Final)</p>
+            <p>App de Ranking v4.0.8 (Fix Carga)</p>
         </footer>
     </div>
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -216,6 +216,7 @@
             eye: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
             logIn: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>',
             logOut: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>',
+            // CORREÇÃO: Removido o 's' que estava antes de 'check'
             check: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
             settings: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
             shovel: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-red-600"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>', 
@@ -1038,6 +1039,7 @@
                 </div>
             `;
         };
+
         const renderKnockoutView = (isFinished) => {
             const goldHtml = renderBracket('Série Ouro 🥇', activeChampionship.goldBracket, 'goldBracket', isFinished);
             const silverHtml = renderBracket('Série Prata 🥈', activeChampionship.silverBracket, 'silverBracket', isFinished);
@@ -1157,6 +1159,8 @@
                     const showConfirmButton = appState.isAdmin && pair1 && pair2 && pair1 !== 'BYE' && pair2 !== 'BYE';
                     const inputDisabled = !appState.isAdmin || (!pair1 || !pair2) || pair1 === 'BYE' || pair2 === 'BYE';
 
+                    // CORREÇÃO: O ID do input (k-${match.id}-s0) agora é único
+                    // porque match.id (ex: "gold_R1_M1") é único.
                     return `
                     <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
                         <div class="flex justify-between items-center mb-2">
@@ -1802,8 +1806,9 @@
 
             try {
                 // 3. Gerar chaves com a lógica de Byes
-                const goldBracket = createBracketWithByes(rankedGoldPairs);
-                const silverBracket = createBracketWithByes(rankedSilverPairs);
+                // CORREÇÃO: Passando "gold" e "silver" como prefixos
+                const goldBracket = createBracketWithByes(rankedGoldPairs, 'gold');
+                const silverBracket = createBracketWithByes(rankedSilverPairs, 'silver');
 
                 const newChampData = {
                     ...activeChampionship,
@@ -1835,7 +1840,8 @@
             return power;
         };
 
-        const createBracketWithByes = (rankedPairs) => {
+        // CORREÇÃO: Adicionado 'prefix' ("gold" ou "silver") para garantir IDs únicos
+        const createBracketWithByes = (rankedPairs, prefix) => {
             const numPairs = rankedPairs.length;
             const targetSize = getNextPowerOfTwo(numPairs);
             const numByes = targetSize - numPairs;
@@ -1868,7 +1874,8 @@
 
             for (let m = 0; m < matchesInRound1; m++) {
                 let match = {
-                    id: `R1_M${m + 1}`,
+                    // CORREÇÃO: ID com prefixo
+                    id: `${prefix}_R1_M${m + 1}`,
                     round: 1, 
                     pairs: [null, null], 
                     score: [null, null],
@@ -1879,7 +1886,8 @@
 
                 // Define o slot do próximo jogo (R2)
                 const nextRoundMatchIndex = Math.floor(m / 2);
-                match.nextMatchId = `R2_M${nextRoundMatchIndex + 1}`;
+                // CORREÇÃO: ID do próximo jogo com prefixo
+                match.nextMatchId = `${prefix}_R2_M${nextRoundMatchIndex + 1}`;
 
                 // Se ainda houver Byes para distribuir
                 if (byeCursor < numByes) {
@@ -1910,13 +1918,15 @@
                 const matchesInRound = targetSize / Math.pow(2, r);
 
                 for (let m = 0; m < matchesInRound; m++) { 
-                    const matchId = `R${r}_M${m+1}`;
+                    // CORREÇÃO: ID com prefixo
+                    const matchId = `${prefix}_R${r}_M${m+1}`;
                     let nextMatchId = null;
                     let nextMatchSlot = null; 
 
                     if (r < numRounds) { 
                         const nextRoundMatchIndex = Math.floor(m / 2); 
-                        nextMatchId = `R${r+1}_M${nextRoundMatchIndex+1}`;
+                        // CORREÇÃO: ID do próximo jogo com prefixo
+                        nextMatchId = `${prefix}_R${r+1}_M${nextRoundMatchIndex+1}`;
                         nextMatchSlot = m % 2; 
                     }
 
@@ -1942,11 +1952,18 @@
             
             return bracket;
         };
+        
+        // =================================================================
+        // === MUDANÇA (RE-EDIÇÃO): handleConfirmKnockoutScore
+        // =================================================================
         const handleConfirmKnockoutScore = async (bracketType, matchId) => {
+            // CORREÇÃO: O matchId (ex: "gold_R1_M1") já é único.
+            // O getElementById (ex: "k-gold_R1_M1-s0") vai funcionar corretamente.
             const val0 = document.getElementById(`k-${matchId}-s0`).value;
             const val1 = document.getElementById(`k-${matchId}-s1`).value;
             const score0 = val0 === '' ? null : parseInt(val0, 10);
             const score1 = val1 === '' ? null : parseInt(val1, 10);
+
             if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
                 showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
                 return;
@@ -1955,35 +1972,75 @@
                 showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
                 return;
             }
+
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
             const match = bracketToUpdate.find(m => m.id === matchId);
+
             if (match) {
-                // Se já houver um vencedor, precisamos reverter o avanço dele na próxima chave
-                if (match.winner && match.nextMatchId) {
-                    const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
-                    // Se o vencedor antigo estava no próximo jogo, remove-o
-                    if (nextMatch && nextMatch.pairs[match.nextMatchSlot]?.id === match.winner.id) {
-                        nextMatch.pairs[match.nextMatchSlot] = null;
-                        nextMatch.winner = null; 
-                        nextMatch.score = [null, null];
-                        // TODO: Reverter em cascata (se a final for alterada)
+                const oldWinnerId = match.winner ? match.winner.id : null;
+                const newWinner = (score0 > score1) ? match.pairs[0] : match.pairs[1];
+                const newWinnerId = newWinner ? newWinner.id : null;
+
+                // Se o vencedor mudou, precisamos limpar o caminho do vencedor antigo
+                if (oldWinnerId && oldWinnerId !== newWinnerId) {
+                    
+                    // Função recursiva para limpar os jogos seguintes
+                    const clearNextMatches = (currentMatchId, winnerToRemoveId) => {
+                        // Encontra o próximo jogo
+                        const nextMatchDef = bracketToUpdate.find(m => m.id === currentMatchId);
+                        if (!nextMatchDef) return; 
+
+                        // Verifica se o vencedor antigo está em algum slot desse próximo jogo
+                        const slotToRemove = nextMatchDef.pairs.findIndex(p => p && p.id === winnerToRemoveId);
+                        
+                        // Se o vencedor antigo estava lá, limpa o slot
+                        if (slotToRemove !== -1) {
+                            nextMatchDef.pairs[slotToRemove] = null;
+                        }
+
+                        // Se o vencedor desse próximo jogo era o vencedor antigo,
+                        // significa que ele já tinha jogado e vencido. Precisamos limpar tudo.
+                        const nextWinnerId = nextMatchDef.winner ? nextMatchDef.winner.id : null;
+                        
+                        if (nextWinnerId && nextWinnerId === winnerToRemoveId) {
+                            nextMatchDef.winner = null;
+                            nextMatchDef.score = [null, null];
+
+                            // Continua a limpeza recursiva para os próximos jogos
+                            if (nextMatchDef.nextMatchId) {
+                                clearNextMatches(nextMatchDef.nextMatchId, winnerToRemoveId);
+                            }
+                        }
+                    };
+
+                    // Inicia a limpeza a partir do próximo jogo
+                    if (match.nextMatchId) {
+                        clearNextMatches(match.nextMatchId, oldWinnerId);
                     }
                 }
 
+                // Agora, atualiza o placar e o vencedor do jogo ATUAL
                 match.score[0] = score0;
                 match.score[1] = score1;
-                if (score0 > score1) match.winner = match.pairs[0]; 
-                else if (score1 > score0) match.winner = match.pairs[1];
+                match.winner = newWinner; 
 
+                // E avança o NOVO vencedor para o próximo jogo
                 if (match.winner && match.nextMatchId) {
                     const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
-                    if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
+                    if (nextMatch) {
+                        // Coloca o novo vencedor no slot correto do próximo jogo
+                        nextMatch.pairs[match.nextMatchSlot] = match.winner;
+                    }
                 }
+                
+                // Salva todas as mudanças (a chave inteira)
                 await saveActiveChampionship(newChampData); 
+                // Verifica se o campeonato terminou (ou se a final foi alterada)
                 await checkAndFinalizeChampionship(newChampData);
             }
         };
+
         const checkAndFinalizeChampionship = async (champData) => {
             if (!champData.goldBracket || !champData.silverBracket || champData.goldBracket.length === 0 || champData.silverBracket.length === 0) {
                 return; 
@@ -2024,7 +2081,9 @@
                         hideModal();
                         showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
                     } else {
-                         showModal("Placar Atualizado", `O placar final foi alterado. O ranking global NÃO foi recalculado para evitar duplicidade.`);
+                         // Se o placar foi RE-EDITADO, o 'wasAlreadyFinished' será true.
+                         // Avisamos que foi atualizado, mas NÃO rodamos o updateGlobalRanking() de novo.
+                         showModal("Placar Atualizado", `O placar final foi alterado. O ranking NÃO foi recalculado para evitar duplicidade de pontos.`);
                     }
                 } catch (error) {
                     console.error("Erro ao finalizar e aplicar ranking:", error);
@@ -2172,6 +2231,7 @@
                 return;
             }
             try {
+
                 const doc = new jsPDF();
                 const currentRanking = allRankings.find(r => r.id === appState.currentRankingId);
                 const rankingName = currentRanking ? currentRanking.name : "Ranking";
@@ -2534,3 +2594,4 @@
     </div>
 </body>
 </html>
+
