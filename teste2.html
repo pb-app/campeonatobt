@@ -4,13 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ranking Beach Tennis 🎾</title>
+    <!-- 
+      v4.1.0 - Implementa Torneio Sortudo e Saldo de Games
+      v4.1.1 - Aplica Saldo de Games ao Coveiro do Mata-Mata
+    -->
+    
+    <!-- Metatags PWA (Progressive Web App) -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0891B2"> <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0891B2"> <!-- Azul Ciano -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ranking BT">
     <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Estilos CSS customizados -->
     <style>
+        /* Banner de Instalação PWA */
         #installBanner {
             display: none;
             position: fixed;
@@ -37,13 +49,15 @@
         #installBanner button:hover {
             background-color: #e5e7eb;
         }
-        .header-nav { /* Estilo modificado conforme solicitado */
-             background-color: #1a1a1a;
-        }
+        
+        /* Cor de fundo padrão */
         body {
             font-family: 'Inter', sans-serif;
-            color: #1F2937;
+            color: #1F2937; /* Cinza escuro */
+            background-color: #FFFAF0; /* Floral White / Fundo Creme */
         }
+        
+        /* Animações de Fade-in */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -54,56 +68,69 @@
         .animate-fade-in-sm {
             animation: fadeIn 0.3s ease-out forwards;
         }
+        
+        /* Oculta elementos */
         .hidden {
             display: none;
         }
-        /* Custom scrollbar */
+        
+        /* Scrollbar customizada (para navegadores Webkit) */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #FEF3C7; /* bg-amber-50 */
+            background: #FEF3C7; /* Amarelo bem claro (baseado no bg-amber-50) */
         }
         ::-webkit-scrollbar-thumb {
-            background: #9CA3AF; /* text-gray-400 */
+            background: #9CA3AF; /* Cinza */
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #6B7280; /* text-gray-500 */
+            background: #6B7280; /* Cinza mais escuro */
+        }
+        
+        /* Estilos para o seletor de tipo de torneio */
+        .champ-type-label {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            border: 2px solid #E5E7EB; /* Borda cinza clara */
+            border-radius: 0.75rem; /* rounded-xl */
+            padding: 1rem; /* p-4 */
+        }
+        .champ-type-label:hover {
+            border-color: #0891B2; /* Ciano no hover */
+        }
+        .champ-type-radio:checked + .champ-type-label {
+            border-color: #0891B2; /* Ciano */
+            background-color: #F0FDFA; /* Ciano bem claro */
+            box-shadow: 0 4px 10px rgba(8, 145, 178, 0.1);
         }
     </style>
 </head>
-<body class="bg-amber-50 min-h-screen">
-    <!-- Botão de Instalação PWA (Progressive Web App) -->
+<body class="min-h-screen">
+
+    <!-- Banner de Instalação PWA -->
     <div id="installBanner">
         Instale o aplicativo para ter acesso rápido na tela inicial!
         <button id="installBtn">Instalar</button>
     </div>
 
-    <!-- Script de Instalação PWA e Service Worker (Corrigido) -->
+    <!-- Script de Instalação PWA -->
     <script>
-        /* CORREÇÃO DO ERRO 1 (Service Worker): Removido o registro do Service Worker
-           pois ele falha no ambiente da Canvas devido ao protocolo. */
-        /*
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('✅ Service Worker registrado com sucesso!'))
-                .catch(err => console.log('❌ Erro ao registrar o Service Worker:', err));
-        }
-        */
-
-        // Lógica do Banner de Instalação PWA
         let deferredPrompt;
         const installBanner = document.getElementById('installBanner');
         const installBtn = document.getElementById('installBtn');
-
+        
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault(); 
             deferredPrompt = e;
-            installBanner.style.display = 'block'; // Mostra o banner
+            // Mostra o banner apenas se não estiver no modo standalone (instalado)
+            if (!window.matchMedia('(display-mode: standalone)').matches) {
+                installBanner.style.display = 'block';
+            }
         });
-
+        
         installBtn.addEventListener('click', async () => {
             if (!deferredPrompt) return;
             deferredPrompt.prompt(); 
@@ -114,55 +141,58 @@
                 console.log('❌ Usuário recusou instalar');
             }
             deferredPrompt = null;
-            installBanner.style.display = 'none'; // Esconde o banner
+            installBanner.style.display = 'none';
         });
     </script>
-
-    <!-- Bibliotecas PDF (jsPDF) -->
+    
+    <!-- Bibliotecas JS (jsPDF para exportar) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- Container Principal do App -->
+    <!-- Container Principal do Aplicativo -->
     <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        
+
         <!-- Cabeçalho -->
         <header class="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 gap-4 bg-white p-4 rounded-xl shadow-md">
             <h1 class="text-3xl sm:text-4xl font-bold text-cyan-600 text-center sm:text-left">
                 🏖️ Ranking Beach Tennis
             </h1>
-            <div id="header-buttons" class="flex gap-3 header-nav rounded-lg p-2">
-                <!-- Botões do Cabeçalho (Login/Navegação) são renderizados aqui -->
+            <div id="header-buttons" class="flex gap-3 rounded-lg p-2">
+                <!-- Botões de Navegação (Renderizados via JS) -->
             </div>
         </header>
 
-        <!-- Spinner de Carregamento -->
+        <!-- Spinner de Carregamento Inicial -->
         <div id="loading-spinner" class="text-center py-20">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
             <p class="mt-4 text-gray-500">Carregando dados...</p>
         </div>
 
-        <!-- Conteúdo Principal (Renderizado via JS) -->
+        <!-- Conteúdo Principal (Oculto até carregar) -->
         <main id="main-content" class="hidden">
-            <!-- As visualizações (Login, Lista, Campeonato) são renderizadas aqui -->
+            <!-- Conteúdo Renderizado via JS -->
         </main>
 
         <!-- Rodapé -->
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v5.0.0 (Dual Mode)</p>
+            <p>App de Ranking v4.1.1</p>
         </footer>
     </div>
 
-    <!-- Modal Global (para Erros e Sucesso) -->
+    <!-- Modal Universal (para erros e sucessos) -->
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full mx-auto animate-fade-in-sm">
+            <!-- Cabeçalho do Modal -->
             <div class="flex justify-between items-center mb-4">
                 <h3 id="modal-title" class="text-xl sm:text-2xl font-bold text-cyan-600"></h3>
                 <button id="modal-close-icon" class="text-gray-500 hover:text-gray-900 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
+            <!-- Mensagem do Modal -->
             <div id="modal-message" class="text-gray-700 text-sm sm:text-base mb-6 max-h-60 overflow-y-auto"></div>
+            <!-- Botão de Fechar do Modal -->
             <button
                 id="modal-close-btn"
                 class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50">
@@ -171,10 +201,10 @@
         </div>
     </div>
 
-    <!-- Módulo principal do App (Firebase e Lógica) -->
+    <!-- MÓDULO JAVASCRIPT PRINCIPAL -->
     <script type="module">
         // =================================================================
-        // === IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
+        // === Importações do Firebase
         // =================================================================
         import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
@@ -196,7 +226,10 @@
             deleteDoc
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configuração do Firebase (Substitua pelos seus dados)
+        // =================================================================
+        // === Configuração do Firebase
+        // =================================================================
+        // (Configuração omitida por segurança no exemplo, mas presente no seu código)
         const firebaseConfig = {
           apiKey: "AIzaSyDeS-rk8OJKhghv1djVucmR3-erOa-ppMY",
           authDomain: "campeonato-sortudo.firebaseapp.com",
@@ -205,22 +238,22 @@
           messagingSenderId: "706083235199",
           appId: "1:706083235199:web:5eca6041bb817401ee264a"
         };
-
-        // Inicialização dos serviços do Firebase
+        
+        // Inicializa Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        setLogLevel('debug'); // Ativa logs detalhados do Firestore no console
+        setLogLevel('debug'); // Habilita logs detalhados do Firestore
 
         // =================================================================
-        // === CONSTANTES E ESTADO GLOBAL
+        // === Constantes e Estado Global
         // =================================================================
         
-        // ID Mestre (Admin)
+        // ID Mestre - Todos os dados são salvos sob este ID
         const MESTRE_USER_ID = "campeonato-sortudo-admin";
-        const ADMIN_PASSWORD = "adm2025"; 
+        const ADMIN_PASSWORD = "adm2025"; // Senha de admin
 
-        // Estado global reativo do aplicativo
+        // Estado inicial do aplicativo
         let appState = {
             userId: null,
             isAuthReady: false,
@@ -231,59 +264,59 @@
             currentRankingId: null, 
         };
 
-        // Caches de dados globais (ouvintes do Firestore)
+        // Cache de dados (preenchidos pelos listeners do Firebase)
         let allRankings = []; 
         let championships = []; 
         let globalPlayers = []; 
-        let activeChampionship = null; 
+        let activeChampionship = null; // O sub-documento 'data/main' do torneio atual
 
-        // Funções de cancelamento de inscrição (listeners)
+        // Funções de 'unsubscribe' dos listeners do Firebase
         let unsubscribeRankingsList = () => {}; 
         let unsubscribeChampionships = () => {}; 
         let unsubscribeGlobalPlayers = () => {}; 
         let unsubscribeActiveChampionship = () => {}; 
 
-        // Pontuações Padrão (Modelo Mata-Mata)
+        // Configurações de pontos padrão (Mata-Mata)
         const DEFAULT_POINTS_MATA_MATA = {
             type: 'mata_mata',
-            participation: 5,
-            groupWin: 0,
-            gold_R3_lose: 20,  // Semi-final Ouro (4º lugar)
-            gold_R3_win: 100, // Campeão Ouro (Chave de 4)
-            gold_R4_lose: 20,  // Semi-final Ouro (4º lugar)
-            gold_R4_win: 100, // Campeão Ouro (Chave de 8)
-            gold_R5_lose: 20,  // Semi-final Ouro (4º lugar)
-            gold_R5_win: 100, // Campeão Ouro (Chave de 16)
-            gold_R3_run: 50,  // Vice Ouro (Chave de 4)
-            gold_R4_run: 50,  // Vice Ouro (Chave de 8)
-            gold_R5_run: 50,  // Vice Ouro (Chave de 16)
-            silver_R3_lose: 10, // Semi-final Prata
-            silver_R3_win: 30, // Campeão Prata (Chave de 4)
-            silver_R4_lose: 10, // Semi-final Prata
-            silver_R4_win: 30, // Campeão Prata (Chave de 8)
-            silver_R5_lose: 10, // Semi-final Prata
-            silver_R5_win: 30, // Campeão Prata (Chave de 16)
-            silver_R3_run: 15, // Vice Prata (Chave de 4)
-            silver_R4_run: 15, // Vice Prata (Chave de 8)
-            silver_R5_run: 15, // Vice Prata (Chave de 16)
+            participation: 10,
+            groupWin: 5,
+            
+            // Prata
+            silver_R1_lose: 0,
+            silver_R2_lose: 10, // Ex: Perdeu Quartas (Prata)
+            silver_R3_lose: 20, // Ex: Perdeu Semi (Prata)
+            silver_R4_lose: 0,  // (Não aplicável se 4 rodadas)
+            silver_R5_lose: 0,  // (Não aplicável)
+            silver_R_runnerup: 30, // Vice (Prata)
+            silver_R_winner: 40,   // Campeão (Prata)
+            
+            // Ouro
+            gold_R1_lose: 0,
+            gold_R2_lose: 30, // Ex: Perdeu Quartas (Ouro)
+            gold_R3_lose: 50, // Ex: Perdeu Semi (Ouro)
+            gold_R4_lose: 0,  // (Não aplicável)
+            gold_R5_lose: 0,  // (Não aplicável)
+            gold_R_runnerup: 70, // Vice (Ouro)
+            gold_R_winner: 100,  // Campeão (Ouro)
         };
         
-        // Pontuações Padrão (Modelo Sortudo)
+        // Configurações de pontos padrão (Sortudo)
         const DEFAULT_POINTS_SORTUDO = {
             type: 'sortudo',
             participation: 10,
-            perGame: 1,
+            perGame: 1, // Pontos por game ganho (exceto 'luckyGames')
             bonus_1st: 100,
             bonus_2nd: 70,
-            bonus_3rd: 50,
+            bonus_3rd: 50
         };
 
-      // Biblioteca de Ícones SVG
-      const icons = {
+        // Banco de Ícones SVG
+        const icons = {
             users: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
             plus: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
             trash: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
-            swords: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline><line x1="13" y1="19" x2="19" y2="13"></line><line x1="16" y1="16" x2="20" y2="20"></line><line x1="19" y1="21" x2="21" y2="19"></line><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline><line x1="11" y1="5" x2="5" y2="11"></line><line x1="8" y1="8" x2="4" y2="4"></line><line x1="3" y1="5" x2="5" y2="3"></line></svg>',
+            swords: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline><line x1="13" y1="19" x2="19" y2="13"></line><line x1="16" y1="16" x2="20" y2="20"></line><line x1="19" y1="21" x2="21" y2="19"></polyline><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline><line x1="11" y1="5" x2="5" y2="11"></line><line x1="8" y1="8" x2="4" y2="4"></line><line x1="3" y1="5" x2="5" y2="3"></line></svg>',
             trophy: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>',
             shield: '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block text-yellow-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
             shieldOff: '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block text-gray-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>',
@@ -299,49 +332,88 @@
             printer: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
             fileDown: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
             tv: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>',
-            shuffle: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>'
+            list: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
+            shuffle: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>'
         };
-
+        
         // =================================================================
-        // === CONTROLES DO DOM E MODAL
+        // === Elementos do DOM (DOM Elements)
         // =================================================================
         
-        // Funções utilitárias para mostrar/esconder o Modal
-        const showModal = (title, message) => {
-            modalTitle.textContent = title;
-            modalMessage.innerHTML = message; 
-            modal.classList.remove('hidden');
-        };
-        const hideModal = () => modal.classList.add('hidden');
-        
-        // Referências do DOM (buscadas após o carregamento do script)
-        const appContainer = document.getElementById('app-container');
-        const mainContent = document.getElementById('main-content');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const headerButtons = document.getElementById('header-buttons');
-        const userIdFooter = document.getElementById('user-id-footer');
+        // Modal
         const modal = document.getElementById('modal');
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
         const modalCloseBtn = document.getElementById('modal-close-btn');
         const modalCloseIcon = document.getElementById('modal-close-icon');
-
-        // Adiciona listeners do Modal
-        modalCloseBtn.addEventListener('click', hideModal);
-        modalCloseIcon.addEventListener('click', hideModal);
-        modal.addEventListener('click', hideModal);
-        modal.firstElementChild.addEventListener('click', (e) => e.stopPropagation()); // Impede de fechar ao clicar dentro do modal
-
+        
+        // Conteúdo Principal
+        const appContainer = document.getElementById('app-container');
+        const mainContent = document.getElementById('main-content');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const headerButtons = document.getElementById('header-buttons');
+        const userIdFooter = document.getElementById('user-id-footer');
 
         // =================================================================
-        // === ROTEAMENTO E RENDERIZAÇÃO PRINCIPAL
+        // === Funções Utilitárias (Helpers)
+        // =================================================================
+        
+        /**
+         * Mostra o modal universal.
+         * @param {string} title - O título do modal.
+         * @param {string} message - A mensagem (pode ser HTML).
+         */
+        const showModal = (title, message) => {
+            modalTitle.textContent = title;
+            modalMessage.innerHTML = message; 
+            modal.classList.remove('hidden');
+        };
+
+        /**
+         * Esconde o modal universal.
+         */
+        const hideModal = () => modal.classList.add('hidden');
+        
+        /**
+         * Converte um nome em um ID seguro.
+         * @param {string} name - O nome a ser convertido.
+         */
+        const nameToId = (name) => {
+            return name.trim().toLowerCase()
+                .replace(/\s+/g, '-') // Troca espaços por hífens
+                .replace(/[^a-z0-9-]/g, ''); // Remove caracteres especiais
+        };
+        
+        /**
+         * Retorna o título da rodada (Ex: 'Final', 'Semi-Final').
+         * @param {number} roundNum - O número da rodada atual.
+         * @param {number} maxRound - O número máximo de rodadas na chave.
+         */
+        const getRoundTitle = (roundNum, maxRound) => {
+            const r = Number(roundNum);
+            const max = Number(maxRound);
+            if (r === max) return 'Final';
+            if (r === max - 1) return 'Semi-Final';
+            if (r === max - 2) return 'Quartas de Final';
+            if (r === max - 3) return 'Oitavas de Final';
+            return `Rodada ${r}`;
+        };
+        
+        // Adiciona listeners para fechar o modal
+        modalCloseBtn.addEventListener('click', hideModal);
+        modalCloseIcon.addEventListener('click', hideModal);
+        modal.addEventListener('click', hideModal); // Fecha ao clicar fora
+        modal.firstElementChild.addEventListener('click', (e) => e.stopPropagation()); // Impede de fechar ao clicar dentro
+
+        // =================================================================
+        // === RENDERIZAÇÃO (Funções 'render')
         // =================================================================
 
         /**
-         * Renderiza a view principal com base no estado global (appState.currentView)
+         * Função principal de renderização. Decide qual view mostrar.
          */
         const render = () => {
-            // Esconde o spinner se não estivermos na view 'loading'
+            // Esconde o spinner e mostra o conteúdo principal, exceto na view 'loading'
             if (appState.currentView !== 'loading') {
                 loadingSpinner.classList.add('hidden');
                 mainContent.classList.remove('hidden');
@@ -350,13 +422,13 @@
                 mainContent.classList.add('hidden');
                 return;
             }
-
-            // Renderiza os botões do cabeçalho (exceto no telão)
+            
+            // Renderiza os botões do cabeçalho (se não estiver no modo telão)
             if (!appState.isTelaoMode) {
                 renderHeaderButtons();
             }
-
-            // Seleciona qual view renderizar
+            
+            // Escolhe qual view específica renderizar
             switch (appState.currentView) {
                 case 'login': 
                     renderLogin();
@@ -377,52 +449,53 @@
                     mainContent.innerHTML = `<p>Estado desconhecido: ${appState.currentView}</p>`;
             }
         };
-
+        
         /**
-         * Navega para uma nova view e (opcionalmente) carrega dados
+         * Navega para uma nova view e atualiza o estado.
+         * @param {string} view - A view para a qual navegar (ex: 'login', 'championshipView').
+         * @param {string|null} champId - O ID do campeonato (se aplicável).
          */
         const navigateTo = (view, champId = null) => {
             if (view === 'login') {
-                appState.isAdmin = false;
+                appState.isAdmin = false; // Reseta admin ao sair
             }
+            
             appState.currentView = view;
             appState.currentChampionshipId = champId;
-
-            // Para qualquer navegação, cancela o ouvinte do campeonato ativo anterior
+            
+            // Limpa o listener do campeonato ativo anterior
             unsubscribeActiveChampionship();
             activeChampionship = null;
-
+            
             if ((view === 'championshipView' || view === 'telaoView') && champId) {
-                // Se for a view de um campeonato, encontra o rankingId dele
+                // Se está abrindo um campeonato, busca o rankingId dele
                 const champ = championships.find(c => c.id === champId);
                 if (champ && champ.rankingId) {
                     if (appState.currentRankingId !== champ.rankingId) {
                         appState.currentRankingId = champ.rankingId;
-                        listenToGlobalPlayers(); // Carrega os jogadores do ranking vinculado
+                        listenToGlobalPlayers(); // Atualiza o listener de jogadores
                     }
-                } else if (championships.length > 0 && !champ) {
-                    console.warn("Navegando para o telão, mas a lista de campeonatos ainda não tem o ID:", champId);
                 }
-                // Inicia o ouvinte para este campeonato específico
+                // Inicia o listener para os dados deste campeonato específico
                 listenToActiveChampionship(champId);
             } else if (view === 'globalRanking') {
-                // Se for o ranking global, carrega os jogadores
+                // Garante que os jogadores do ranking selecionado estão sendo ouvidos
                 listenToGlobalPlayers();
                 render();
             } else {
-                // Para outras views (Login, Lista), apenas renderiza
+                // Para outras views (login, list), apenas renderiza
                 render();
             }
         };
 
         /**
-         * Renderiza os botões de "Ranking" / "Voltar" / "Login/Sair" no cabeçalho
+         * Renderiza os botões no cabeçalho (Voltar, Ranking, Login/Logout).
          */
         const renderHeaderButtons = () => {
             let navHtml = ''; 
             let authHtml = ''; 
-
-            // Botão de Navegação (Ranking Geral / Voltar)
+            
+            // Botão de navegação principal (Voltar ou Ir para Ranking)
             if (appState.currentView === 'championshipList') {
                 navHtml = `
                 <button
@@ -442,8 +515,8 @@
                 </button>
                 `;
             }
-
-            // Botão de Autenticação (Login / Sair)
+            
+            // Botão de Autenticação (Login ou Logout)
             if (appState.currentView !== 'login') {
                 if (appState.isAdmin) {
                     authHtml = `
@@ -467,8 +540,8 @@
             }
             
             headerButtons.innerHTML = navHtml + authHtml; 
-
-            // Adiciona listeners aos botões renderizados
+            
+            // Adiciona listeners aos botões recém-criados
             const rankingBtn = document.getElementById('nav-to-ranking');
             if (rankingBtn) rankingBtn.addEventListener('click', () => navigateTo('globalRanking'));
             
@@ -478,16 +551,17 @@
             const loginBtn = document.getElementById('nav-to-login');
             if (loginBtn) loginBtn.addEventListener('click', () => navigateTo('login'));
         };
-
-        // =================================================================
-        // === VIEW: LOGIN
-        // =================================================================
+        
+        /**
+         * Renderiza a tela de Login (Visitante vs Admin).
+         */
         const renderLogin = () => {
             mainContent.innerHTML = `
                 <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
                     <h2 class="text-3xl font-bold text-center text-cyan-600 mb-8">Bem-vindo(a) 🎾</h2>
                     
                     <div class="space-y-4">
+                        <!-- Botão Modo Visitante -->
                         <button
                             id="visitor-login-btn"
                             class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 px-6 rounded-lg shadow-sm transition-all flex items-center justify-center gap-3 text-lg">
@@ -495,6 +569,7 @@
                             Modo Visitante
                         </button>
                         
+                        <!-- Botão Modo Administrador -->
                         <button
                             id="admin-login-btn"
                             class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
@@ -504,31 +579,32 @@
                     </div>
                 </div>
             `;
-
+            
             // Listeners da tela de Login
             document.getElementById('visitor-login-btn').addEventListener('click', () => {
                 appState.isAdmin = false;
                 navigateTo('championshipList');
             });
-
+            
             document.getElementById('admin-login-btn').addEventListener('click', () => {
                 const password = prompt("Digite a senha de administrador:");
                 if (password === ADMIN_PASSWORD) {
                     appState.isAdmin = true;
                     navigateTo('championshipList');
-                } else if (password !== null) { 
+                } else if (password !== null) { // Só mostra erro se o usuário não clicou em "Cancelar"
                     showModal("Acesso Negado", "Senha incorreta.");
                 }
             });
         };
-
-        // =================================================================
-        // === VIEW: LISTA DE CAMPEONATOS
-        // =================================================================
+        
+        /**
+         * Renderiza a lista de campeonatos (e o formulário de criação se for admin).
+         */
         const renderChampionshipList = () => {
-            // Ordena os campeonatos (mais novos primeiro)
+            // Ordena os campeonatos por data (mais recente primeiro)
             const sortedChampionships = [...championships].sort((a, b) => b.createdAt - a.createdAt);
             
+            // HTML da lista de campeonatos existentes
             const championshipsListHtml = sortedChampionships.length === 0
                 ? `<p class="text-gray-500 text-center py-4">Nenhum campeonato cadastrado.</p>`
                 : sortedChampionships.map(champ => {
@@ -540,24 +616,28 @@
                     const ranking = allRankings.find(r => r.id === champ.rankingId);
                     const rankingHtml = ranking ? `<span class="block text-xs text-orange-600 font-medium">${ranking.name}</span>` : '';
                     
-                    // Mostra o tipo de torneio (Mata-Mata ou Sortudo)
-                    const typeIcon = (champ.type === 'sortudo') ? icons.shuffle : icons.swords;
-                    const typeText = (champ.type === 'sortudo') ? 'Torneio Sortudo' : 'Mata-Mata';
-                    
+                    // Mostra o tipo de torneio (se definido)
+                    let typeHtml = '';
+                    if (champ.type === 'sortudo') {
+                        typeHtml = `<span class="block text-xs text-purple-600 font-medium">Torneio Sortudo</span>`;
+                    } else if (champ.type === 'mata_mata') {
+                        typeHtml = `<span class="block text-xs text-blue-600 font-medium">Mata-Mata</span>`;
+                    }
+
                     const deleteButtonHtml = appState.isAdmin ? `
                     <button
                         class="delete-champ-btn text-rose-600 hover:text-rose-700 transition-colors p-2 rounded-lg bg-gray-100"
                         data-id="${champ.id}">
                         ${icons.trash}
                     </button>` : '';
-
+                    
                     return `
                     <div class="flex flex-col sm:flex-row justify-between items-center bg-white border border-gray-200 p-4 rounded-xl shadow-sm animate-fade-in-sm gap-3">
                         <div>
                             <span class="text-gray-800 font-bold text-lg">${champ.name}</span>
                             <span class="block text-sm ${statusColor}">${statusText}</span>
-                            <span class="block text-xs text-purple-600 font-medium flex items-center gap-1.5">${typeIcon} ${typeText}</span>
                             ${rankingHtml}
+                            ${typeHtml}
                             <span class="block text-xs text-gray-500">${new Date(champ.createdAt?.toDate()).toLocaleDateString()}</span>
                         </div>
                         <div class="flex gap-2">
@@ -570,11 +650,11 @@
                         </div>
                     </div>
                     `}).join('');
-
-            // Opções de rankings para o <select>
+            
+            // Opções para o <select> de rankings
             const rankingsOptions = allRankings.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-
-            // Formulário de Novo Campeonato (Admin)
+            
+            // Formulário de criação de novo campeonato (só para admin)
             const newChampionshipFormHtml = appState.isAdmin ? `
             <form id="add-championship-form">
                 <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8 border border-gray-200">
@@ -592,50 +672,59 @@
                         />
                     </div>
                     
-                    <!-- Ranking Vinculado -->
+                    <!-- Seleção de Ranking -->
                     <div class="mb-4">
                         <label for="ranking-select" class="block text-sm font-medium text-gray-700 mb-1">Vincular ao Ranking</label>
                         <div class="flex gap-2">
                             <select id="ranking-select" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500" required>
                                 ${rankingsOptions.length > 0 ? rankingsOptions : '<option disabled>Nenhum ranking encontrado...</option>'}
                             </select>
-                            <button type="button" id="add-new-ranking-btn" class="flex-shrink-0 bg-cyan-600 hover:bg-cyan-700 text-white font-bold p-3 rounded-lg shadow-md transition-all">
+                            <button type="button" id="add-new-ranking-btn" class="flex-shrink-0 bg-cyan-600 hover:bg-cyan-700 text-white font-bold p-3 rounded-lg shadow-md transition-all" title="Criar Novo Ranking">
                                 ${icons.plus}
                             </button>
                         </div>
                     </div>
-
-                    <!-- Tipo de Torneio (NOVO) -->
+                    
+                    <!-- Seleção do Tipo de Torneio -->
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Torneio</label>
-                        <div class="flex gap-4">
-                            <label class="flex items-center p-3 bg-gray-50 border border-gray-300 rounded-lg flex-1 cursor-pointer">
-                                <input type="radio" id="type-select-mata-mata" name="champ-type" value="mata_mata" class="h-5 w-5 text-cyan-600 focus:ring-cyan-500" checked>
-                                <span class="ml-3 font-medium text-gray-800">Grupos e Mata-Mata</span>
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Opção 1: Mata-Mata -->
+                            <input type="radio" name="champ_type" id="champ-type-mata_mata" value="mata_mata" class="hidden champ-type-radio" checked>
+                            <label for="champ-type-mata_mata" class="champ-type-label text-center">
+                                ${icons.swords}
+                                <span class="block font-semibold text-gray-800 mt-2">Grupos & Mata-Mata</span>
+                                <span class="block text-xs text-gray-500">Clássico, com chaves Ouro/Prata.</span>
                             </label>
-                            <label class="flex items-center p-3 bg-gray-50 border border-gray-300 rounded-lg flex-1 cursor-pointer">
-                                <input type="radio" id="type-select-sortudo" name="champ-type" value="sortudo" class="h-5 w-5 text-purple-600 focus:ring-purple-500">
-                                <span class="ml-3 font-medium text-gray-800">Torneio Sortudo</span>
+                            
+                            <!-- Opção 2: Sortudo -->
+                            <input type="radio" name="champ_type" id="champ-type-sortudo" value="sortudo" class="hidden champ-type-radio">
+                            <label for="champ-type-sortudo" class="champ-type-label text-center">
+                                ${icons.shuffle}
+                                <span class="block font-semibold text-gray-800 mt-2">Torneio Sortudo</span>
+                                <span class="block text-xs text-gray-500">Rodadas aleatórias, vence quem faz mais games.</span>
                             </label>
                         </div>
                     </div>
-
-                    <!-- Configuração de Pontos (Dinâmico) -->
-                    <div id="points-config-container">
-                        <!-- O formulário de pontos (Mata-Mata ou Sortudo) será injetado aqui -->
+                    
+                    <!-- Configuração de Pontos (Dinâmica) -->
+                    <div id="points-config-wrapper" class="mt-6">
+                        <!-- O conteúdo aqui será preenchido por renderPointsConfigForm() -->
                     </div>
                     
+                    <!-- Botão Criar -->
                     <button
                         type="submit"
                         id="add-championship-btn"
-                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-6">
                         ${icons.plus}
                         <span>Criar Campeonato</span>
                     </button>
                 </div>
             </form>
-            ` : ''; 
-
+            ` : ''; // Fim do if(appState.isAdmin)
+            
+            // Renderiza o HTML final
             mainContent.innerHTML = `
                 <div class="animate-fade-in">
                     ${newChampionshipFormHtml}
@@ -647,8 +736,8 @@
                     </div>
                 </div>
             `;
-
-            // Adiciona listeners (se admin)
+            
+            // Adiciona listeners para admin
             if (appState.isAdmin) {
                 const addForm = document.getElementById('add-championship-form');
                 if (addForm) addForm.addEventListener('submit', handleAddChampionship);
@@ -660,128 +749,141 @@
                     btn.addEventListener('click', () => handleDeleteChampionship(btn.dataset.id));
                 });
                 
-                // Listeners para os botões de tipo de torneio (para mudar o formulário de pontos)
-                const radioMataMata = document.getElementById('type-select-mata-mata');
-                const radioSortudo = document.getElementById('type-select-sortudo');
-                if (radioMataMata) radioMataMata.addEventListener('change', renderPointsConfigForm);
-                if (radioSortudo) radioSortudo.addEventListener('change', renderPointsConfigForm);
+                // Listener para trocar o formulário de pontos
+                document.getElementsByName('champ_type').forEach(radio => {
+                    radio.addEventListener('change', (e) => renderPointsConfigForm(e.target.value));
+                });
                 
-                // Renderiza o formulário de pontos inicial (Mata-Mata, o padrão)
-                renderPointsConfigForm();
+                // Renderiza o formulário de pontos inicial (Mata-Mata)
+                renderPointsConfigForm('mata_mata');
             }
-
-            // Listeners para todos (Visitante e Admin)
+            
+            // Adiciona listeners para todos (visitante e admin)
             document.querySelectorAll('.open-champ-btn').forEach(btn => {
                 btn.addEventListener('click', () => navigateTo('championshipView', btn.dataset.id));
             });
         };
-
+        
         /**
-         * (NOVO) Renderiza o formulário de pontos correto (Mata-Mata ou Sortudo)
+         * Renderiza o formulário de configuração de pontos (dinamicamente).
+         * @param {string} champType - 'mata_mata' ou 'sortudo'.
          */
-        const renderPointsConfigForm = () => {
-            const container = document.getElementById('points-config-container');
-            if (!container) return; // Só executa se o container existir (modo admin)
-
-            const type = document.querySelector('input[name="champ-type"]:checked')?.value || 'mata_mata';
-
-            if (type === 'sortudo') {
-                container.innerHTML = `
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Configuração (Torneio Sortudo)</h3>
-                    <div class="grid grid-cols-2 gap-3 mb-4">
+        const renderPointsConfigForm = (champType) => {
+            const wrapper = document.getElementById('points-config-wrapper');
+            if (!wrapper) return;
+            
+            let html = '';
+            
+            if (champType === 'mata_mata') {
+                // Formulário de Pontos para MATA-MATA
+                const p = DEFAULT_POINTS_MATA_MATA;
+                html = `
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Configuração de Pontos (Mata-Mata)</h3>
+                    <p class="text-xs text-gray-500 mb-3 -mt-2">
+                        Bônus fixos (não acumulativos). O total será: <span class="font-bold">[Base] + [Vitórias Grupo] + [Bônus Fixo Máximo]</span>.
+                    </p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
-                            <label for="sortudo-rounds" class="block text-xs font-medium text-gray-700 mb-1">Nº de Rodadas</label>
-                            <input type="number" id="sortudo-rounds" min="1" value="5"
+                            <label for="points-participation" class="block text-xs font-medium text-gray-500 mb-1">Participação</label>
+                            <input type="number" id="points-participation" min="0" value="${p.participation}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="sortudo-lucky-games" class="block text-xs font-medium text-gray-700 mb-1">Games do Sortudo (BYE)</label>
-                            <input type="number" id="sortudo-lucky-games" min="0" value="6"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
-                        </div>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Pontuação (Ranking)</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                        <div>
-                            <label for="points-sortudo-participation" class="block text-xs font-medium text-gray-500 mb-1">Participação</label>
-                            <input type="number" id="points-sortudo-participation" min="0" value="${DEFAULT_POINTS_SORTUDO.participation}"
+                            <label for="points-groupWin" class="block text-xs font-medium text-blue-600 mb-1">Vitória (Grupo)</label>
+                            <input type="number" id="points-groupWin" min="0" value="${p.groupWin}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-sortudo-per-game" class="block text-xs font-medium text-gray-500 mb-1">Pts. por Game Ganho</label>
-                            <input type="number" id="points-sortudo-per-game" min="0" value="${DEFAULT_POINTS_SORTUDO.perGame}"
+                            <label for="points-gold-R3-lose" class="block text-xs font-medium text-yellow-700 mb-1">Perder Semi (Ouro)</label>
+                            <input type="number" id="points-gold-R3-lose" min="0" value="${p.gold_R3_lose}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-sortudo-1st" class="block text-xs font-medium text-yellow-500 mb-1">Bônus 1º Lugar 🥇</label>
-                            <input type="number" id="points-sortudo-1st" min="0" value="${DEFAULT_POINTS_SORTUDO.bonus_1st}"
+                            <label for="points-silver-R3-lose" class="block text-xs font-medium text-gray-500 mb-1">Perder Semi (Prata)</label>
+                            <input type="number" id="points-silver-R3-lose" min="0" value="${p.silver_R3_lose}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-sortudo-2nd" class="block text-xs font-medium text-gray-500 mb-1">Bônus 2º Lugar 🥈</label>
-                            <input type="number" id="points-sortudo-2nd" min="0" value="${DEFAULT_POINTS_SORTUDO.bonus_2nd}"
+                            <label for="points-gold-R-winner" class="block text-xs font-medium text-emerald-600 mb-1">Campeão Ouro 🥇</label>
+                            <input type="number" id="points-gold-R-winner" min="0" value="${p.gold_R_winner}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-sortudo-3rd" class="block text-xs font-medium text-orange-600 mb-1">Bônus 3º Lugar 🥉</label>
-                            <input type="number" id="points-sortudo-3rd" min="0" value="${DEFAULT_POINTS_SORTUDO.bonus_3rd}"
+                            <label for="points-gold-R-runnerup" class="block text-xs font-medium text-emerald-700 mb-1">Vice Ouro</label>
+                            <input type="number" id="points-gold-R-runnerup" min="0" value="${p.gold_R_runnerup}"
+                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                        </div>
+                        <div>
+                            <label for="points-silver-R-winner" class="block text-xs font-medium text-gray-600 mb-1">Campeão Prata 🥈</label>
+                            <input type="number" id="points-silver-R-winner" min="0" value="${p.silver_R_winner}"
+                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                        </div>
+                        <div>
+                            <label for="points-silver-R-runnerup" class="block text-xs font-medium text-gray-700 mb-1">Vice Prata</label>
+                            <input type="number" id="points-silver-R-runnerup" min="0" value="${p.silver_R_runnerup}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                     </div>
                 `;
-            } else {
-                // Modo Mata-Mata (o padrão)
-                container.innerHTML = `
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Pontuação (Mata-Mata)</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+            } else if (champType === 'sortudo') {
+                // Formulário de Pontos para SORTUDO
+                const p = DEFAULT_POINTS_SORTUDO;
+                html = `
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Configuração do Torneio (Sortudo)</h3>
+                    <!-- Configs específicas do Sortudo -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
                         <div>
-                            <label for="points-mm-participation" class="block text-xs font-medium text-gray-500 mb-1">Participação</label>
-                            <input type="number" id="points-mm-participation" min="0" value="${DEFAULT_POINTS_MATA_MATA.participation}"
+                            <label for="config-numRounds" class="block text-sm font-medium text-gray-700 mb-1">Nº de Rodadas</label>
+                            <input type="number" id="config-numRounds" min="1" max="20" value="5"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-mm-group-win" class="block text-xs font-medium text-blue-500 mb-1">Pts. por Vitória (Grupo)</label>
-                            <input type="number" id="points-mm-group-win" min="0" value="${DEFAULT_POINTS_MATA_MATA.groupWin}"
+                            <label for="config-luckyGames" class="block text-sm font-medium text-gray-700 mb-1">Games (Sortudo/BYE)</label>
+                            <input type="number" id="config-luckyGames" min="0" max="20" value="6"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    
+                    <!-- Configs de Pontos do Sortudo -->
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Configuração de Pontos (Sortudo)</h3>
+                    <p class="text-xs text-gray-500 mb-3 -mt-2">
+                        O total será: <span class="font-bold">[Base] + [Games Ganhos * Pts. por Game] + [Bônus Fixo]</span>.
+                    </p>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                         <div>
-                            <label for="points-mm-gold-win" class="block text-xs font-medium text-yellow-500 mb-1">Campeão Ouro 🥇</label>
-                            <input type="number" id="points-mm-gold-win" min="0" value="${DEFAULT_POINTS_MATA_MATA.gold_R4_win}"
+                            <label for="points-participation" class="block text-xs font-medium text-gray-500 mb-1">Participação</label>
+                            <input type="number" id="points-participation" min="0" value="${p.participation}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-mm-gold-run" class="block text-xs font-medium text-gray-500 mb-1">Vice Ouro 🥈</label>
-                            <input type="number" id="points-mm-gold-run" min="0" value="${DEFAULT_POINTS_MATA_MATA.gold_R4_run}"
+                            <label for="points-perGame" class="block text-xs font-medium text-blue-600 mb-1">Ponto por Game</label>
+                            <input type="number" id="points-perGame" min="0" value="${p.perGame}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-mm-gold-semi" class="block text-xs font-medium text-orange-600 mb-1">Semi Ouro (3º/4º) 🥉</glabel>
-                            <input type="number" id="points-mm-gold-semi" min="0" value="${DEFAULT_POINTS_MATA_MATA.gold_R4_lose}"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
-                        </div>
-                        <div></div> <!-- Espaçador -->
-                        <div>
-                            <label for="points-mm-silver-win" class="block text-xs font-medium text-gray-700 mb-1">Campeão Prata</label>
-                            <input type="number" id="points-mm-silver-win" min="0" value="${DEFAULT_POINTS_MATA_MATA.silver_R4_win}"
+                            <label for="points-bonus-1st" class="block text-xs font-medium text-emerald-600 mb-1">Bônus 1º Lugar 🥇</labe
+
+labe>
+                            <input type="number" id="points-bonus-1st" min="0" value="${p.bonus_1st}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-mm-silver-run" class="block text-xs font-medium text-gray-500 mb-1">Vice Prata</glabel>
-                            <input type="number" id="points-mm-silver-run" min="0" value="${DEFAULT_POINTS_MATA_MATA.silver_R4_run}"
+                            <label for="points-bonus-2nd" class="block text-xs font-medium text-gray-600 mb-1">Bônus 2º Lugar 🥈</label>
+                            <input type="number" id="points-bonus-2nd" min="0" value="${p.bonus_2nd}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-mm-silver-semi" class="block text-xs font-medium text-gray-500 mb-1">Semi Prata</glabel>
-                            <input type="number" id="points-mm-silver-semi" min="0" value="${DEFAULT_POINTS_MATA_MATA.silver_R4_lose}"
+                            <label for="points-bonus-3rd" class="block text-xs font-medium text-orange-700 mb-1">Bônus 3º Lugar 🥉</label>
+                            <input type="number" id="points-bonus-3rd" min="0" value="${p.bonus_3rd}"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                     </div>
                 `;
             }
+            
+            wrapper.innerHTML = html;
         };
-
+        
         /**
          * Lida com a criação de um novo campeonato (ambos os tipos)
          */
@@ -802,55 +904,62 @@
             button.lastChild.textContent = "Criando...";
             
             // Pega o tipo de torneio e as configurações de pontos
-            const champType = document.querySelector('input[name="champ-type"]:checked').value;
+            const champType = document.querySelector('input[name="champ_type"]:checked').value;
             let pointsConfig = {};
             let champConfig = {}; // Config específica do torneio (ex: N_Rodadas)
 
             if (champType === 'sortudo') {
                 champConfig = {
-                    numRounds: parseInt(document.getElementById('sortudo-rounds').value) || 5,
-                    luckyGames: parseInt(document.getElementById('sortudo-lucky-games').value) || 0,
+                    numRounds: parseInt(document.getElementById('config-numRounds').value) || 5,
+                    luckyGames: parseInt(document.getElementById('config-luckyGames').value) || 0,
                 };
                 pointsConfig = {
                     type: 'sortudo',
-                    participation: parseInt(document.getElementById('points-sortudo-participation').value) || 0,
-                    perGame: parseInt(document.getElementById('points-sortudo-per-game').value) || 0,
-                    bonus_1st: parseInt(document.getElementById('points-sortudo-1st').value) || 0,
-                    bonus_2nd: parseInt(document.getElementById('points-sortudo-2nd').value) || 0,
-                    bonus_3rd: parseInt(document.getElementById('points-sortudo-3rd').value) || 0,
+                    participation: parseInt(document.getElementById('points-participation').value) || 0,
+                    perGame: parseInt(document.getElementById('points-perGame').value) || 0,
+                    bonus_1st: parseInt(document.getElementById('points-bonus-1st').value) || 0,
+                    bonus_2nd: parseInt(document.getElementById('points-bonus-2nd').value) || 0,
+                    bonus_3rd: parseInt(document.getElementById('points-bonus-3rd').value) || 0,
                 };
             } else {
                 // Mata-Mata
+                const goldWinnerPts = parseInt(document.getElementById('points-gold-R-winner').value);
+                const goldRunnerUpPts = parseInt(document.getElementById('points-gold-R-runnerup').value);
+                const goldSemiPts = parseInt(document.getElementById('points-gold-R3-lose').value);
+                const silverWinnerPts = parseInt(document.getElementById('points-silver-R-winner').value);
+                const silverRunnerUpPts = parseInt(document.getElementById('points-silver-R-runnerup').value);
+                const silverSemiPts = parseInt(document.getElementById('points-silver-R3-lose').value);
+
                 pointsConfig = {
                     type: 'mata_mata',
-                    participation: parseInt(document.getElementById('points-mm-participation').value) || 0,
-                    groupWin: parseInt(document.getElementById('points-mm-group-win').value) || 0,
+                    participation: parseInt(document.getElementById('points-participation').value) || 0,
+                    groupWin: parseInt(document.getElementById('points-groupWin').value) || 0,
                     
                     // Pontos baseados em chave de 16 (R5), 8 (R4), 4 (R3)
                     // Usamos um valor único e aplicamos a todas as chaves
-                    gold_R5_win: parseInt(document.getElementById('points-mm-gold-win').value),
-                    gold_R4_win: parseInt(document.getElementById('points-mm-gold-win').value),
-                    gold_R3_win: parseInt(document.getElementById('points-mm-gold-win').value),
+                    gold_R5_win: goldWinnerPts,
+                    gold_R4_win: goldWinnerPts,
+                    gold_R3_win: goldWinnerPts,
                     
-                    gold_R5_run: parseInt(document.getElementById('points-mm-gold-run').value),
-                    gold_R4_run: parseInt(document.getElementById('points-mm-gold-run').value),
-                    gold_R3_run: parseInt(document.getElementById('points-mm-gold-run').value),
+                    gold_R5_run: goldRunnerUpPts,
+                    gold_R4_run: goldRunnerUpPts,
+                    gold_R3_run: goldRunnerUpPts,
 
-                    gold_R5_lose: parseInt(document.getElementById('points-mm-gold-semi').value),
-                    gold_R4_lose: parseInt(document.getElementById('points-mm-gold-semi').value),
-                    gold_R3_lose: parseInt(document.getElementById('points-mm-gold-semi').value),
+                    gold_R5_lose: goldSemiPts,
+                    gold_R4_lose: goldSemiPts,
+                    gold_R3_lose: goldSemiPts,
 
-                    silver_R5_win: parseInt(document.getElementById('points-mm-silver-win').value),
-                    silver_R4_win: parseInt(document.getElementById('points-mm-silver-win').value),
-                    silver_R3_win: parseInt(document.getElementById('points-mm-silver-win').value),
+                    silver_R5_win: silverWinnerPts,
+                    silver_R4_win: silverWinnerPts,
+                    silver_R3_win: silverWinnerPts,
 
-                    silver_R5_run: parseInt(document.getElementById('points-mm-silver-run').value),
-                    silver_R4_run: parseInt(document.getElementById('points-mm-silver-run').value),
-                    silver_R3_run: parseInt(document.getElementById('points-mm-silver-run').value),
+                    silver_R5_run: silverRunnerUpPts,
+                    silver_R4_run: silverRunnerUpPts,
+                    silver_R3_run: silverRunnerUpPts,
 
-                    silver_R5_lose: parseInt(document.getElementById('points-mm-silver-semi').value),
-                    silver_R4_lose: parseInt(document.getElementById('points-mm-silver-semi').value),
-                    silver_R3_lose: parseInt(document.getElementById('points-mm-silver-semi').value),
+                    silver_R5_lose: silverSemiPts,
+                    silver_R4_lose: silverSemiPts,
+                    silver_R3_lose: silverSemiPts,
                 };
             }
 
@@ -893,10 +1002,8 @@
                 await batch.commit();
                 
                 input.value = '';
-                showModal("Sucesso!", `Campeonato "${champName}" (${typeText}) criado.`);
-            } catch (error)
-
-{
+                showModal("Sucesso!", `Campeonato "${champName}" (${champType === 'sortudo' ? 'Sortudo' : 'Mata-Mata'}) criado.`);
+            } catch (error) {
                 console.error("Erro ao criar campeonato:", error);
                 showModal("Erro", "Não foi possível criar o campeonato.");
             }
@@ -909,6 +1016,7 @@
          */
         const handleDeleteChampionship = async (champId) => {
             const champ = championships.find(c => c.id === champId);
+            if (!champ) return;
             if (window.prompt(`Para confirmar, digite o nome do campeonato: "${champ.name}"`) !== champ.name) {
                 showModal("Cancelado", "A exclusão foi cancelada.");
                 return;
@@ -933,9 +1041,7 @@
             if (!name || name.trim() === '') return;
             
             // Gera um ID amigável (slug)
-            const id = name.trim().toLowerCase()
-                .replace(/\s+/g, '-') 
-                .replace(/[^a-z0-9-]/g, ''); 
+            const id = nameToId(name);
                 
             if (!id) {
                 showModal("Erro", "Nome inválido. Use letras e números.");
@@ -964,8 +1070,22 @@
         // === VIEW: RANKING GERAL
         // =================================================================
         const renderGlobalRanking = () => {
-            // Ordena os jogadores por pontos
-            const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
+            // Ordena os jogadores por pontos (com desempate)
+            const sortedPlayers = [...globalPlayers].sort((a, b) => {
+                if (a.points !== b.points) {
+                    return (b.points || 0) - (a.points || 0);
+                }
+                if (a.goldWins !== b.goldWins) {
+                    return (b.goldWins || 0) - (a.goldWins || 0);
+                }
+                if (a.silverWins !== b.silverWins) {
+                    return (b.silverWins || 0) - (a.silverWins || 0);
+                }
+                if (a.coveiroWins !== b.coveiroWins) {
+                    return (a.coveiroWins || 0) - (b.coveiroWins || 0);
+                }
+                return a.name.localeCompare(b.name);
+            });
             
             const rankingsHtml = sortedPlayers.length === 0
                 ? `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhum jogador neste ranking.</td></tr>`
@@ -1133,7 +1253,7 @@
             if (!activeChampionship) {
                 mainContent.innerHTML = `
                 <div class="text-center py-20 animate-fade-in">
-                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600 mx-auto"></div>
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
                     <p class="mt-4 text-gray-500">Carregando campeonato...</p>
                 </div>
                 `;
@@ -1682,16 +1802,20 @@
             
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
+                // CORREÇÃO: Usa a nova função que calcula Saldo
                 const stats = getGlobalTournamentStats_MataMata(activeChampionship);
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
-                    const coveiros = stats.filter(p => p.gamesWon === minGames); 
+                    const minSaldo = stats[0].saldo;
+                    // Pega todos os jogadores empatados com o pior saldo
+                    const coveiros = stats.filter(p => p.gamesWon === minGames && p.saldo === minSaldo); 
                     const coveiroNames = coveiros.map(c => c.name).join(' / ');
+                    
                     coveiroHtml = `
                     <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl mt-8 text-center animate-fade-in border border-gray-200">
                         <h4 class="text-2xl font-black uppercase tracking-wider text-rose-600">👻 Prêmio Coveiro</h4>
                         <p class="text-4xl font-extrabold text-gray-900 mt-2">${coveiroNames}</p>
-                        <p class="text-sm text-gray-500">Com apenas ${minGames} games marcados no torneio.</p>
+                        <p class="text-sm text-gray-500">Com ${minGames} games e saldo ${minSaldo}.</p>
                     </div>
                     `;
                 }
@@ -1894,19 +2018,6 @@
         };
         
         /**
-         * Retorna o nome da rodada (ex: Final, Semi-Final)
-         */
-        const getRoundTitle = (roundNum, maxRound) => {
-            const r = Number(roundNum);
-            const max = Number(maxRound);
-            if (r === max) return 'Final';
-            if (r === max - 1) return 'Semi-Final';
-            if (r === max - 2) return 'Quartas de Final';
-            if (r === max - 3) return 'Oitavas de Final';
-            return `Rodada ${r}`;
-        };
-
-        /**
          * Retorna os vencedores (se houver) do mata-mata
          */
         const getKnockoutWinners = (champData) => {
@@ -1962,6 +2073,7 @@
                 if (rank === 3) medal = '🥉';
                 
                 const isCoveiro = (rank === leaderboard.length && leaderboard.length > 3);
+                // SALDO: Define a cor (verde > 0, vermelho < 0)
                 const saldoClass = player.saldo > 0 ? 'text-emerald-600' : (player.saldo < 0 ? 'text-rose-600' : 'text-gray-500');
                 
                 return `
@@ -1994,7 +2106,7 @@
                 `;
             }
             
-            // Cabeçalho da Tabela (com a nova coluna Saldo)
+            // SALDO: Cabeçalho da Tabela (com a nova coluna Saldo)
             const tableHeader = `
                 <thead class="bg-amber-100">
                     <tr class="text-left">
@@ -2010,7 +2122,7 @@
             return `
                 <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200 mb-8">
                     <h2 class="text-3xl font-bold mb-6 text-purple-600 flex items-center gap-3">
-                        ${icons.shuffle} Classificação (Leaderboard)
+                        ${icons.list} Classificação (Leaderboard)
                     </h2>
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-max">
@@ -2104,7 +2216,7 @@
              if (!activeChampionship) {
                 mainContent.innerHTML = `
                 <div class="text-center py-20 animate-fade-in">
-                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600 mx-auto"></div>
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
                     <p class="mt-4 text-gray-500">Aguardando dados do torneio...</p>
                 </div>
                 `;
@@ -2263,16 +2375,19 @@
             
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
+                // CORREÇÃO: Usa a nova função que calcula Saldo
                 const stats = getGlobalTournamentStats_MataMata(activeChampionship);
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
-                    const coveiros = stats.filter(p => p.gamesWon === minGames);
+                    const minSaldo = stats[0].saldo;
+                    // Pega todos os jogadores empatados com o pior saldo
+                    const coveiros = stats.filter(p => p.gamesWon === minGames && p.saldo === minSaldo); 
                     const coveiroNames = coveiros.map(c => c.name).join(' / ');
                     coveiroHtml = `
                     <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl text-center animate-fade-in w-full sm:max-w-sm border border-gray-200">
                         <h4 class="text-2xl font-black uppercase tracking-wider text-rose-600">👻 Prêmio Coveiro</h4>
                         <p class="text-4xl font-extrabold text-gray-900 mt-2">${coveiroNames}</p>
-                        <p class="text-sm text-gray-500">Com apenas ${minGames} games marcados no torneio.</p>
+                        <p class="text-sm text-gray-500">Com ${minGames} games e saldo ${minSaldo}.</p>
                     </div>
                     `;
                 }
@@ -2382,7 +2497,7 @@
                             <span class="font-medium text-lg ${winnerClass1}">
                                 ${pair1 ? pair1.name : 'Aguardando...'}
                             </span>
-                            <span classm-lg p-2 text-center text-xl font-bold opacity-70">
+                            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
                                 ${score1 === null ? '-' : score1}
                             </span>
                         </div>
@@ -2411,7 +2526,7 @@
             }).join('');
             
             return `
-            <div classbg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
+            <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
                 <h3 class="text-3xl font-bold mb-6 text-cyan-600">
                     ${title}
                 </h3>
@@ -2437,6 +2552,7 @@
                 if (rank === 3) medal = '🥉';
                 
                 const isCoveiro = (rank === leaderboard.length && leaderboard.length > 3);
+                // SALDO: Define a cor (verde > 0, vermelho < 0)
                 const saldoClass = player.saldo > 0 ? 'text-emerald-600' : (player.saldo < 0 ? 'text-rose-600' : 'text-gray-500');
                 
                 return `
@@ -2450,7 +2566,7 @@
                 `;
             }).join('');
             
-            // Cabeçalho da Tabela
+            // SALDO: Cabeçalho da Tabela (com a nova coluna Saldo)
             const tableHeader = `
                 <thead class="bg-amber-100">
                     <tr class="text-left">
@@ -2458,7 +2574,7 @@
                         <th class="p-3 sm:p-4 text-gray-600">Jogador</th>
                         <th class="p-3 sm:p-4 text-gray-600">Games Ganhos</th>
                         <th class="p-3 sm:p-4 text-gray-600">Saldo</th>
-                        <th classa="p-3 sm:p-4 text-center rounded-tr-lg text-gray-600">Games Perdidos</th>
+                        <th class="p-3 sm:p-4 text-center rounded-tr-lg text-gray-600">Games Perdidos</th>
                     </tr>
                 </thead>
             `;
@@ -2466,7 +2582,7 @@
             return `
                 <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200 mb-8 w-full lg:w-auto">
                     <h2 class="text-3xl font-bold mb-6 text-purple-600 flex items-center gap-3">
-                        ${icons.shuffle} Classificação ao Vivo
+                        ${icons.list} Classificação ao Vivo
                     </h2>
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-max">
@@ -3055,29 +3171,38 @@
                 const placements = new Map(); // Key: playerId, Value: 'gold_R4_win'
                 
                 const processBracket = (bracket, prefix) => {
+                    if (!bracket || bracket.length === 0) return; // Pula se a chave (ex: Prata) não foi gerada
                     const maxRound = Math.max(...bracket.map(m => m.round));
+                    
                     bracket.forEach(match => {
-                        // Se não for a final
-                        if (match.round < maxRound) {
-                            const loserKey = `${prefix}_R${maxRound}_lose`; // Ex: gold_R4_lose
-                            if (match.winner && match.pairs[0] && match.pairs[1]) { // Ignora Byes
-                                const loser = (match.winner.id === match.pairs[0].id) ? match.pairs[1] : match.pairs[0];
-                                loser.players.forEach(p => placements.set(p.id, loserKey));
-                            }
-                        } 
+                        if (!match.pairs[0] || !match.pairs[1] || match.pairs[0] === 'BYE' || match.pairs[1] === 'BYE') {
+                            return; // Ignora partidas incompletas ou de BYE
+                        }
+
                         // Se for a final
-                        else {
-                            const winnerKey = `${prefix}_R${maxRound}_win`; // Ex: gold_R4_win
-                            const runnerUpKey = `${prefix}_R${maxRound}_run`; // Ex: gold_R4_run
+                        if (match.round === maxRound) {
+                            const winnerKey = `${prefix}_R_winner`; // Ex: gold_R_winner
+                            const runnerUpKey = `${prefix}_R_runnerup`; // Ex: gold_R_runnerup
                             
                             if (match.winner) {
                                 match.winner.players.forEach(p => placements.set(p.id, winnerKey));
                                 const runnerUp = match.pairs.find(p => p.id !== match.winner.id);
-                                if (runnerUp) {
+                                if (runnerUp && runnerUp.players) {
                                     runnerUp.players.forEach(p => placements.set(p.id, runnerUpKey));
                                 }
                             }
                         }
+                        // Se for a semi-final
+                        else if (match.round === maxRound - 1) {
+                            const loserKey = `${prefix}_R${maxRound}_lose`; // Ex: gold_R4_lose
+                            if (match.winner) {
+                                const loser = (match.winner.id === match.pairs[0].id) ? match.pairs[1] : match.pairs[0];
+                                if (loser && loser.players) {
+                                    loser.players.forEach(p => placements.set(p.id, loserKey));
+                                }
+                            }
+                        }
+                        // TODO: Adicionar lógica para 'Perdeu Quartas' (R_lose) se necessário
                     });
                 };
                 
@@ -3105,7 +3230,7 @@
                 }, { merge: true });
 
                 hideModal();
-                showModal("Sucesso!", `Ranking global atualizado! Campeões Ouro: ${goldWinner.name}.`);
+                showModal("Sucesso!", `Ranking global atualizado! Campeões Ouro: ${goldWinner?.name || 'N/D'}.`);
 
             } catch (error) {
                 console.error("Erro ao finalizar (manual) torneio:", error);
@@ -3116,7 +3241,1604 @@
         /**
          * (Auxiliar) Calcula os pontos ganhos na fase de grupos
          */
+```eof        /**
+         * Renderiza a view do campeonato (Mata-Mata)
+         */
+        const renderChampionshipView_MataMata = (champInfo) => {
+            let html = '';
+            
+            // Se finalizado, mostra grupos e chave
+            if (champInfo?.status === 'finished') {
+                html = renderGroupStage() + renderKnockoutView(true);
+            } 
+            // Se em mata-mata, mostra grupos e chave
+            else if (activeChampionship.status === 'knockout') {
+                html = renderGroupStage() + renderKnockoutView(false);
+            } 
+            // Se em grupos, mostra apenas os grupos
+            else if (activeChampionship.status === 'groups') {
+                html = renderGroupStage();
+            } 
+            // Se em inscrição, mostra apenas a inscrição
+            else { 
+                html = renderPlayerRegistration('mata_mata');
+            }
+            return html;
+        };
+        
+        /**
+         * Renderiza a Fase de Grupos (Mata-Mata)
+         */
+        const renderGroupStage = () => {
+            let allScoresFilled = true;
+            const isDisabled = !appState.isAdmin ? 'disabled' : '';
+            // Trava os inputs se os grupos já foram finalizados
+            const isLocked = (activeChampionship.status === 'knockout' || activeChampionship.status === 'finished');
 
+            const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
+                const rankings = getRankings(group);
+                
+                const matchesHtml = group.matches.map((match, matchIndex) => {
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
+                    if (score1 === null || score2 === null) allScoresFilled = false;
+                    
+                    // Oculta o botão de confirmar se estiver travado (isLocked) ou se for visitante
+                    const confirmButtonDisplay = (isLocked || !appState.isAdmin) ? 'hidden' : '';
+
+                    return `
+                    <div class="bg-amber-50 p-3 sm:p-4 rounded-lg border border-amber-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+                            <span class="text-sm text-gray-700 text-center sm:text-left">${match.names[0]}</span>
+                            <span class="font-bold text-cyan-600">vs</span>
+                            <span class="text-sm text-gray-700 text-center sm:text-right">${match.names[1]}</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-3 mt-3">
+                            <input
+                                type="number"
+                                min="0"
+                                value="${score1 === null ? '' : score1}"
+                                id="g-${groupIndex}-m-${matchIndex}-s0" 
+                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isLocked ? 'opacity-70' : ''}"
+                                ${isLocked ? 'disabled' : isDisabled}
+                            />
+                            <span class="text-gray-500">-</span>
+                            <input
+                                type="number"
+                                min="0"
+                                value="${score2 === null ? '' : score2}"
+                                id="g-${groupIndex}-m-${matchIndex}-s1"
+                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isLocked ? 'opacity-70' : ''}"
+                                ${isLocked ? 'disabled' : isDisabled}
+                            />
+                            <button 
+                                class="confirm-group-score-btn p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all ${confirmButtonDisplay}"
+                                data-group-index="${groupIndex}"
+                                data-match-index="${matchIndex}"
+                                title="Confirmar Placar">
+                                ${icons.check}
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                
+                const rankingsHtml = rankings.map((player, rankIndex) => `
+                    <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-emerald-600' : 'text-orange-600'}">
+                        <td class="p-3 font-bold">${rankIndex + 1}º</td>
+                        <td class="p-3 text-gray-800">${player.name}</td>
+                        <td class="p-3 font-bold">${player.gamesWon}</td>
+                    </tr>
+                `).join('');
+
+                const printButton = `
+                    <button class="print-group-btn bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm" data-group-index="${groupIndex}">
+                        ${icons.printer}
+                    </button>
+                `;
+
+                return `
+                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in border border-gray-200">
+                    <div class="flex justify-between items-center mb-5">
+                        <h3 class="text-2xl font-bold text-cyan-600">Grupo ${groupIndex + 1}</h3>
+                        ${printButton}
+                    </div>
+                    <div class="space-y-4 mb-6">${matchesHtml}</div>
+                    <div>
+                        <h4 class="text-lg font-semibold mb-3 text-gray-800">Ranking do Grupo</h4>
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-amber-100">
+                                    <th class="p-3 rounded-l-lg text-gray-600">Pos.</th>
+                                    <th class="p-3 text-gray-600">Jogador</th>
+                                    <th class="p-3 rounded-r-lg text-gray-600">Games Vencidos</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rankingsHtml}</tbody>
+                        </table>
+                        <div class="flex justify-between mt-2 text-sm">
+                            <span class="text-emerald-600">▲ Dupla Ouro 🥇</span>
+                            <span class="text-orange-600">▼ Dupla Prata 🥈</span>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+            
+            // Botão de Finalizar Grupos
+            const finalizeButtonHtml = (appState.isAdmin && activeChampionship.status === 'groups') ? `
+            <div class="mt-8 text-center">
+                <button
+                    id="finalize-groups-btn"
+                    type="button"
+                    ${!allScoresFilled ? 'disabled' : ''}
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
+                    ${icons.trophy}
+                    ${allScoresFilled ? "Finalizar Grupos e Gerar Chaves" : "Preencha todos os placares"}
+                </button>
+            </div>
+            ` : '';
+            
+            return `
+                <div class="space-y-8 animate-fade-in">
+                    ${groupsHtml}
+                    ${finalizeButtonHtml}
+                </div>
+            `;
+        };
+        
+        /**
+         * Renderiza as Chaves de Mata-Mata (Ouro e Prata)
+         */
+        const renderKnockoutView = (isFinished) => {
+            const goldHtml = renderBracket('Série Ouro 🥇', activeChampionship.goldBracket, 'goldBracket', isFinished);
+            const silverHtml = renderBracket('Série Prata 🥈', activeChampionship.silverBracket, 'silverBracket', isFinished);
+            
+            let coveiroHtml = '';
+            if (activeChampionship.groups && activeChampionship.groups.length > 0) {
+                // CORREÇÃO: Usa a nova função que calcula Saldo
+                const stats = getGlobalTournamentStats_MataMata(activeChampionship);
+                if (stats.length > 0) {
+                    const minGames = stats[0].gamesWon;
+                    const minSaldo = stats[0].saldo;
+                    // Pega todos os jogadores empatados com o pior saldo
+                    const coveiros = stats.filter(p => p.gamesWon === minGames && p.saldo === minSaldo); 
+                    const coveiroNames = coveiros.map(c => c.name).join(' / ');
+                    
+                    coveiroHtml = `
+                    <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl mt-8 text-center animate-fade-in border border-gray-200">
+                        <h4 class="text-2xl font-black uppercase tracking-wider text-rose-600">👻 Prêmio Coveiro</h4>
+                        <p class="text-4xl font-extrabold text-gray-900 mt-2">${coveiroNames}</p>
+                        <p class="text-sm text-gray-500">Com ${minGames} games e saldo ${minSaldo}.</p>
+                    </div>
+                    `;
+                }
+            }
+            
+            // Botão de Finalização Manual (Mata-Mata)
+            let finalizeButtonHtml = '';
+            const champ = championships.find(c => c.id === appState.currentChampionshipId);
+            
+            if (appState.isAdmin && activeChampionship.status === 'knockout' && champ?.status !== 'finished') {
+                const { goldWinner, silverWinner } = getKnockoutWinners(activeChampionship);
+                
+                finalizeButtonHtml = `
+                <div class="mt-8 text-center bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+                    <h3 class="text-2xl font-bold text-cyan-600 mb-4">Finalizar Campeonato</h3>
+                    <p class="text-gray-600 mb-2">Campeão Ouro: <span class="font-bold">${goldWinner ? goldWinner.name : 'Aguardando...'}</span></p>
+                    <p class="text-gray-600 mb-5">Campeão Prata: <span class="font-bold">${silverWinner ? silverWinner.name : 'Aguardando...'}</span></p>
+                    <button
+                        id="finalize-champ-btn-mm"
+                        type="button"
+                        ${(!goldWinner || !silverWinner) ? 'disabled' : ''}
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
+                        ${icons.award}
+                        ${(goldWinner && silverWinner) ? "Finalizar e Lançar no Ranking" : "Aguardando Finais"}
+                    </button>
+                </div>
+                `;
+            }
+            
+            return `<div class="animate-fade-in">${finalizeButtonHtml}${goldHtml}${silverHtml}${coveiroHtml}</div>`;
+        };
+
+        /**
+         * Renderiza uma chave (bracket) individual
+         */
+        const renderBracket = (title, bracket, bracketType, isFinished) => {
+            const rounds = {};
+            if (!bracket || bracket.length === 0) {
+                 return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
+                     <h3 class="text-3xl font-bold mb-6 text-cyan-600 flex items-center gap-3">
+                         ${title}
+                     </h3>
+                     <p class="text-gray-500">Chave ainda não gerada.</p>
+                  </div>`;
+            }
+
+            bracket.forEach(match => {
+                if (!rounds[match.round]) rounds[match.round] = [];
+                rounds[match.round].push(match);
+            });
+            
+            const maxRound = Math.max(...bracket.map(m => m.round));
+            const final = bracket.find(m => m.round === maxRound);
+            const semiFinals = bracket.filter(m => m.round === maxRound - 1);
+            
+            const champion = final?.winner; 
+            const runnerUp = final?.pairs.find(p => p && p.id !== champion?.id);
+
+            // Lógica para encontrar o 3º Lugar (Perdedor da semi do campeão)
+            let thirdPlace = null;
+            if (champion && semiFinals.length === 2) {
+                const championSemi = semiFinals.find(sf => 
+                    sf.pairs.some(p => p && p.id === champion.id)
+                );
+                if(championSemi) {
+                    thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
+                }
+            }
+
+            const isGold = bracketType === 'goldBracket';
+            const cardStyle = isGold 
+                ? 'bg-gradient-to-r from-yellow-300 via-orange-400 to-orange-500 text-white' 
+                : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900';
+            
+            const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
+            const runnerUpStyle = isGold ? 'text-lg font-bold text-white opacity-90' : 'text-lg font-bold text-gray-700';
+            const thirdPlaceStyle = isGold ? 'text-base font-medium text-white opacity-80' : 'text-base font-medium text-gray-600';
+
+            const championHtml = champion ? `
+            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in space-y-2">
+                <div>
+                    <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">🥇 1º Lugar</h4>
+                    <p class="${championNameStyle}">${champion.name}</p>
+                </div>
+                ${runnerUp ? `
+                <div>
+                    <h5 class="text-lg font-bold uppercase tracking-wider ${runnerUpStyle}">🥈 2º Lugar</h5>
+                    <p class="${runnerUpStyle}">${runnerUp.name}</p>
+                </div>
+                ` : ''}
+                ${thirdPlace ? `
+                <div>
+                    <h6 class="text-base font-medium uppercase tracking-wider ${thirdPlaceStyle}">🥉 3º Lugar</h6>
+                    <p class="${thirdPlaceStyle}">${thirdPlace.name}</p>
+                </div>
+                ` : ''}
+            </div>
+            ` : '';
+
+            // Renderiza as colunas das rodadas
+            const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
+                const roundTitle = getRoundTitle(roundNum, maxRound);
+                
+                const matchesHtml = rounds[roundNum].map(match => {
+                    const pair1 = match.pairs[0]; 
+                    const pair2 = match.pairs[1]; 
+                    const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
+                    const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
+                    const isBye = pair2 === 'BYE' || pair1 === 'BYE';
+                    
+                    // Jogo de BYE (Folga)
+                    if (isBye) {
+                        const byePair = pair1 === 'BYE' ? pair2 : pair1;
+                        const winnerClass = 'text-emerald-600 font-bold';
+                        return `
+                        <div class="bg-emerald-50 rounded-lg shadow-sm border border-emerald-200 p-4 opacity-80">
+                            <p class="text-xs text-emerald-700 font-semibold mb-2">BYE (Folga)</p>
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium text-sm ${winnerClass}">
+                                    ${byePair ? byePair.name : 'Erro'}
+                                </span>
+                                <span class="text-sm font-bold text-emerald-800">AVANÇA</span>
+                            </div>
+                        </div>
+                        `;
+                    }
+
+                    // Jogo Normal
+                    // Permite admin editar mesmo finalizado, botão fica sempre visível se for admin
+                    const showConfirmButton = appState.isAdmin && pair1 && pair2 && pair1 !== 'BYE' && pair2 !== 'BYE';
+                    const inputDisabled = !appState.isAdmin || (!pair1 || !pair2) || pair1 === 'BYE' || pair2 === 'BYE';
+
+                    return `
+                    <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-sm ${isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
+                                ${pair1 ? pair1.name : 'Aguardando...'}
+                            </span>
+                            <input
+                                type="number"
+                                min="0"
+                                value="${score1 === null ? '' : score1}"
+                                id="k-${match.id}-s0"
+                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabled ? 'opacity-70' : ''}"
+                                ${inputDisabled ? 'disabled' : ''}
+                            />
+                        </div>
+                        
+                        <div class="flex items-center my-2">
+                            <div class="flex-grow border-t border-gray-300"></div>
+                            <span class="mx-2 text-xs text-gray-500">vs</span>
+                            <div class="flex-grow border-t border-gray-300"></div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-sm ${isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
+                                ${pair2 ? pair2.name : 'Aguardando...'}
+                            </span>
+                            <input
+                                type="number"
+                                min="0"
+                                value="${score2 === null ? '' : score2}"
+                                id="k-${match.id}-s1"
+                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabled ? 'disabled' : ''}"
+                                ${inputDisabled ? 'disabled' : ''}
+                            />
+                        </div>
+                        <div class="text-center mt-3 ${!showConfirmButton ? 'hidden' : ''}">
+                            <button 
+                                class="confirm-knockout-score-btn p-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all"
+                                data-bracket-type="${bracketType}"
+                                data-match-id="${match.id}"
+                                title="Confirmar Placar">
+                                ${icons.check}
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                return `
+                <div class="flex flex-col space-y-6 flex-shrink-0 w-72 sm:w-80">
+                    <h4 class="text-xl font-semibold text-gray-800">${roundTitle}</h4>
+                    <div class="space-y-4">${matchesHtml}</div>
+                </div>
+                `;
+            }).join('');
+            
+            return `
+            <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
+                <h3 class="text-3xl font-bold mb-6 text-cyan-600">
+                    ${title}
+                </h3>
+                ${championHtml}
+                <div class="flex gap-4 sm:gap-6 pb-4 overflow-x-auto">
+                    ${roundsHtml}
+                </div>
+            </div>
+            `;
+        };
+        
+        /**
+         * Retorna os vencedores (se houver) do mata-mata
+         */
+        const getKnockoutWinners = (champData) => {
+            if (!champData.goldBracket || champData.goldBracket.length === 0) {
+                return { goldWinner: null, silverWinner: null };
+            }
+            const maxRoundGold = Math.max(...champData.goldBracket.map(m => m.round));
+            const maxRoundSilver = Math.max(...champData.silverBracket.map(m => m.round));
+            const goldFinal = champData.goldBracket.find(m => m.round === maxRoundGold);
+            const silverFinal = champData.silverBracket.find(m => m.round === maxRoundSilver);
+            
+            return {
+                goldWinner: goldFinal?.winner || null,
+                silverWinner: silverFinal?.winner || null
+            };
+        };
+        
+        // =================================================================
+        // === LÓGICA (Sortudo)
+        // =================================================================
+
+        /**
+         * Renderiza a view do campeonato (Sortudo)
+         */
+        const renderChampionshipView_Sortudo = (champInfo) => {
+            let html = '';
+            
+            if (champInfo?.status === 'finished') {
+                html = renderLeaderboard_Sortudo(true); // Finalizado
+            } 
+            else if (activeChampionship.status === 'rounds') {
+                html = renderLeaderboard_Sortudo(false); // Em andamento
+                html += renderRounds_Sortudo();
+            } 
+            else { 
+                // Status 'registration'
+                html = renderPlayerRegistration('sortudo');
+            }
+            return html;
+        };
+
+        /**
+         * Renderiza o Leaderboard (Classificação) do Torneio Sortudo
+         */
+        const renderLeaderboard_Sortudo = (isFinished) => {
+            const { leaderboard, allScoresFilled } = getLeaderboard_Sortudo();
+            
+            const playerRows = leaderboard.map((player, index) => {
+                const rank = index + 1;
+                let medal = '';
+                if (rank === 1) medal = '🥇';
+                if (rank === 2) medal = '🥈';
+                if (rank === 3) medal = '🥉';
+                
+                const isCoveiro = (rank === leaderboard.length && leaderboard.length > 3);
+                // SALDO: Define a cor (verde > 0, vermelho < 0)
+                const saldoClass = player.saldo > 0 ? 'text-emerald-600' : (player.saldo < 0 ? 'text-rose-600' : 'text-gray-500');
+                
+                return `
+                    <tr class="border-b border-amber-100 animate-fade-in-sm">
+                        <td class="p-3 sm:p-4 font-bold text-lg text-cyan-600">${rank}º ${medal}</td>
+                        <td class="p-3 sm:p-4 font-medium text-gray-800">${player.name} ${isCoveiro ? '👻' : ''}</td>
+                        <td class="p-3 sm:p-4 font-bold text-xl text-orange-600">${player.totalGames}</td>
+                        <td class="p-3 sm:p-4 font-bold ${saldoClass}">${player.saldo > 0 ? '+' : ''}${player.saldo}</td>
+                        <td class="p-3 sm:p-4 text-center text-gray-500">${player.gamesLost}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Botão de Finalização (Admin)
+            let finalizeButtonHtml = '';
+            if (appState.isAdmin && !isFinished && activeChampionship.status === 'rounds') {
+                 finalizeButtonHtml = `
+                <div class="mt-8 text-center bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+                    <h3 class="text-2xl font-bold text-cyan-600 mb-4">Finalizar Torneio Sortudo</h3>
+                    <p class="text-gray-600 mb-5">O ranking será calculado com base nesta classificação.</p>
+                    <button
+                        id="finalize-champ-btn-sortudo"
+                        type="button"
+                        ${!allScoresFilled ? 'disabled' : ''}
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
+                        ${icons.award}
+                        ${allScoresFilled ? "Finalizar e Lançar no Ranking" : "Preencha todos os placares"}
+                    </button>
+                </div>
+                `;
+            }
+            
+            // SALDO: Cabeçalho da Tabela (com a nova coluna Saldo)
+            const tableHeader = `
+                <thead class="bg-amber-100">
+                    <tr class="text-left">
+                        <th class="p-3 sm:p-4 rounded-tl-lg text-gray-600">Pos.</th>
+                        <th class="p-3 sm:p-4 text-gray-600">Jogador</th>
+                        <th class="p-3 sm:p-4 text-gray-600">Games Ganhos</th>
+                        <th class="p-3 sm:p-4 text-gray-600">Saldo</th>
+                        <th class="p-3 sm:p-4 text-center rounded-tr-lg text-gray-600">Games Perdidos</th>
+                    </tr>
+                </thead>
+            `;
+
+            return `
+                <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200 mb-8">
+                    <h2 class="text-3xl font-bold mb-6 text-purple-600 flex items-center gap-3">
+                        ${icons.list} Classificação (Leaderboard)
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-max">
+                            ${tableHeader}
+                            <tbody class="divide-y divide-amber-100">
+                                ${playerRows}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ${finalizeButtonHtml}
+            `;
+        };
+        
+        /**
+         * Renderiza as Rodadas (Admin) do Torneio Sortudo
+         */
+        const renderRounds_Sortudo = () => {
+            const isDisabled = !appState.isAdmin ? 'disabled' : '';
+            const playerNameMap = new Map(activeChampionship.players.map(p => [p.id, p.name]));
+
+            const roundsHtml = activeChampionship.rounds.map((round, roundIndex) => {
+                
+                const matchesHtml = round.matches.map((match, matchIndex) => {
+                    const [p1, p2, p3, p4] = match.p;
+                    const [s1, s2] = match.score;
+                    
+                    const pair1Name = `${playerNameMap.get(p1) || '?'} / ${playerNameMap.get(p2) || '?'}`;
+                    const pair2Name = `${playerNameMap.get(p3) || '?'} / ${playerNameMap.get(p4) || '?'}`;
+
+                    return `
+                    <div class="bg-amber-50 p-3 sm:p-4 rounded-lg border border-amber-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+                            <span class="text-sm text-gray-700 text-center sm:text-left">${pair1Name}</span>
+                            <span class="font-bold text-cyan-600">vs</span>
+                            <span class="text-sm text-gray-700 text-center sm:text-right">${pair2Name}</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-3 mt-3">
+                            <input
+                                type="number"
+                                min="0"
+                                value="${s1 === null ? '' : s1}"
+                                id="s-${roundIndex}-m-${matchIndex}-s0" 
+                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
+                                ${isDisabled}
+                            />
+                            <span class="text-gray-500">-</span>
+                            <input
+                                type="number"
+                                min="0"
+                                value="${s2 === null ? '' : s2}"
+                                id="s-${roundIndex}-m-${matchIndex}-s1"
+                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
+                                ${isDisabled}
+                            />
+                            <button 
+                                class="confirm-sortudo-score-btn p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all ${isDisabled ? 'hidden' : ''}"
+                                data-round-index="${roundIndex}"
+                                data-match-index="${matchIndex}"
+                                title="Confirmar Placar">
+                                ${icons.check}
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                
+                const luckyPlayersHtml = round.luckyPlayers.map(pId => playerNameMap.get(pId) || '?').join(' / ');
+
+                return `
+                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in border border-gray-200">
+                    <h3 class="text-2xl font-bold text-cyan-600 mb-4">Rodada ${roundIndex + 1}</h3>
+                    ${luckyPlayersHtml ? `
+                        <div class="mb-4 bg-emerald-50 border border-emerald-200 p-3 rounded-lg text-sm">
+                            <span class="font-semibold text-emerald-700">Sortudos (BYE):</span> ${luckyPlayersHtml}
+                            <span class="text-emerald-700">(+${activeChampionship.config.luckyGames} games)</span>
+                        </div>
+                    ` : ''}
+                    <div class="space-y-4">${matchesHtml}</div>
+                </div>
+                `;
+            }).join('');
+            
+            return `<div class="space-y-8 animate-fade-in">${roundsHtml}</div>`;
+        };
+        
+        // =================================================================
+        // === VIEW: TELÃO (Bifurcação)
+        // =================================================================
+        const renderTelaoView = () => {
+             if (!activeChampionship) {
+                mainContent.innerHTML = `
+                <div class="text-center py-20 animate-fade-in">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
+                    <p class="mt-4 text-gray-500">Aguardando dados do torneio...</p>
+                </div>
+                `;
+                return;
+            }
+            
+            const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+            const champName = champInfo ? champInfo.name : "Campeonato";
+            const champType = champInfo?.type || 'mata_mata';
+            
+            let html = `<h1 class="text-4xl sm:text-6xl font-bold text-center text-cyan-600 my-8 animate-fade-in">🏖️ ${champName} 🎾</h1>`;
+            let contentHtml = '';
+
+            // Bifurcação (Telão)
+            if (champType === 'sortudo') {
+                if (champInfo?.status === 'finished') {
+                    contentHtml = renderLeaderboard_Sortudo_ReadOnly(true);
+                } else if (activeChampionship.status === 'rounds') {
+                    contentHtml = renderLeaderboard_Sortudo_ReadOnly(false);
+                    contentHtml += renderRounds_Sortudo_ReadOnly();
+                } else { 
+                    contentHtml = renderPlayerRegistration_ReadOnly();
+                }
+            } else {
+                // Mata-Mata
+                if (champInfo?.status === 'finished') {
+                    contentHtml = renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(true);
+                } else if (activeChampionship.status === 'knockout') {
+                    contentHtml = renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(false);
+                } else if (activeChampionship.status === 'groups') {
+                    contentHtml = renderGroupStage_ReadOnly();
+                } else { 
+                    contentHtml = renderPlayerRegistration_ReadOnly();
+                }
+            }
+
+            // O Torneio Sortudo e Mata-Mata (Pós-inscrição) usam layout flexível
+            if (activeChampionship.status !== 'registration') {
+                html += `
+                <div class="flex flex-wrap justify-center gap-6 animate-fade-in">
+                    ${contentHtml}
+                </div>
+                `;
+            } else {
+                html += contentHtml; // Inscrição (ocupa tela cheia)
+            }
+            
+            mainContent.innerHTML = html;
+            
+            if (appState.isTelaoMode) {
+                 document.body.style.backgroundColor = '#FFFAF0'; 
+            }
+        };
+
+        /**
+         * Renderiza Inscrição (Read-Only)
+         */
+        const renderPlayerRegistration_ReadOnly = () => {
+            const playerCount = activeChampionship.players.length;
+            const playersListHtml = playerCount === 0
+                ? `<p class="text-gray-500 text-center py-4 text-2xl">Aguardando inscrição dos jogadores...</p>`
+                : activeChampionship.players.map(player => `
+                    <div class="bg-white p-4 rounded-lg animate-fade-in-sm border border-gray-200 shadow-sm">
+                        <span class="text-gray-800 font-medium text-2xl">${player.name}</span>
+                    </div>
+                `).join('');
+
+            return `
+                <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12 animate-fade-in max-w-4xl mx-auto border border-gray-200">
+                    <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8 border border-gray-200">
+                        <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-cyan-600 flex items-center gap-3">
+                            ${icons.users}
+                            Jogadores Inscritos (${playerCount})
+                        </h3>
+                        <div class="max-h-[70vh] overflow-y-auto pr-2 space-y-3">
+                            ${playersListHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+        
+        /**
+         * Renderiza Grupos (Read-Only)
+         */
+        const renderGroupStage_ReadOnly = () => {
+            const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
+                const rankings = getRankings(group);
+                
+                const matchesHtml = group.matches.map((match) => {
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
+                    return `
+                    <div class="bg-amber-100 p-3 sm:p-4 rounded-lg border border-amber-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+                            <span class="text-base text-gray-700 text-center sm:text-left">${match.names[0]}</span>
+                            <span class="font-bold text-cyan-600">vs</span>
+                            <span class="text-base text-gray-700 text-center sm:text-right">${match.names[1]}</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-3 mt-3">
+                            <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
+                                ${score1 === null ? '-' : score1}
+                            </span>
+                            <span class="text-gray-500 text-xl">-</span>
+                             <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
+                                ${score2 === null ? '-' : score2}
+                            </span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                
+                const rankingsHtml = rankings.map((player, rankIndex) => `
+                    <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-emerald-600' : 'text-orange-600'}">
+                        <td class="p-3 font-bold text-lg">${rankIndex + 1}º</td>
+                        <td class="p-3 text-lg text-gray-800">${player.name}</td>
+                        <td class="p-3 font-bold text-lg">${player.gamesWon}</td>
+                    </tr>
+                `).join('');
+
+                return `
+                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:max-w-sm border border-gray-200">
+                    <div class="flex justify-between items-center mb-5">
+                        <h3 class="text-3xl font-bold text-cyan-600">Grupo ${groupIndex + 1}</h3>
+                    </div>
+                    <div class="space-y-4 mb-6">${matchesHtml}</div>
+                    <div>
+                        <h4 class="text-xl font-semibold mb-3 text-gray-800">Ranking do Grupo</h4>
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-amber-100">
+                                    <th class="p-3 rounded-l-lg text-base text-gray-600">Pos.</th>
+                                    <th class="p-3 text-base text-gray-600">Jogador</th>
+                                    <th class="p-3 rounded-r-lg text-base text-gray-600">Games Vencidos</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rankingsHtml}</tbody>
+                        </table>
+                        <div class="flex justify-between mt-2 text-base">
+                            <span class="text-emerald-600">▲ Dupla Ouro 🥇</span>
+                            <span class="text-orange-600">▼ Dupla Prata 🥈</span>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+            return groupsHtml; 
+        };
+        
+        /**
+         * Renderiza Mata-Mata (Read-Only)
+         */
+        const renderKnockoutView_ReadOnly = (isFinished) => {
+            const goldHtml = renderBracket_ReadOnly('Série Ouro 🥇', activeChampionship.goldBracket, 'goldBracket', isFinished);
+            const silverHtml = renderBracket_ReadOnly('Série Prata 🥈', activeChampionship.silverBracket, 'silverBracket', isFinished);
+            
+            let coveiroHtml = '';
+            if (activeChampionship.groups && activeChampionship.groups.length > 0) {
+                // CORREÇÃO: Usa a nova função que calcula Saldo
+                const stats = getGlobalTournamentStats_MataMata(activeChampionship);
+                if (stats.length > 0) {
+                    const minGames = stats[0].gamesWon;
+                    const minSaldo = stats[0].saldo;
+                    // Pega todos os jogadores empatados com o pior saldo
+                    const coveiros = stats.filter(p => p.gamesWon === minGames && p.saldo === minSaldo); 
+                    const coveiroNames = coveiros.map(c => c.name).join(' / ');
+                    coveiroHtml = `
+                    <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl text-center animate-fade-in w-full sm:max-w-sm border border-gray-200">
+                        <h4 class="text-2xl font-black uppercase tracking-wider text-rose-600">👻 Prêmio Coveiro</h4>
+                        <p class="text-4xl font-extrabold text-gray-900 mt-2">${coveiroNames}</p>
+                        <p class="text-sm text-gray-500">Com ${minGames} games e saldo ${minSaldo}.</p>
+                    </div>
+                    `;
+                }
+            }
+            return goldHtml + silverHtml + coveiroHtml; 
+        };
+        
+        /**
+         * Renderiza Chave Individual (Read-Only)
+         */
+        const renderBracket_ReadOnly = (title, bracket, bracketType, isFinished) => {
+            const rounds = {};
+            if (!bracket || bracket.length === 0) {
+                 return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
+                     <h3 class="text-3xl font-bold mb-6 text-cyan-600">
+                         ${title}
+                     </h3>
+                     <p class="text-gray-500">Chave ainda não gerada.</p>
+                  </div>`;
+            }
+
+            bracket.forEach(match => {
+                if (!rounds[match.round]) rounds[match.round] = [];
+                rounds[match.round].push(match);
+            });
+            
+            const maxRound = Math.max(...bracket.map(m => m.round));
+            const final = bracket.find(m => m.round === maxRound);
+            const semiFinals = bracket.filter(m => m.round === maxRound - 1);
+
+            const champion = final?.winner; 
+            const runnerUp = final?.pairs.find(p => p && p.id !== champion?.id);
+
+            let thirdPlace = null;
+            if (champion && semiFinals.length === 2) {
+                const championSemi = semiFinals.find(sf => 
+                    sf.pairs.some(p => p && p.id === champion.id)
+                );
+                if(championSemi) {
+                    thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
+                }
+            }
+
+            const isGold = bracketType === 'goldBracket';
+            const cardStyle = isGold 
+                ? 'bg-gradient-to-r from-yellow-300 via-orange-400 to-orange-500 text-white' 
+                : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900';
+            
+            const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
+            const runnerUpStyle = isGold ? 'text-lg font-bold text-white opacity-90' : 'text-lg font-bold text-gray-700';
+            const thirdPlaceStyle = isGold ? 'text-base font-medium text-white opacity-80' : 'text-base font-medium text-gray-600';
+
+            const championHtml = champion ? `
+            <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in space-y-2">
+                <div>
+                    <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">🥇 1º Lugar</h4>
+                    <p class="${championNameStyle}">${champion.name}</p>
+                </div>
+                ${runnerUp ? `
+                <div>
+                    <h5 class="text-lg font-bold uppercase tracking-wider ${runnerUpStyle}">🥈 2º Lugar</h5>
+                    <p class="${runnerUpStyle}">${runnerUp.name}</p>
+                </div>
+                ` : ''}
+                ${thirdPlace ? `
+                <div>
+                    <h6 class="text-base font-medium uppercase tracking-wider ${thirdPlaceStyle}">🥉 3º Lugar</h6>
+                    <p class="${thirdPlaceStyle}">${thirdPlace.name}</p>
+                </div>
+                ` : ''}
+            </div>
+            ` : '';
+
+            // Renderiza as colunas das rodadas (Read-Only)
+            const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
+                const roundTitle = getRoundTitle(roundNum, maxRound);
+                
+                const matchesHtml = rounds[roundNum].map(match => {
+                    const pair1 = match.pairs[0]; 
+                    const pair2 = match.pairs[1]; 
+                    const isPair1Winner = match.winner && pair1 && match.winner.id === pair1.id;
+                    const isPair2Winner = match.winner && pair2 && match.winner.id === pair2.id;
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
+                    const isBye = pair2 === 'BYE' || pair1 === 'BYE';
+                    const winnerClass1 = isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
+                    const winnerClass2 = isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800';
+                    
+                    if (isBye) {
+                         const byePair = pair1 === 'BYE' ? pair2 : pair1;
+                        return `
+                        <div class="bg-emerald-50 rounded-lg shadow-sm border border-emerald-200 p-4 opacity-80">
+                            <p class="text-xs text-emerald-700 font-semibold mb-2">BYE (Folga)</p>
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium text-lg ${winnerClass1}">
+                                    ${byePair ? byePair.name : 'Erro'}
+                                </span>
+                                <span class="text-lg font-bold text-emerald-800">AVANÇA</span>
+                            </div>
+                        </div>
+                        `;
+                    }
+                    
+                    return `
+                    <div class="bg-amber-100 rounded-lg shadow-sm border border-amber-200 p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-lg ${winnerClass1}">
+                                ${pair1 ? pair1.name : 'Aguardando...'}
+                            </span>
+                            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
+                                ${score1 === null ? '-' : score1}
+                            </span>
+                        </div>
+                        <div class="flex items-center my-2">
+                            <div class="flex-grow border-t border-gray-300"></div>
+                            <span class="mx-2 text-sm text-gray-500">vs</span>
+                            <div class="flex-grow border-t border-gray-300"></div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-lg ${winnerClass2}">
+                                ${pair2 ? pair2.name : 'Aguardando...'}
+                            </span>
+                            <span class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-xl font-bold opacity-70">
+                                ${score2 === null ? '-' : score2}
+                            </span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                return `
+                <div class="flex flex-col space-y-6 w-full max-w-xs">
+                    <h4 class="text-xl font-semibold text-gray-800">${roundTitle}</h4>
+                    <div class="space-y-4">${matchesHtml}</div>
+                </div>
+                `;
+            }).join('');
+            
+            return `
+            <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
+                <h3 class="text-3xl font-bold mb-6 text-cyan-600">
+                    ${title}
+                </h3>
+                ${championHtml}
+                <div class="flex flex-wrap justify-center gap-4 sm:gap-6 pb-4">
+                    ${roundsHtml}
+                </div>
+            </div>
+            `;
+        };
+        
+        /**
+         * Renderiza Leaderboard (Read-Only)
+         */
+        const renderLeaderboard_Sortudo_ReadOnly = (isFinished) => {
+            const { leaderboard } = getLeaderboard_Sortudo();
+            
+            const playerRows = leaderboard.map((player, index) => {
+                const rank = index + 1;
+                let medal = '';
+                if (rank === 1) medal = '🥇';
+                if (rank === 2) medal = '🥈';
+                if (rank === 3) medal = '🥉';
+                
+                const isCoveiro = (rank === leaderboard.length && leaderboard.length > 3);
+                // SALDO: Define a cor (verde > 0, vermelho < 0)
+                const saldoClass = player.saldo > 0 ? 'text-emerald-600' : (player.saldo < 0 ? 'text-rose-600' : 'text-gray-500');
+                
+                return `
+                    <tr class="border-b border-amber-100">
+                        <td class="p-3 sm:p-4 font-bold text-lg text-cyan-600">${rank}º ${medal}</td>
+                        <td class="p-3 sm:p-4 font-medium text-gray-800 text-lg">${player.name} ${isCoveiro ? '👻' : ''}</td>
+                        <td class="p-3 sm:p-4 font-bold text-xl text-orange-600">${player.totalGames}</td>
+                        <td class="p-3 sm:p-4 font-bold text-lg ${saldoClass}">${player.saldo > 0 ? '+' : ''}${player.saldo}</td>
+                        <td class="p-3 sm:p-4 text-center text-gray-500">${player.gamesLost}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // SALDO: Cabeçalho da Tabela (com a nova coluna Saldo)
+            const tableHeader = `
+                <thead class="bg-amber-100">
+                    <tr class="text-left">
+                        <th class="p-3 sm:p-4 rounded-tl-lg text-gray-600">Pos.</th>
+                        <th class="p-3 sm:p-4 text-gray-600">Jogador</th>
+                        <th class="p-3 sm:p-4 text-gray-600">Games Ganhos</th>
+                        <th class="p-3 sm:p-4 text-gray-600">Saldo</th>
+                        <th class="p-3 sm:p-4 text-center rounded-tr-lg text-gray-600">Games Perdidos</th>
+                    </tr>
+                </thead>
+            `;
+
+            return `
+                <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200 mb-8 w-full lg:w-auto">
+                    <h2 class="text-3xl font-bold mb-6 text-purple-600 flex items-center gap-3">
+                        ${icons.list} Classificação ao Vivo
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-max">
+                            ${tableHeader}
+                            <tbody class="divide-y divide-amber-100">
+                                ${playerRows}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        };
+        
+        /**
+         * Renderiza Rodadas (Read-Only)
+         */
+        const renderRounds_Sortudo_ReadOnly = () => {
+            const playerNameMap = new Map(activeChampionship.players.map(p => [p.id, p.name]));
+
+            const roundsHtml = activeChampionship.rounds.map((round, roundIndex) => {
+                
+                const matchesHtml = round.matches.map((match) => {
+                    const [p1, p2, p3, p4] = match.p;
+                    const [s1, s2] = match.score;
+                    
+                    const pair1Name = `${playerNameMap.get(p1) || '?'} / ${playerNameMap.get(p2) || '?'}`;
+                    const pair2Name = `${playerNameMap.get(p3) || '?'} / ${playerNameMap.get(p4) || '?'}`;
+
+                    return `
+                    <div class="bg-amber-100 p-3 sm:p-4 rounded-lg border border-amber-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+                            <span class="text-base text-gray-700 text-center sm:text-left">${pair1Name}</span>
+                            <span class="font-bold text-cyan-600">vs</span>
+                            <span class="text-base text-gray-700 text-center sm:text-right">${pair2Name}</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-3 mt-3">
+                            <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
+                                ${s1 === null ? '-' : s1}
+                            </span>
+                            <span class="text-gray-500 text-xl">-</span>
+                             <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
+                                ${s2 === null ? '-' : s2}
+                            </span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                
+                const luckyPlayersHtml = round.luckyPlayers.map(pId => playerNameMap.get(pId) || '?').join(' / ');
+
+                return `
+                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:max-w-sm border border-gray-200">
+                    <h3 class="text-3xl font-bold text-cyan-600 mb-4">Rodada ${roundIndex + 1}</h3>
+                    ${luckyPlayersHtml ? `
+                        <div class="mb-4 bg-emerald-50 border border-emerald-200 p-3 rounded-lg text-sm">
+                            <span class="font-semibold text-emerald-700">Sortudos (BYE):</span> ${luckyPlayersHtml}
+                            <span class="text-emerald-700">(+${activeChampionship.config.luckyGames} games)</span>
+                        </div>
+                    ` : ''}
+                    <div class="space-y-4">${matchesHtml}</div>
+                </div>
+                `;
+            }).join('');
+            
+            return roundsHtml;
+        };
+
+        // =================================================================
+        // === AÇÕES E LÓGICA (Comum)
+        // =================================================================
+        
+        /**
+         * Abre o Telão em uma nova aba
+         */
+        const handleLaunchTelao = () => {
+            const champId = appState.currentChampionshipId;
+            if (!champId) {
+                showModal("Erro", "ID do campeonato não encontrado.");
+                return;
+            }
+            const url = `${window.location.origin}${window.location.pathname}?telao=true&champId=${champId}`;
+            window.open(url, '_blank');
+        };
+
+        // =================================================================
+        // === AÇÕES E LÓGICA (Mata-Mata)
+        // =================================================================
+        
+        /**
+         * Gera os Grupos (Mata-Mata)
+         */
+        const handleGenerateChampionship_MataMata = async () => {
+            const playerCount = activeChampionship.players.length;
+            const isMultypleOfFour = playerCount % 4 === 0;
+
+            if (playerCount < 4 || !isMultypleOfFour) {
+                showModal("Número de Jogadores Inválido", `O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.`);
+                return;
+            }
+            
+            const numGroups = playerCount / 4;
+            
+            if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Os ${numGroups} melhores do ranking serão os "Cabeças de Chave" e o restante será sorteado.`)) {
+                return;
+            }
+
+            try {
+                // Mapeia pontos do ranking global
+                const globalPlayersMap = new Map(globalPlayers.map(p => [p.id, p.points || 0]));
+
+                // Adiciona pontos aos jogadores do torneio
+                const tournamentPlayersWithPoints = activeChampionship.players.map(p => ({
+                    ...p, 
+                    points: globalPlayersMap.get(p.id) || 0 
+                }));
+
+                // Ordena e separa cabeças de chave
+                const sortedTournamentPlayers = tournamentPlayersWithPoints.sort((a, b) => b.points - a.points);
+                const seededPlayers = sortedTournamentPlayers.slice(0, numGroups);
+                const unseededPlayers = sortedTournamentPlayers.slice(numGroups);
+
+                // Embaralha os não-cabeças
+                const shuffledUnseeded = unseededPlayers.sort(() => 0.5 - Math.random());
+
+                // Cria os grupos
+                const newGroupsList = []; 
+                for (let i = 0; i < numGroups; i++) {
+                    newGroupsList.push({
+                        id: `group_${i + 1}`,
+                        players: [], 
+                        matches: [] 
+                    });
+                }
+
+                // Distribui cabeças de chave (1 por grupo)
+                for (let i = 0; i < seededPlayers.length; i++) {
+                    newGroupsList[i].players.push(seededPlayers[i]);
+                }
+
+                // Distribui os demais (estilo "cobra")
+                let unseededCursor = 0;
+                const playersPerGroup = 4;
+                for (let p_slot = 1; p_slot < playersPerGroup; p_slot++) { 
+                    for (let g_index = 0; g_index < numGroups; g_index++) { 
+                        if (unseededCursor < shuffledUnseeded.length) {
+                            newGroupsList[g_index].players.push(shuffledUnseeded[unseededCursor]);
+                            unseededCursor++;
+                        }
+                    }
+                }
+
+                // Cria os jogos de cada grupo
+                for (const group of newGroupsList) {
+                    const [p1, p2, p3, p4] = group.players; 
+                    
+                    if (!p1 || !p2 || !p3 || !p4) {
+                         console.error("Erro na distribuição de grupos. Grupo incompleto:", group.players);
+                         throw new Error("Erro de lógica ao distribuir jogadores. Grupo ficou incompleto.");
+                    }
+
+                    // Jogos (p1/p2 vs p3/p4), (p1/p3 vs p2/p4), (p1/p4 vs p2/p3)
+                    group.matches = [
+                        { id: 1, p: [p1.id, p2.id, p3.id, p4.id], names: [`${p1.name} / ${p2.name}`, `${p3.name} / ${p4.name}`], score: [null, null] },
+                        { id: 2, p: [p1.id, p3.id, p2.id, p4.id], names: [`${p1.name} / ${p3.name}`, `${p2.name} / ${p4.name}`], score: [null, null] },
+                        { id: 3, p: [p1.id, p4.id, p2.id, p3.id], names: [`${p1.name} / ${p4.name}`, `${p2.name} / ${p3.name}`], score: [null, null] },
+                    ];
+                }
+                
+                const newChampData = {
+                    ...activeChampionship,
+                    status: 'groups',
+                    groups: newGroupsList 
+                };
+                await saveActiveChampionship(newChampData);
+                
+                // Atualiza o status no documento principal (para o listener da lista)
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                await setDoc(champRef, { status: 'groups' }, { merge: true });
+
+            } catch (error) {
+                console.error("Erro ao gerar campeonato (cabeça de chave):", error);
+                showModal("Erro", "Não foi possível gerar os grupos. " + error.message);
+            }
+        };
+
+        /**
+         * Confirma o placar de um jogo de grupo (Mata-Mata)
+         */
+        const handleConfirmGroupScore = (groupIndex, matchIndex) => {
+            const val0 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s0`).value;
+            const val1 = document.getElementById(`g-${groupIndex}-m-${matchIndex}-s1`).value;
+            const score0 = val0 === '' ? null : parseInt(val0, 10);
+            const score1 = val1 === '' ? null : parseInt(val1, 10);
+            
+            if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                return;
+            }
+            
+            const newChampData = JSON.parse(JSON.stringify(activeChampionship));
+            newChampData.groups[groupIndex].matches[matchIndex].score[0] = score0;
+            newChampData.groups[groupIndex].matches[matchIndex].score[1] = score1;
+            saveActiveChampionship(newChampData); 
+        };
+
+        /**
+         * Gera um PDF para impressão da Súmula do Grupo
+         */
+        const handlePrintGroup = (groupIndex) => {
+            const group = activeChampionship.groups[groupIndex];
+            const champ = championships.find(c => c.id === appState.currentChampionshipId);
+            const champName = champ ? champ.name : "Torneio";
+            
+            let matchesHtml = '';
+            group.matches.forEach((match) => {
+                matchesHtml += `
+                    <div class="match">
+                        <div class="team">${match.names[0]}</div>
+                        <div class="score-box"></div>
+                        <div class="vs">vs</div>
+                        <div class="score-box"></div>
+                        <div class="team">${match.names[1]}</div>
+                    </div>
+                `;
+            });
+            
+            const playersHtml = group.players.map(p => `<li>${p.name}</li>`).join('');
+            
+            const printStyles = `
+                <style>
+                    @page { margin: 20mm; }
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 0; 
+                        color: #000; 
+                        width: 100%;
+                    }
+                    h1 { text-align: center; font-size: 24px; margin-bottom: 5px; }
+                    h2 { text-align: center; font-size: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; margin-top: 0; }
+                    .players { margin-bottom: 20px; }
+                    .players h3 { font-size: 18px; margin-bottom: 5px; }
+                    .players ul { list-style: none; padding-left: 0; margin: 0; }
+                    .players li { font-size: 16px; }
+                    .match { 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: space-between; 
+                        padding: 20px 0; 
+                        border-bottom: 1px dashed #999; 
+                        page-break-inside: avoid;
+                    }
+                    .team { flex: 1; font-size: 18px; font-weight: bold; }
+                    .team:last-of-type { text-align: right; }
+                    .vs { font-size: 14px; font-weight: bold; margin: 0 10px; }
+                    .score-box {
+                        width: 60px;
+                        height: 40px;
+                        border: 2px solid #000;
+                        margin: 0 10px;
+                    }
+                </style>
+            `;
+
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Imprimir - ${champName} - Grupo ${groupIndex + 1}</title>
+                        ${printStyles}
+                    </head>
+                    <body>
+                        <h1>${champName}</h1>
+                        <h2>Grupo ${groupIndex + 1}</h2>
+                        <div class="players">
+                            <h3>Jogadores do Grupo:</h3>
+                            <ul>${playersHtml}</ul>
+                        </div>
+                        <h2>Jogos</h2>
+                        <div class="matches">
+                            ${matchesHtml}
+                        </div>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+            }, 250);
+        };
+        
+        /**
+         * Finaliza os grupos e gera as chaves Ouro/Prata (com Byes)
+         */
+        const handleFinalizeGroups = async () => {
+            if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata e bloquear os grupos.")) return;
+
+            let goldSeriesPairs = [];
+            let silverSeriesPairs = [];
+            let allPairs = [];
+
+            // 1. Coleta e classifica todas as duplas por games vencidos
+            activeChampionship.groups.forEach(group => {
+                const rankings = getRankings(group); 
+
+                const goldPair = {
+                    id: `${rankings[0].id}_${rankings[1].id}`,
+                    name: `${rankings[0].name} / ${rankings[1].name}`,
+                    players: [rankings[0], rankings[1]],
+                    gamesWon: rankings[0].gamesWon + rankings[1].gamesWon,
+                    type: 'gold' 
+                };
+                goldSeriesPairs.push(goldPair);
+                allPairs.push(goldPair);
+
+                const silverPair = {
+                    id: `${rankings[2].id}_${rankings[3].id}`,
+                    name: `${rankings[2].name} / ${rankings[3].name}`,
+                    players: [rankings[2], rankings[3]],
+                    gamesWon: rankings[2].gamesWon + rankings[3].gamesWon,
+                    type: 'silver'
+                };
+                silverSeriesPairs.push(silverPair);
+                allPairs.push(silverPair);
+            });
+
+            // 2. Classificação global das duplas (para aplicar Byes)
+            // Ordem: Dupla Gold 1, Dupla Gold 2, ..., Dupla Silver 1, Dupla Silver 2, ...
+            const rankedGoldPairs = goldSeriesPairs.sort((a, b) => b.gamesWon - a.gamesWon);
+            const rankedSilverPairs = silverSeriesPairs.sort((a, b) => b.gamesWon - a.gamesWon);
+
+            try {
+                // 3. Gerar chaves com a lógica de Byes
+                // Adiciona prefixos 'gold_' e 'silver_' para evitar IDs duplicados
+                const goldBracket = createBracketWithByes(rankedGoldPairs, 'gold_');
+                const silverBracket = createBracketWithByes(rankedSilverPairs, 'silver_');
+
+                const newChampData = {
+                    ...activeChampionship,
+                    status: 'knockout',
+                    goldBracket: goldBracket,
+                    silverBracket: silverBracket,
+                };
+
+                await saveActiveChampionship(newChampData);
+
+                // Atualiza o status no documento principal
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                await setDoc(champRef, { status: 'knockout' }, { merge: true });
+
+            } catch (error) {
+                console.error("Erro ao finalizar grupos:", error);
+                showModal("Erro", "Ocorreu um erro ao gerar as chaves. " + error.message);
+            }
+        };
+
+        /**
+         * (Auxiliar) Retorna a próxima potência de 2
+         */
+        const getNextPowerOfTwo = (n) => {
+            if (n <= 1) return 2;
+            let power = 2;
+            while (power < n) {
+                power *= 2;
+            }
+            return power;
+        };
+
+        /**
+         * (Auxiliar) Cria a chave (bracket) com lógica de Byes
+         */
+        const createBracketWithByes = (rankedPairs, idPrefix) => {
+            const numPairs = rankedPairs.length;
+            
+            // Se não houver duplas (ex: grupo de 4 com 0 duplas prata), retorna chave vazia
+            if (numPairs === 0) return [];
+            
+            const targetSize = getNextPowerOfTwo(numPairs);
+            const numByes = targetSize - numPairs;
+            
+            let pairsForBracket = [...rankedPairs];
+            let byesForBracket = [];
+
+            // 1. Determina quem recebe Bye (as melhores classificadas)
+            if (numByes > 0) {
+                byesForBracket = pairsForBracket.slice(0, numByes);
+                pairsForBracket = pairsForBracket.slice(numByes);
+            }
+
+            // 2. Embaralha as duplas que VÃO JOGAR a primeira rodada
+            pairsForBracket.sort(() => 0.5 - Math.random());
+            
+            const bracket = [];
+            const numRounds = Math.log2(targetSize);
+            
+            // 3. Prepara a Rodada 1
+            const matchesInRound1 = targetSize / 2;
+            let byeCursor = 0;
+            let pairCursor = 0;
+
+            for (let m = 0; m < matchesInRound1; m++) {
+                const matchId = `${idPrefix}R1_M${m + 1}`;
+                const nextRoundMatchIndex = Math.floor(m / 2);
+                const nextMatchId = `${idPrefix}R2_M${nextRoundMatchIndex + 1}`;
+                
+                let match = {
+                    id: matchId,
+                    round: 1, 
+                    pairs: [null, null], 
+                    score: [null, null],
+                    winner: null,
+                    nextMatchId: nextMatchId,
+                    nextMatchSlot: m % 2, // 0 (cima) ou 1 (baixo)
+                };
+
+                // Se ainda houver Byes para distribuir
+                if (byeCursor < numByes) {
+                    match.pairs[0] = byesForBracket[byeCursor];
+                    match.pairs[1] = 'BYE'; 
+                    match.score = [1, 0]; 
+                    match.winner = byesForBracket[byeCursor]; 
+                    byeCursor++;
+                } else {
+                    // Distribui as duplas que vão jogar
+                    match.pairs[0] = pairsForBracket[pairCursor] || null;
+                    match.pairs[1] = pairsForBracket[pairCursor + 1] || null;
+                    pairCursor += 2;
+                }
+                
+                bracket.push(match);
+            }
+            
+            // 4. Preenche as demais Rodadas (R2 em diante)
+            for (let r = 2; r <= numRounds; r++) { 
+                const matchesInRound = targetSize / Math.pow(2, r);
+                for (let m = 0; m < matchesInRound; m++) { 
+                    const matchId = `${idPrefix}R${r}_M${m+1}`;
+                    let nextMatchId = null;
+                    let nextMatchSlot = null; 
+
+                    if (r < numRounds) { 
+                        const nextRoundMatchIndex = Math.floor(m / 2); 
+                        nextMatchId = `${idPrefix}R${r+1}_M${nextRoundMatchIndex+1}`;
+                        nextMatchSlot = m % 2; 
+                    }
+
+                    const match = {
+                        id: matchId,
+                        round: r, 
+                        pairs: [null, null], 
+                        score: [null, null],
+                        winner: null,
+                        nextMatchId: nextMatchId,
+                        nextMatchSlot: nextMatchSlot,
+                    };
+                    bracket.push(match);
+                }
+            }
+            
+            // 5. Conecta os vencedores dos Byes (R1) à R2
+            bracket.filter(m => m.round === 1 && m.pairs.includes('BYE')).forEach(match => {
+                const nextMatch = bracket.find(m => m.id === match.nextMatchId);
+                if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
+            });
+            
+            return bracket;
+        };
+
+        /**
+         * Confirma o placar de um jogo do Mata-Mata (com lógica de reversão)
+         */
+        const handleConfirmKnockoutScore = async (bracketType, matchId) => {
+            const val0 = document.getElementById(`k-${matchId}-s0`).value;
+            const val1 = document.getElementById(`k-${matchId}-s1`).value;
+            const score0 = val0 === '' ? null : parseInt(val0, 10);
+            const score1 = val1 === '' ? null : parseInt(val1, 10);
+            
+            if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                return;
+            }
+            if (score0 === score1) {
+                showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
+                return;
+            }
+            
+            const newChampData = JSON.parse(JSON.stringify(activeChampionship));
+            const bracketToUpdate = newChampData[bracketType];
+            
+            // Encontra a partida atual
+            const currentMatch = bracketToUpdate.find(m => m.id === matchId);
+            if (!currentMatch) return;
+            
+            const oldWinner = currentMatch.winner;
+            const newWinner = (score0 > score1) ? currentMatch.pairs[0] : currentMatch.pairs[1];
+
+            // Se o placar mudou, mas o vencedor é o mesmo, apenas salva e sai
+            if (oldWinner && oldWinner.id === newWinner.id) {
+                currentMatch.score[0] = score0;
+                currentMatch.score[1] = score1;
+                await saveActiveChampionship(newChampData);
+                return;
+            }
+
+            // O VENCEDOR MUDOU! (ou é o primeiro lançamento)
+            // 1. Limpa o caminho do vencedor antigo
+            if (oldWinner) {
+                let matchToClear = currentMatch;
+                while (matchToClear && matchToClear.nextMatchId) {
+                    const nextMatch = bracketToUpdate.find(m => m.id === matchToClear.nextMatchId);
+                    if (!nextMatch) break;
+                    
+                    // Se o vencedor antigo estava no próximo jogo, remove-o
+                    if (nextMatch.pairs[matchToClear.nextMatchSlot]?.id === oldWinner.id) {
+                        nextMatch.pairs[matchToClear.nextMatchSlot] = null;
+                        nextMatch.winner = null; 
+                        nextMatch.score = [null, null];
+                        matchToClear = nextMatch; // Continua limpando a chave
+                    } else {
+                        break; // O caminho já estava limpo ou foi alterado
+                    }
+                }
+            }
+
+            // 2. Define o novo placar e o novo vencedor
+            currentMatch.score[0] = score0;
+            currentMatch.score[1] = score1;
+            currentMatch.winner = newWinner;
+
+            // 3. Avança o novo vencedor
+            if (currentMatch.winner && currentMatch.nextMatchId) {
+                let matchToAdvance = currentMatch;
+                while (matchToAdvance && matchToAdvance.nextMatchId) {
+                    const nextMatch = bracketToUpdate.find(m => m.id === matchToAdvance.nextMatchId);
+                    if (!nextMatch) break;
+                    
+                    // Coloca o novo vencedor no slot
+                    nextMatch.pairs[matchToAdvance.nextMatchSlot] = matchToAdvance.winner;
+                    
+                    // Se o outro par for 'BYE', avança automaticamente
+                    const otherSlot = (matchToAdvance.nextMatchSlot === 0) ? 1 : 0;
+                    if (nextMatch.pairs[otherSlot] === 'BYE') {
+                        nextMatch.winner = matchToAdvance.winner;
+                        nextMatch.score = [1, 0];
+                        matchToAdvance = nextMatch; // Continua avançando
+                    } else {
+                        break; // Para, pois precisa do outro jogador
+                    }
+                }
+            }
+            
+            // Salva o estado modificado
+            await saveActiveChampionship(newChampData); 
+            
+            // (Não finaliza automaticamente, espera o botão manual)
+        };
+        
+        /**
+         * Finaliza o torneio (Mata-Mata) e lança no Ranking
+         */
+        const handleManualFinalize_MataMata = async () => {
+            if (!confirm("Confirmar Finalização?\nEsta ação irá calcular os pontos, lançar no ranking e marcar o campeonato como 'Finalizado'. Esta ação não pode ser desfeita.")) {
+                return;
+            }
+            
+            const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+            const champDoc = await getDoc(champRef);
+            if (!champDoc.exists()) {
+                 showModal("Erro Crítico", "Documento principal do campeonato não encontrado.");
+                 return;
+            }
+            
+            const champInfo = champDoc.data();
+            const rankingId = champInfo.rankingId;
+            const pointsConfig = champInfo.pointsConfig || DEFAULT_POINTS_MATA_MATA;
+            
+            if (!rankingId) {
+                showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
+                return;
+            }
+            
+            showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+
+            try {
+                // 1. Identificar Posições Finais
+                const placements = new Map(); // Key: playerId, Value: 'gold_R4_win'
+                
+                const processBracket = (bracket, prefix) => {
+                    if (!bracket || bracket.length === 0) return; // Pula se a chave (ex: Prata) não foi gerada
+                    const maxRound = Math.max(...bracket.map(m => m.round));
+                    
+                    bracket.forEach(match => {
+                        if (!match.pairs[0] || !match.pairs[1] || match.pairs[0] === 'BYE' || match.pairs[1] === 'BYE') {
+                            return; // Ignora partidas incompletas ou de BYE
+                        }
+
+                        // Se for a final
+                        if (match.round === maxRound) {
+                            const winnerKey = `${prefix}_R_winner`; // Ex: gold_R_winner
+                            const runnerUpKey = `${prefix}_R_runnerup`; // Ex: gold_R_runnerup
+                            
+                            // Ajuste para usar as chaves corretas baseadas na rodada (R3, R4, R5...)
+                            const finalWinnerKey = `${prefix}_R${maxRound}_win`;
+                            const finalRunnerUpKey = `${prefix}_R${maxRound}_run`;
+                            
+                            if (match.winner) {
+                                match.winner.players.forEach(p => placements.set(p.id, finalWinnerKey));
+                                const runnerUp = match.pairs.find(p => p.id !== match.winner.id);
+                                if (runnerUp && runnerUp.players) {
+                                    runnerUp.players.forEach(p => placements.set(p.id, finalRunnerUpKey));
+                                }
+                            }
+                        }
+                        // Se for a semi-final
+                        else if (match.round === maxRound - 1) {
+                            const loserKey = `${prefix}_R${maxRound}_lose`; // Ex: gold_R4_lose
+                            if (match.winner) {
+                                const loser = (match.winner.id === match.pairs[0].id) ? match.pairs[1] : match.pairs[0];
+                                if (loser && loser.players) {
+                                    loser.players.forEach(p => placements.set(p.id, loserKey));
+                                }
+                            }
+                        }
+                        // TODO: Adicionar lógica para 'Perdeu Quartas' (R_lose) se necessário
+                    });
+                };
+                
+                processBracket(activeChampionship.goldBracket, 'gold');
+                processBracket(activeChampionship.silverBracket, 'silver');
+                
+                // 2. Calcular Pontos de Grupo
+                const groupPoints = getPlayerGroupPoints_MataMata(activeChampionship, pointsConfig.groupWin || 0);
+                
+                // 3. Atualizar o Ranking (Transação)
+                await updateGlobalRanking_MataMata(
+                    activeChampionship.players,
+                    placements,
+                    groupPoints,
+                    pointsConfig,
+                    rankingId
+                );
+
+                // 4. Marcar o campeonato como finalizado
+                const { goldWinner, silverWinner } = getKnockoutWinners(activeChampionship);
+                await setDoc(champRef, {
+                    status: 'finished',
+                    winnerGold: goldWinner?.name || '?',
+                    winnerSilver: silverWinner?.name || '?'
+                }, { merge: true });
+
+                hideModal();
+                showModal("Sucesso!", `Ranking global atualizado! Campeões Ouro: ${goldWinner?.name || 'N/D'}.`);
+
+            } catch (error) {
+                console.error("Erro ao finalizar (manual) torneio:", error);
+                showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes: " + error.message);
+            }
+        };
+
+        /**
+         * (Auxiliar) Calcula os pontos ganhos na fase de grupos
+         */
         const getPlayerGroupPoints_MataMata = (champData, pointsPerWin) => {
             const playerPoints = new Map();
             if (pointsPerWin === 0) return playerPoints; // Economiza processamento
@@ -3173,11 +4895,12 @@
         
         /**
          * (Auxiliar) Calcula os stats globais (para Coveiro Mata-Mata)
+         * CORREÇÃO: Esta função agora calcula o SALDO para desempate do Coveiro.
          */
         const getGlobalTournamentStats_MataMata = (champData) => {
             const playerStats = {};
             champData.players.forEach(p => {
-                playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
+                playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0, gamesLost: 0, saldo: 0 };
             });
 
             // 1. Soma games dos Grupos
@@ -3187,12 +4910,12 @@
                         const [p1, p2, p3, p4] = match.p;
                         const [s1, s2] = match.score;
                         if (s1 !== null && !isNaN(s1)) {
-                            if (playerStats[p1]) playerStats[p1].gamesWon += s1;
-                            if (playerStats[p2]) playerStats[p2].gamesWon += s1;
+                            if (playerStats[p1]) { playerStats[p1].gamesWon += s1; playerStats[p1].gamesLost += s2; }
+                            if (playerStats[p2]) { playerStats[p2].gamesWon += s1; playerStats[p2].gamesLost += s2; }
                         }
                         if (s2 !== null && !isNaN(s2)) {
-                            if (playerStats[p3]) playerStats[p3].gamesWon += s2;
-                            if (playerStats[p4]) playerStats[p4].gamesWon += s2;
+                            if (playerStats[p3]) { playerStats[p3].gamesWon += s2; playerStats[p3].gamesLost += s1; }
+                            if (playerStats[p4]) { playerStats[p4].gamesWon += s2; playerStats[p4].gamesLost += s1; }
                         }
                     });
                 });
@@ -3204,10 +4927,14 @@
                 const [pair1, pair2] = match.pairs;
                 const [s0, s1] = match.score;
                 
+                // Ignora Byes
+                if (pair1 === 'BYE' || pair2 === 'BYE') return;
+                
                 if (s0 !== null && !isNaN(s0) && pair1 && pair1.players) {
                     pair1.players.forEach(player => {
                         if (playerStats[player.id]) {
                             playerStats[player.id].gamesWon += s0;
+                            if (s1 !== null && !isNaN(s1)) playerStats[player.id].gamesLost += s1;
                         }
                     });
                 }
@@ -3215,13 +4942,32 @@
                     pair2.players.forEach(player => {
                         if (playerStats[player.id]) {
                             playerStats[player.id].gamesWon += s1;
+                            if (s0 !== null && !isNaN(s0)) playerStats[player.id].gamesLost += s0;
                         }
                     });
                 }
             });
             
-            // Ordena por menos games vencidos
-            return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
+            // 3. Calcula o Saldo
+            const statsArray = Object.values(playerStats);
+            statsArray.forEach(p => {
+                p.saldo = p.gamesWon - p.gamesLost;
+            });
+            
+            // 4. Ordena para o Coveiro
+            // Critério 1: Menos games vencidos (ascendente)
+            // Critério 2: Pior saldo (ascendente)
+            statsArray.sort((a, b) => {
+                if (a.gamesWon !== b.gamesWon) {
+                    return a.gamesWon - b.gamesWon;
+                }
+                if (a.saldo !== b.saldo) {
+                    return a.saldo - b.saldo;
+                }
+                return a.name.localeCompare(b.name);
+            });
+            
+            return statsArray;
         };
         
         /**
@@ -3229,12 +4975,14 @@
          */
         const updateGlobalRanking_MataMata = async (players, placements, groupPoints, pointsConfig, rankingId) => {
             
-            // 1. Determina o Coveiro
+            // 1. Determina o Coveiro (usando a nova função com saldo)
             const stats = getGlobalTournamentStats_MataMata(activeChampionship);
             const coveiroIds = new Set();
             if (stats.length > 0) {
                 const minGames = stats[0].gamesWon;
-                stats.filter(p => p.gamesWon === minGames).forEach(p => coveiroIds.add(p.id));
+                const minSaldo = stats[0].saldo;
+                stats.filter(p => p.gamesWon === minGames && p.saldo === minSaldo)
+                     .forEach(p => coveiroIds.add(p.id));
             }
 
             // 2. Prepara o mapa de pontos
@@ -3247,11 +4995,18 @@
                 
                 const totalPoints = participationPoints + grpPoints + bonusPoints;
                 
+                // Define as chaves de vencedor/vice com base na rodada real
+                const maxRoundGold = activeChampionship.goldBracket.length > 0 ? Math.max(...activeChampionship.goldBracket.map(m => m.round)) : 0;
+                const maxRoundSilver = activeChampionship.silverBracket.length > 0 ? Math.max(...activeChampionship.silverBracket.map(m => m.round)) : 0;
+
+                const isGoldWinner = (placementKey === `gold_R${maxRoundGold}_win`);
+                const isSilverWinner = (placementKey === `silver_R${maxRoundSilver}_win`);
+                
                 playerPointsMap.set(player.id, {
                     name: player.name,
                     pointsToAdd: totalPoints,
-                    goldWins: (placementKey === `gold_R${Math.max(...activeChampionship.goldBracket.map(m => m.round))}_win`) ? 1 : 0,
-                    silverWins: (placementKey === `silver_R${Math.max(...activeChampionship.silverBracket.map(m => m.round))}_win`) ? 1 : 0,
+                    goldWins: isGoldWinner ? 1 : 0,
+                    silverWins: isSilverWinner ? 1 : 0,
                     coveiroWins: coveiroIds.has(player.id) ? 1 : 0
                 });
             }
@@ -3405,8 +5160,8 @@
                     id: p.id,
                     name: p.name,
                     totalGames: 0,
-                    gamesLost: 0, // SALDO: Novo campo
-                    saldo: 0       // SALDO: Novo campo
+                    gamesLost: 0, 
+                    saldo: 0       
                 });
             });
             
@@ -3419,7 +5174,7 @@
                     const stats = playerStats.get(pId);
                     if (stats) {
                         stats.totalGames += (luckyGames || 0);
-                        // SALDO: Lucky games não afetam o saldo (0 perdidos)
+                        // Lucky games não afetam o saldo (0 perdidos)
                     }
                 });
                 
@@ -3440,23 +5195,23 @@
                     
                     if (stats1) { 
                         stats1.totalGames += s1; 
-                        stats1.gamesLost += s2; // SALDO
-                        stats1.saldo += (s1 - s2); // SALDO
+                        stats1.gamesLost += s2; 
+                        stats1.saldo += (s1 - s2); 
                     }
                     if (stats2) { 
                         stats2.totalGames += s1; 
-                        stats2.gamesLost += s2; // SALDO
-                        stats2.saldo += (s1 - s2); // SALDO
+                        stats2.gamesLost += s2; 
+                        stats2.saldo += (s1 - s2); 
                     }
                     if (stats3) { 
                         stats3.totalGames += s2; 
-                        stats3.gamesLost += s1; // SALDO
-                        stats3.saldo += (s2 - s1); // SALDO
+                        stats3.gamesLost += s1; 
+                        stats3.saldo += (s2 - s1); 
                     }
                     if (stats4) { 
                         stats4.totalGames += s2; 
-                        stats4.gamesLost += s1; // SALDO
-                        stats4.saldo += (s2 - s1); // SALDO
+                        stats4.gamesLost += s1; 
+                        stats4.saldo += (s2 - s1); 
                     }
                 });
             });
@@ -3515,11 +5270,13 @@
                 if (leaderboard[1]) bonusMap.set(leaderboard[1].id, pointsConfig.bonus_2nd || 0);
                 if (leaderboard[2]) bonusMap.set(leaderboard[2].id, pointsConfig.bonus_3rd || 0);
                 
-                // 3. Define o Coveiro
+                // 3. Define o Coveiro (baseado na ordenação que já inclui saldo)
                 const coveiroIds = new Set();
                 if (leaderboard.length > 3) {
                     const lastPlayer = leaderboard[leaderboard.length - 1];
-                    coveiroIds.add(lastPlayer.id);
+                    // Pega todos que empataram com o último
+                    leaderboard.filter(p => p.totalGames === lastPlayer.totalGames && p.saldo === lastPlayer.saldo)
+                               .forEach(p => coveiroIds.add(p.id));
                 }
                 
                 // 4. Atualiza o Ranking (Transação)
@@ -3565,7 +5322,7 @@
                 playerPointsMap.set(player.id, {
                     name: player.name,
                     pointsToAdd: totalPoints,
-                    goldWins: (bonusMap.get(player.id) === pointsConfig.bonus_1st) ? 1 : 0, // Conta 1º lugar como "goldWin"
+                    goldWins: (bonusMap.get(player.id) === pointsConfig.bonus_1st && (pointsConfig.bonus_1st > 0)) ? 1 : 0, // Conta 1º lugar como "goldWin"
                     silverWins: 0, // Sortudo não tem "silverWin"
                     coveiroWins: coveiroIds.has(player.id) ? 1 : 0
                 });
@@ -3804,11 +5561,12 @@
                     }
                 }
 
-                // Coveiro
+                // Coveiro (com Saldo)
                 const stats = getGlobalTournamentStats_MataMata(activeChampionship);
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
-                    const coveiros = stats.filter(p => p.gamesWon === minGames);
+                    const minSaldo = stats[0].saldo;
+                    const coveiros = stats.filter(p => p.gamesWon === minGames && p.saldo === minSaldo);
                     finalResults.push(['👻 Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
                 }
                 
