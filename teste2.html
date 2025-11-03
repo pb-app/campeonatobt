@@ -78,8 +78,6 @@
         <button id="installBtn">Instalar</button>
     </div>
     <script>
-        /* CORREÇÃO DO ERRO 1 (Service Worker): Removido o registro do Service Worker
-           pois ele falha no ambiente da Canvas devido ao protocolo. */
         /*
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
@@ -126,7 +124,7 @@
             </main>
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v4.1.0 (Pontuação Granular)</p>
+            <p>App de Ranking v5.0.0 (Sortudo)</p>
         </footer>
     </div>
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -198,32 +196,39 @@
         let unsubscribeActiveChampionship = () => {}; 
 
         // =================================================================
-        // === MUDANÇA: Nova Estrutura de Pontos (Granular)
+        // === MUDANÇA: Novas Constantes de Pontos Padrão
         // =================================================================
-        const DEFAULT_RANKING_POINTS = {
-            // Pontos Base (Acumulativos)
+        
+        // Configuração Padrão para "Mata-Mata"
+        const DEFAULT_POINTS_MATA_MATA = {
             participation: 10,
             groupWin: 5,
             
-            // Bônus Fixo por Fase (Ouro) - Não acumulativo entre si
-            gold_R1_win: 10, // Ex: Bônus Oitavas (chegou nas Quartas)
-            gold_R2_win: 20, // Ex: Bônus Quartas (chegou na Semi)
-            gold_R3_win: 40, // Ex: Bônus Semi (chegou na Final)
-            gold_R4_win: 70, // Ex: Bônus Final (Campeão)
-
-            // Bônus Fixo por Fase (Prata) - Não acumulativo entre si
-            silver_R1_win: 5, // Ex: Bônus Oitavas (chegou nas Quartas)
-            silver_R2_win: 10, // Ex: Bônus Quartas (chegou na Semi)
-            silver_R3_win: 15, // Ex: Bônus Semi (chegou na Final)
-            silver_R4_win: 25, // Ex: Bônus Final (Campeão)
+            silver_R1_win: 15, // Perdeu Quartas Prata
+            silver_R2_win: 20, // Perdeu Semi Prata
+            silver_R3_win: 30, // Vice Prata
+            silver_R4_win: 40, // Campeão Prata
+            
+            gold_R1_win: 25, // Perdeu Quartas Ouro
+            gold_R2_win: 50, // Perdeu Semi Ouro
+            gold_R3_win: 70, // Vice Ouro
+            gold_R4_win: 100, // Campeão Ouro
         };
-        // =================================================================
 
+        // Configuração Padrão para "Sortudo"
+        const DEFAULT_POINTS_SORTUDO = {
+            participation: 10,
+            perGame: 1, // 1 ponto por game ganho
+            
+            bonus_1st: 100, // Bônus Campeão
+            bonus_2nd: 70,  // Bônus Vice
+            bonus_3rd: 50   // Bônus 3º Lugar
+        };
       const icons = {
             users: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
             plus: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
             trash: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
-            swords: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline><line x1="13" y1="19" x2="19" y2="13"></line><line x1="16" y1="16" x2="20" y2="20"></line><line x1="19" y1="21" x2="21" y2="19"></polyline><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline><line x1="11" y1="5" x2="5" y2="11"></line><line x1="8" y1="8" x2="4" y2="4"></line><line x1="3" y1="5" x2="5" y2="3"></line></svg>',
+            swords: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline><line x1="13" y1="19" x2="19" y2="13"></line><line x1="16" y1="16" x2="20" y2="20"></line><line x1="19" y1="21" x2="21" y2="19"></line><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline><line x1="11" y1="5" x2="5" y2="11"></line><line x1="8" y1="8" x2="4" y2="4"></line><line x1="3" y1="5" x2="5" y2="3"></line></svg>',
             trophy: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>',
             shield: '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block text-yellow-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
             shieldOff: '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block text-gray-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>',
@@ -238,7 +243,10 @@
             shovelSmall: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22v-5l5-5 5 5v5H2z"></path><path d="M9.5 17H14a5 5 0 0 0 5-5V7A2 2 0 0 0 17 5H7a2 2 0 0 0-2 2v5a5 5 0 0 0 5 5z"></path><path d="M9.5 17v5"></path></svg>',
             printer: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
             fileDown: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
-            tv: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>'
+            tv: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>',
+            // NOVO ÍCONE
+            shuffle: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>',
+            list: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>'
         };
         const showModal = (title, message) => {
             modalTitle.textContent = title;
@@ -262,7 +270,6 @@
         modalCloseIcon.addEventListener('click', hideModal);
         modal.addEventListener('click', hideModal);
         modal.firstElementChild.addEventListener('click', (e) => e.stopPropagation());
-
 
         const render = () => {
             if (appState.currentView !== 'loading') {
@@ -409,6 +416,10 @@
                 }
             });
         };
+
+        // =================================================================
+        // === MUDANÇA: renderChampionshipList (Formulário bifurcado)
+        // =================================================================
         const renderChampionshipList = () => {
             const sortedChampionships = [...championships].sort((a, b) => b.createdAt - a.createdAt);
             const championshipsListHtml = sortedChampionships.length === 0
@@ -418,8 +429,14 @@
                     let statusText = 'Em andamento';
                     if (champ.status === 'registration') { statusColor = 'text-cyan-600'; statusText = 'Em Inscrição'; }
                     if (champ.status === 'finished') { statusColor = 'text-emerald-600'; statusText = 'Finalizado 🏅'; }
+                    
+                    // MUDANÇA: Exibe o tipo de torneio
+                    const typeText = champ.type === 'sortudo' ? `${icons.shuffle} Torneio Sortudo` : `${icons.swords} Mata-Mata`;
+                    const typeColor = champ.type === 'sortudo' ? 'text-purple-600' : 'text-cyan-700';
+
                     const ranking = allRankings.find(r => r.id === champ.rankingId);
                     const rankingHtml = ranking ? `<span class="block text-xs text-orange-600 font-medium">${ranking.name}</span>` : '';
+                    
                     const deleteButtonHtml = appState.isAdmin ? `
                     <button
                         class="delete-champ-btn text-rose-600 hover:text-rose-700 transition-colors p-2 rounded-lg bg-gray-100"
@@ -430,6 +447,7 @@
                     <div class="flex flex-col sm:flex-row justify-between items-center bg-white border border-gray-200 p-4 rounded-xl shadow-sm animate-fade-in-sm gap-3">
                         <div>
                             <span class="text-gray-800 font-bold text-lg">${champ.name}</span>
+                            <span class="block text-sm font-semibold ${typeColor}">${typeText}</span>
                             <span class="block text-sm ${statusColor}">${statusText}</span>
                             ${rankingHtml}
                             <span class="block text-xs text-gray-500">${new Date(champ.createdAt?.toDate()).toLocaleDateString()}</span>
@@ -444,15 +462,15 @@
                         </div>
                     </div>
                     `}).join('');
+            
             const rankingsOptions = allRankings.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
             
-            // =================================================================
-            // === MUDANÇA: Novo Formulário de Pontos (Granular)
-            // =================================================================
             const newChampionshipFormHtml = appState.isAdmin ? `
             <form id="add-championship-form">
                 <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8 border border-gray-200">
                     <h2 class="text-2xl font-bold text-cyan-600 mb-4">🎾 Novo Campeonato</h2>
+                    
+                    <!-- Nome e Ranking (Comum a ambos os tipos) -->
                     <div class="mb-4">
                         <label for="championship-name-input" class="block text-sm font-medium text-gray-700 mb-1">Nome do Campeonato</label>
                         <input
@@ -475,74 +493,123 @@
                         </div>
                     </div>
                     
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Configuração de Pontos (Base)</h3>
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <div>
-                            <label for="points-participation" class="block text-xs font-medium text-gray-500 mb-1">Pontos por Participação (Base)</label>
-                            <input type="number" id="points-participation" min="0" value="${DEFAULT_RANKING_POINTS.participation}"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
-                        </div>
-                        <div>
-                            <label for="points-group-win" class="block text-xs font-medium text-blue-600 mb-1">Pontos por Vitória (Grupo)</label>
-                            <input type="number" id="points-group-win" min="0" value="${DEFAULT_RANKING_POINTS.groupWin}"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                    <!-- MUDANÇA: Seleção do Tipo de Torneio -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Torneio</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2 p-3 border border-gray-300 rounded-lg cursor-pointer flex-1">
+                                <input type="radio" name="champ-type" id="champ-type-mata-mata" value="mata-mata" class="form-radio text-cyan-600" checked>
+                                <span class="font-medium text-gray-800">${icons.swords} Grupos e Mata-Mata</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-3 border border-gray-300 rounded-lg cursor-pointer flex-1">
+                                <input type="radio" name="champ-type" id="champ-type-sortudo" value="sortudo" class="form-radio text-purple-600">
+                                <span class="font-medium text-gray-800">${icons.shuffle} Torneio Sortudo</span>
+                            </label>
                         </div>
                     </div>
 
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Bônus por Fase (Mata-mata)</h3>
-                    <p class="text-xs text-gray-500 mb-3 -mt-2">
-                        O bônus é fixo e substitui o anterior (não acumula). Ex: O Campeão Ouro recebe SÓ o bônus de "Campeão Ouro", e não o de vice, semi, etc.
-                        O total será: <span class="font-bold">[Base] + [Vitórias Grupo] + [Bônus Fixo Máximo]</span>.
-                    </p>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                        <!-- Coluna da Prata -->
-                        <div class="space-y-3 p-3 bg-gray-100 rounded-lg">
-                            <h4 class="text-md font-bold text-center text-gray-600">🥈 Série Prata</h4>
+                    <!-- MUDANÇA: Configuração de Pontos (Mata-Mata) -->
+                    <div id="points-config-mata-mata">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">Config. Pontos (Mata-Mata)</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
                             <div>
-                                <label for="points-silver-R1-win" class="block text-xs font-medium text-gray-500 mb-1">Bônus 1ª Fase (Ex: Oitavas)</label>
-                                <input type="number" id="points-silver-R1-win" min="0" value="${DEFAULT_RANKING_POINTS.silver_R1_win}"
-                                       class="w-full bg-white border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                                <label class="block text-xs font-medium text-gray-500 mb-1">Participação</label>
+                                <input type="number" id="mm-points-participation" min="0" value="${DEFAULT_POINTS_MATA_MATA.participation}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                             </div>
                             <div>
-                                <label for="points-silver-R2-win" class="block text-xs font-medium text-gray-500 mb-1">Bônus 2ª Fase (Ex: Quartas)</label>
-                                <input type="number" id="points-silver-R2-win" min="0" value="${DEFAULT_RANKING_POINTS.silver_R2_win}"
-                                       class="w-full bg-white border border-gray-300 rounded-lg p-2 text-center text-gray-800">
-                            </div>
-                            <div>
-                                <label for="points-silver-R3-win" class="block text-xs font-medium text-gray-600 mb-1">Bônus 3ª Fase (Vice-Campeão)</label>
-                                <input type="number" id="points-silver-R3-win" min="0" value="${DEFAULT_RANKING_POINTS.silver_R3_win}"
-                                       class="w-full bg-white border border-gray-300 rounded-lg p-2 text-center text-gray-800">
-                            </div>
-                            <div>
-                                <label for="points-silver-R4-win" class="block text-xs font-medium text-gray-700 mb-1">Bônus 4ª Fase (Campeão Prata)</label>
-                                <input type="number" id="points-silver-R4-win" min="0" value="${DEFAULT_RANKING_POINTS.silver_R4_win}"
-                                       class="w-full bg-white border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                                <label class="block text-xs font-medium text-gray-500 mb-1">Vitória (Grupo)</label>
+                                <input type="number" id="mm-points-groupWin" min="0" value="${DEFAULT_POINTS_MATA_MATA.groupWin}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                             </div>
                         </div>
-
-                        <!-- Coluna do Ouro -->
-                        <div class="space-y-3 p-3 bg-yellow-100 rounded-lg">
-                            <h4 class="text-md font-bold text-center text-yellow-700">🥇 Série Ouro</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
                             <div>
-                                <label for="points-gold-R1-win" class="block text-xs font-medium text-yellow-600 mb-1">Bônus 1ª Fase (Ex: Oitavas)</label>
-                                <input type="number" id="points-gold-R1-win" min="0" value="${DEFAULT_RANKING_POINTS.gold_R1_win}"
-                                       class="w-full bg-white border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Perdeu Quartas Prata</label>
+                                <input type="number" id="mm-points-silver_R1_win" min="0" value="${DEFAULT_POINTS_MATA_MATA.silver_R1_win}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                             </div>
                             <div>
-                                <label for="points-gold-R2-win" class="block text-xs font-medium text-yellow-600 mb-1">Bônus 2ª Fase (Ex: Quartas)</label>
-                                <input type="number" id="points-gold-R2-win" min="0" value="${DEFAULT_RANKING_POINTS.gold_R2_win}"
-                                       class="w-full bg-white border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Perdeu Semi Prata</label>
+                                <input type="number" id="mm-points-silver_R2_win" min="0" value="${DEFAULT_POINTS_MATA_MATA.silver_R2_win}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                             </div>
                             <div>
-                                <label for="points-gold-R3-win" class="block text-xs font-medium text-yellow-700 mb-1">Bônus 3ª Fase (Vice-Campeão)</label>
-                                <input type="number" id="points-gold-R3-win" min="0" value="${DEFAULT_RANKING_POINTS.gold_R3_win}"
-                                       class="w-full bg-white border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Vice Prata 🥈</label>
+                                <input type="number" id="mm-points-silver_R3_win" min="0" value="${DEFAULT_POINTS_MATA_MATA.silver_R3_win}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                             </div>
                             <div>
-                                <label for="points-gold-R4-win" class="block text-xs font-medium text-yellow-800 mb-1">Bônus 4ª Fase (Campeão Ouro)</label>
-                                <input type="number" id="points-gold-R4-win" min="0" value="${DEFAULT_RANKING_POINTS.gold_R4_win}"
-                                       class="w-full bg-white border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Campeão Prata 🥈</label>
+                                <input type="number" id="mm-points-silver_R4_win" min="0" value="${DEFAULT_POINTS_MATA_MATA.silver_R4_win}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                        </div>
+                         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                            <div>
+                                <label class="block text-xs font-medium text-emerald-600 mb-1">Perdeu Quartas Ouro</label>
+                                <input type="number" id="mm-points-gold_R1_win" min="0" value="${DEFAULT_POINTS_MATA_MATA.gold_R1_win}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-emerald-600 mb-1">Perdeu Semi Ouro</label>
+                                <input type="number" id="mm-points-gold_R2_win" min="0" value="${DEFAULT_POINTS_MATA_MATA.gold_R2_win}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-emerald-600 mb-1">Vice Ouro 🥇</label>
+                                <input type="number" id="mm-points-gold_R3_win" min="0" value="${DEFAULT_POINTS_MATA_MATA.gold_R3_win}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-emerald-600 mb-1">Campeão Ouro 🥇</label>
+                                <input type="number" id="mm-points-gold_R4_win" min="0" value="${DEFAULT_POINTS_MATA_MATA.gold_R4_win}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- MUDANÇA: Configuração de Pontos (Sortudo) -->
+                    <div id="points-config-sortudo" class="hidden">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">Config. Torneio (Sortudo)</h3>
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div>
+                                <label class="block text-xs font-medium text-purple-600 mb-1">Nº de Rodadas</label>
+                                <input type="number" id="sortudo-config-numRounds" min="1" value="5"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-purple-600 mb-1">Games p/ "Sortudo" (BYE)</label>
+                                <input type="number" id="sortudo-config-luckyGames" min="0" value="6"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">Config. Pontos (Sortudo)</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 mb-1">Participação</label>
+                                <input type="number" id="sortudo-points-participation" min="0" value="${DEFAULT_POINTS_SORTUDO.participation}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                             <div>
+                                <label class="block text-xs font-medium text-gray-500 mb-1">Ponto por Game</label>
+                                <input type="number" id="sortudo-points-perGame" min="0" value="${DEFAULT_POINTS_SORTUDO.perGame}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-emerald-600 mb-1">Bônus 1º Lugar 🥇</label>
+                                <input type="number" id="sortudo-points-bonus_1st" min="0" value="${DEFAULT_POINTS_SORTUDO.bonus_1st}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-emerald-700 mb-1">Bônus 2º Lugar</label>
+                                <input type="number" id="sortudo-points-bonus_2nd" min="0" value="${DEFAULT_POINTS_SORTUDO.bonus_2nd}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-emerald-700 mb-1">Bônus 3º Lugar</label>
+                                <input type="number" id="sortudo-points-bonus_3rd" min="0" value="${DEFAULT_POINTS_SORTUDO.bonus_3rd}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                             </div>
                         </div>
                     </div>
@@ -550,17 +617,13 @@
                     <button
                         type="submit"
                         id="add-championship-btn"
-                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-6">
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                         ${icons.plus}
                         <span>Criar Campeonato</span>
                     </button>
                 </div>
             </form>
             ` : ''; 
-            // =================================================================
-            // === Fim da Mudança
-            // =================================================================
-            
             mainContent.innerHTML = `
                 <div class="animate-fade-in">
                     ${newChampionshipFormHtml}
@@ -573,6 +636,20 @@
                 </div>
             `;
             if (appState.isAdmin) {
+                // MUDANÇA: Adiciona listener para os botões de rádio
+                document.querySelectorAll('input[name="champ-type"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        const type = e.target.value;
+                        if (type === 'sortudo') {
+                            document.getElementById('points-config-mata-mata').classList.add('hidden');
+                            document.getElementById('points-config-sortudo').classList.remove('hidden');
+                        } else {
+                            document.getElementById('points-config-mata-mata').classList.remove('hidden');
+                            document.getElementById('points-config-sortudo').classList.add('hidden');
+                        }
+                    });
+                });
+
                 const addForm = document.getElementById('add-championship-form');
                 if (addForm) addForm.addEventListener('submit', handleAddChampionship);
                 const addRankingBtn = document.getElementById('add-new-ranking-btn');
@@ -585,64 +662,93 @@
                 btn.addEventListener('click', () => navigateTo('championshipView', btn.dataset.id));
             });
         };
+
+        // =================================================================
+        // === MUDANÇA: handleAddChampionship (Salva o tipo e o config)
+        // =================================================================
         const handleAddChampionship = async (e) => {
             e.preventDefault();
             const input = document.getElementById('championship-name-input');
             const button = document.getElementById('add-championship-btn');
             const champName = input.value.trim();
             if (!champName) return;
+            
             const rankingId = document.getElementById('ranking-select').value;
             if (!rankingId) {
                 showModal("Erro", "Nenhum ranking foi selecionado. Crie um ranking primeiro.");
                 return;
             }
+            
+            const champType = document.querySelector('input[name="champ-type"]:checked').value;
+            
             button.disabled = true;
             button.lastChild.textContent = "Criando...";
 
-            // =================================================================
-            // === MUDANÇA: Coleta todos os novos campos de pontos
-            // =================================================================
-            const pointsConfig = {
-                // Base
-                participation: parseInt(document.getElementById('points-participation').value) || 0,
-                groupWin: parseInt(document.getElementById('points-group-win').value) || 0,
-                // Ouro
-                gold_R1_win: parseInt(document.getElementById('points-gold-R1-win').value) || 0,
-                gold_R2_win: parseInt(document.getElementById('points-gold-R2-win').value) || 0,
-                gold_R3_win: parseInt(document.getElementById('points-gold-R3-win').value) || 0,
-                gold_R4_win: parseInt(document.getElementById('points-gold-R4-win').value) || 0,
-                // Prata
-                silver_R1_win: parseInt(document.getElementById('points-silver-R1-win').value) || 0,
-                silver_R2_win: parseInt(document.getElementById('points-silver-R2-win').value) || 0,
-                silver_R3_win: parseInt(document.getElementById('points-silver-R3-win').value) || 0,
-                silver_R4_win: parseInt(document.getElementById('points-silver-R4-win').value) || 0,
+            let pointsConfig = {};
+            let sortudoConfig = null;
+            let champDataMain = {
+                players: [],
+                status: 'registration',
             };
-            // =================================================================
+
+            if (champType === 'mata-mata') {
+                pointsConfig = {
+                    participation: parseInt(document.getElementById('mm-points-participation').value) || 0,
+                    groupWin: parseInt(document.getElementById('mm-points-groupWin').value) || 0,
+                    silver_R1_win: parseInt(document.getElementById('mm-points-silver_R1_win').value) || 0,
+                    silver_R2_win: parseInt(document.getElementById('mm-points-silver_R2_win').value) || 0,
+                    silver_R3_win: parseInt(document.getElementById('mm-points-silver_R3_win').value) || 0,
+                    silver_R4_win: parseInt(document.getElementById('mm-points-silver_R4_win').value) || 0,
+                    gold_R1_win: parseInt(document.getElementById('mm-points-gold_R1_win').value) || 0,
+                    gold_R2_win: parseInt(document.getElementById('mm-points-gold_R2_win').value) || 0,
+                    gold_R3_win: parseInt(document.getElementById('mm-points-gold_R3_win').value) || 0,
+                    gold_R4_win: parseInt(document.getElementById('mm-points-gold_R4_win').value) || 0,
+                };
+                // Adiciona campos específicos do mata-mata
+                champDataMain.groups = [];
+                champDataMain.goldBracket = [];
+                champDataMain.silverBracket = [];
+
+            } else if (champType === 'sortudo') {
+                pointsConfig = {
+                    participation: parseInt(document.getElementById('sortudo-points-participation').value) || 0,
+                    perGame: parseInt(document.getElementById('sortudo-points-perGame').value) || 0,
+                    bonus_1st: parseInt(document.getElementById('sortudo-points-bonus_1st').value) || 0,
+                    bonus_2nd: parseInt(document.getElementById('sortudo-points-bonus_2nd').value) || 0,
+                    bonus_3rd: parseInt(document.getElementById('sortudo-points-bonus_3rd').value) || 0,
+                };
+                sortudoConfig = {
+                    numRounds: parseInt(document.getElementById('sortudo-config-numRounds').value) || 5,
+                    luckyGames: parseInt(document.getElementById('sortudo-config-luckyGames').value) || 0,
+                };
+                // Adiciona campos específicos do sortudo
+                champDataMain.config = sortudoConfig;
+                champDataMain.rounds = [];
+            }
 
             try {
                 const batch = writeBatch(db);
                 const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
                 const newChampRef = doc(champCollectionRef);
                 const champDataRef = doc(db, 'users', appState.userId, 'championships', newChampRef.id, 'data', 'main');
+                
+                // Salva o documento principal (metadados)
                 batch.set(newChampRef, {
                     name: champName,
                     createdAt: Timestamp.now(),
                     status: 'registration',
-                    winnerGold: null,
-                    winnerSilver: null,
-                    pointsConfig: pointsConfig, // Salva a nova configuração
-                    rankingId: rankingId 
+                    rankingId: rankingId,
+                    type: champType, // <-- NOVO CAMPO
+                    pointsConfig: pointsConfig, // <-- Config de pontos específica
+                    // Remove campos antigos de winner
                 });
-                batch.set(champDataRef, {
-                    players: [],
-                    groups: [],
-                    goldBracket: [],
-                    silverBracket: [],
-                    status: 'registration'
-                });
+                
+                // Salva o documento de dados (dados voláteis)
+                batch.set(champDataRef, champDataMain);
+                
                 await batch.commit();
                 input.value = '';
-                showModal("Sucesso!", `Campeonato "${champName}" criado e vinculado ao ranking.`);
+                showModal("Sucesso!", `Campeonato "${champName}" (${champType}) criado.`);
             } catch (error) {
                 console.error("Erro ao criar campeonato:", error);
                 showModal("Erro", "Não foi possível criar o campeonato.");
@@ -657,7 +763,9 @@
                 return;
             }
             try {
+                // Deleta o documento de dados (grande)
                 await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main'));
+                // Deleta o documento principal (metadados)
                 await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId));
             } catch (error) {
                 console.error("Erro ao excluir campeonato:", error);
@@ -753,6 +861,7 @@
                 </div>
             `;
             const rankingViewSelect = document.getElementById('ranking-view-select');
+
             if (rankingViewSelect) rankingViewSelect.addEventListener('change', handleViewRankingChange);
             const manageRankingsBtn = document.getElementById('manage-rankings-btn');
             if (manageRankingsBtn) manageRankingsBtn.addEventListener('click', renderRankingManagementModal);
@@ -812,6 +921,10 @@
             render(); 
             listenToGlobalPlayers();
         };
+
+        // =================================================================
+        // === MUDANÇA: renderChampionshipView (agora é um Roteador)
+        // =================================================================
         const renderChampionshipView = () => {
             if (!activeChampionship) {
                 mainContent.innerHTML = `
@@ -822,9 +935,15 @@
                 `;
                 return;
             }
-            let html = '';
+
+            // Encontra os metadados do campeonato (que armazena o 'tipo')
             const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+            const champType = champInfo?.type || 'mata-mata'; // 'mata-mata' como padrão
+            
+            let html = '';
             let topButtonsHtml = '';
+
+            // --- Botões Superiores (Comum a ambos) ---
             if (appState.isAdmin) { 
                 let pdfButtonHtml = '';
                 if (champInfo?.status === 'finished') {
@@ -850,44 +969,54 @@
                 </div>
                 `;
             }
+            
+            html += topButtonsHtml;
 
-            let finalizeButtonHtml = '';
-            if (appState.isAdmin && activeChampionship.status === 'knockout' && champInfo?.status !== 'finished') {
-                const maxRoundGold = Math.max(...(activeChampionship.goldBracket || []).map(m => m.round));
-                const goldFinal = (activeChampionship.goldBracket || []).find(m => m.round === maxRoundGold);
-                const goldWinner = goldFinal?.winner;
+            // --- Roteador de View ---
+            if (champType === 'sortudo') {
+                html += renderChampionshipView_Sortudo(champInfo);
+            } else {
+                html += renderChampionshipView_MataMata(champInfo);
+            }
 
-                const maxRoundSilver = Math.max(...(activeChampionship.silverBracket || []).map(m => m.round));
-                const silverFinal = (activeChampionship.silverBracket || []).find(m => m.round === maxRoundSilver);
-                const silverWinner = silverFinal?.winner;
+            mainContent.innerHTML = html;
 
-                if (goldWinner && silverWinner) {
-                    finalizeButtonHtml = `
-                    <div class="bg-emerald-100 border-l-4 border-emerald-500 text-emerald-700 p-6 rounded-lg shadow-lg my-8 text-center animate-fade-in">
-                        <h3 class="text-2xl font-bold mb-4">🏆 Campeonato Pronto para Finalizar!</h3>
-                        <p class="mb-5">As finais Ouro e Prata foram concluídas. Clique abaixo para salvar os resultados e atualizar o Ranking Geral.</p>
-                        <button
-                            id="manual-finalize-btn"
-                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto">
-                            ${icons.trophy}
-                            Finalizar e Lançar no Ranking
-                        </button>
-                    </div>
-                    `;
+            // --- Adicionar Listeners (Comum a ambos) ---
+            if (appState.isAdmin) {
+                const launchTelaoBtn = document.getElementById('launch-telao-btn');
+                if (launchTelaoBtn) launchTelaoBtn.addEventListener('click', handleLaunchTelao);
+                if (champInfo?.status === 'finished') {
+                    const printChampBtn = document.getElementById('print-champ-pdf-btn');
+                    if (printChampBtn) printChampBtn.addEventListener('click', () => handlePrintChampionshipPDF(champType));
                 }
             }
 
-            if (champInfo?.status === 'finished') {
-                html = topButtonsHtml + renderGroupStage() + renderKnockoutView(true);
-            } else if (activeChampionship.status === 'knockout') {
-                // Adicionado o 'finalizeButtonHtml' aqui
-                html = topButtonsHtml + finalizeButtonHtml + renderGroupStage() + renderKnockoutView(false);
-            } else if (activeChampionship.status === 'groups') {
-                html = topButtonsHtml + renderGroupStage();
-            } else { 
-                html = topButtonsHtml + renderPlayerRegistration();
+            // --- Adicionar Listeners (Específicos do Tipo) ---
+            if (champType === 'sortudo') {
+                addListeners_Sortudo();
+            } else {
+                addListeners_MataMata(champInfo);
             }
-            mainContent.innerHTML = html;
+        };
+
+        // =================================================================
+        // === RENDERIZAÇÃO (Mata-Mata)
+        // =================================================================
+        const renderChampionshipView_MataMata = (champInfo) => {
+            let contentHtml = '';
+            if (champInfo?.status === 'finished') {
+                contentHtml = renderGroupStage() + renderKnockoutView(true);
+            } else if (activeChampionship.status === 'knockout') {
+                contentHtml = renderGroupStage() + renderKnockoutView(false);
+            } else if (activeChampionship.status === 'groups') {
+                contentHtml = renderGroupStage();
+            } else { 
+                contentHtml = renderPlayerRegistration_MataMata();
+            }
+            return contentHtml;
+        };
+
+        const addListeners_MataMata = (champInfo) => {
             if (appState.isAdmin && activeChampionship.status === 'registration') {
                 const addExistingForm = document.getElementById('add-existing-player-form');
                 if (addExistingForm) addExistingForm.addEventListener('submit', handleAddExistingPlayerToChampionship);
@@ -897,7 +1026,7 @@
                     btn.addEventListener('click', () => handleDeletePlayerFromChampionship(btn.dataset.id));
                 });
                 const generateBtn = document.getElementById('generate-champ-btn');
-                if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship);
+                if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship_MataMata);
             }
             if (activeChampionship.status === 'groups' || activeChampionship.status === 'knockout' || champInfo?.status === 'finished') {
                 document.querySelectorAll('.print-group-btn').forEach(btn => {
@@ -926,21 +1055,12 @@
                         handleConfirmKnockoutScore(bracketType, matchId);
                     });
                 });
-                
-                 const manualFinalizeBtn = document.getElementById('manual-finalize-btn');
-                 if (manualFinalizeBtn) {
-                     manualFinalizeBtn.addEventListener('click', handleManualFinalize);
-                 }
-            }
-            if (appState.isAdmin) {
-                const launchTelaoBtn = document.getElementById('launch-telao-btn');
-                if (launchTelaoBtn) launchTelaoBtn.addEventListener('click', handleLaunchTelao);
-                if (champInfo?.status === 'finished') {
-                    const printChampBtn = document.getElementById('print-champ-pdf-btn');
-                    if (printChampBtn) printChampBtn.addEventListener('click', handlePrintChampionshipPDF);
-                }
+
+                const finalizeBtn = document.getElementById('manual-finalize-btn');
+                if (finalizeBtn) finalizeBtn.addEventListener('click', handleManualFinalize_MataMata);
             }
         };
+
         const saveActiveChampionship = async (newChampData) => {
             if (!appState.userId || !appState.currentChampionshipId) return;
             if (!appState.isAdmin) {
@@ -955,7 +1075,8 @@
                 showModal("Erro", "Não foi possível salvar as alterações. Se este erro persistir, pode ser um problema de regras do Firestore ou a transação está sendo chamada de forma incorreta.");
             }
         };
-        const renderPlayerRegistration = () => {
+        
+        const renderPlayerRegistration_MataMata = () => {
             const playersListHtml = activeChampionship.players.length === 0
                 ? `<p class="text-gray-500 text-center py-4">Nenhum jogador cadastrado neste torneio.</p>`
                 : activeChampionship.players.map(player => {
@@ -1153,7 +1274,7 @@
             const silverHtml = renderBracket('Série Prata 🥈', activeChampionship.silverBracket, 'silverBracket', isFinished);
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
-                const stats = getGlobalTournamentStats(activeChampionship);
+                const stats = getGlobalTournamentStats_MataMata(activeChampionship);
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
                     const coveiros = stats.filter(p => p.gamesWon === minGames); 
@@ -1167,7 +1288,33 @@
                     `;
                 }
             }
-            return `<div class="animate-fade-in">${goldHtml}${silverHtml}${coveiroHtml}</div>`;
+            
+            // MUDANÇA: Botão de Finalização Manual
+            let finalizeButtonHtml = '';
+            if (appState.isAdmin && !isFinished) {
+                const maxRoundGold = Math.max(...(activeChampionship.goldBracket || []).map(m => m.round));
+                const goldFinal = (activeChampionship.goldBracket || []).find(m => m.round === maxRoundGold);
+                
+                const maxRoundSilver = Math.max(...(activeChampionship.silverBracket || []).map(m => m.round));
+                const silverFinal = (activeChampionship.silverBracket || []).find(m => m.round === maxRoundSilver);
+
+                if (goldFinal?.winner && silverFinal?.winner) {
+                    finalizeButtonHtml = `
+                    <div class="bg-white rounded-2xl shadow-xl p-6 mt-8 animate-fade-in border-4 border-emerald-500 text-center">
+                        <h3 class="text-2xl font-bold text-emerald-600 mb-4">Pronto para Finalizar!</h3>
+                        <p class="text-gray-700 mb-5">Ambas as finais (Ouro e Prata) foram preenchidas. Clique abaixo para calcular os pontos e lançar os resultados no Ranking Geral.</p>
+                        <button
+                            id="manual-finalize-btn"
+                            class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto">
+                            ${icons.trophy}
+                            Finalizar e Lançar no Ranking
+                        </button>
+                    </div>
+                    `;
+                }
+            }
+
+            return `<div class="animate-fade-in">${finalizeButtonHtml}${goldHtml}${silverHtml}${coveiroHtml}</div>`;
         };
         const renderBracket = (title, bracket, bracketType, isFinished) => {
             const rounds = {};
@@ -1267,8 +1414,6 @@
                     const showConfirmButton = appState.isAdmin && pair1 && pair2 && pair1 !== 'BYE' && pair2 !== 'BYE';
                     const inputDisabled = !appState.isAdmin || (!pair1 || !pair2) || pair1 === 'BYE' || pair2 === 'BYE';
 
-                    // CORREÇÃO: O ID do input (k-${match.id}-s0) agora é único
-                    // porque match.id (ex: "gold_R1_M1") é único.
                     return `
                     <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
                         <div class="flex justify-between items-center mb-2">
@@ -1334,6 +1479,285 @@
             </div>
             `;
         };
+
+        // =================================================================
+        // === MUDANÇA: RENDERIZAÇÃO (Sortudo)
+        // =================================================================
+        const renderChampionshipView_Sortudo = (champInfo) => {
+            if (activeChampionship.status === 'registration') {
+                return renderPlayerRegistration_Sortudo();
+            }
+            
+            if (activeChampionship.status === 'rounds' || champInfo?.status === 'finished') {
+                return renderRounds_Sortudo();
+            }
+
+            return '<p>Erro: Estado desconhecido para Torneio Sortudo.</p>';
+        };
+
+        const addListeners_Sortudo = () => {
+             if (appState.isAdmin && activeChampionship.status === 'registration') {
+                const addExistingForm = document.getElementById('add-existing-player-form');
+                if (addExistingForm) addExistingForm.addEventListener('submit', handleAddExistingPlayerToChampionship);
+                const addNewForm = document.getElementById('add-new-player-form');
+                if (addNewForm) addNewForm.addEventListener('submit', handleAddNewPlayerToChampionship);
+                document.querySelectorAll('.delete-player-btn').forEach(btn => {
+                    btn.addEventListener('click', () => handleDeletePlayerFromChampionship(btn.dataset.id));
+                });
+                const generateBtn = document.getElementById('generate-champ-btn-sortudo');
+                if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship_Sortudo);
+            }
+
+            if (appState.isAdmin && (activeChampionship.status === 'rounds' || champInfo?.status === 'finished')) {
+                document.querySelectorAll('.confirm-sortudo-score-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const { roundIndex, matchIndex } = e.currentTarget.dataset;
+                        handleConfirmSortudoScore(roundIndex, matchIndex);
+                    });
+                });
+
+                const finalizeBtn = document.getElementById('manual-finalize-btn-sortudo');
+                if (finalizeBtn) finalizeBtn.addEventListener('click', handleManualFinalize_Sortudo);
+            }
+        };
+
+        const renderPlayerRegistration_Sortudo = () => {
+            const playersListHtml = activeChampionship.players.length === 0
+                ? `<p class="text-gray-500 text-center py-4">Nenhum jogador cadastrado neste torneio.</p>`
+                : activeChampionship.players.map(player => {
+                    const deleteButton = appState.isAdmin ? `
+                    <button class="delete-player-btn text-rose-600 hover:text-rose-700 transition-colors" data-id="${player.id}">
+                        ${icons.trash}
+                    </button>` : '';
+                    return `
+                    <div class="flex justify-between items-center bg-purple-50 p-3 rounded-lg animate-fade-in-sm border border-purple-200">
+                        <span class="text-gray-800 font-medium">${player.name}</span>
+                        ${deleteButton}
+                    </div>
+                    `
+                }).join('');
+            
+            const playerCount = activeChampionship.players.length;
+            const minPlayersForSortudo = 4;
+            const canGenerate = playerCount >= minPlayersForSortudo;
+
+            const generateButtonHtml = playerCount >= minPlayersForSortudo
+                ? `
+                <div class="mt-8 text-center">
+                    <button
+                        id="generate-champ-btn-sortudo"
+                        type="button"
+                        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto">
+                        ${icons.shuffle}
+                        Sortear Rodadas
+                    </button>
+                </div>
+                ` : `<p class="text-gray-500 text-sm mt-3 text-center">Mínimo de ${minPlayersForSortudo} jogadores para começar.</p>`;
+            
+            // Reutiliza o mesmo formulário de adicionar jogadores
+            const playersInTournamentIds = new Set(activeChampionship.players.map(p => p.id));
+            const availablePlayersFromRanking = globalPlayers.filter(p => !playersInTournamentIds.has(p.id));
+            const existingPlayersOptions = availablePlayersFromRanking.length > 0
+                ? availablePlayersFromRanking.map(p => `<option value="${p.id}">${p.name}</option>`).join('')
+                : '<option disabled>Nenhum jogador disponível no ranking</option>';
+            const addPlayerFormHtml = appState.isAdmin ? `
+            <div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form id="add-existing-player-form">
+                    <label for="existing-player-select" class="block text-sm font-medium text-gray-700 mb-1">Adicionar do Ranking</label>
+                    <div class="flex gap-2">
+                        <select id="existing-player-select" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500" ${availablePlayersFromRanking.length === 0 ? 'disabled' : ''}>
+                            ${existingPlayersOptions}
+                        </select>
+                        <button
+                            type="submit"
+                            id="add-existing-player-btn"
+                            class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            ${availablePlayersFromRanking.length === 0 ? 'disabled' : ''}>
+                            ${icons.plus}
+                        </button>
+                    </div>
+                </form>
+                <form id="add-new-player-form">
+                    <label for="new-player-name-input" class="block text-sm font-medium text-gray-700 mb-1">Adicionar Novo Jogador</label>
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            id="new-player-name-input"
+                            placeholder="Nome do Novo Jogador"
+                            class="flex-grow bg-gray-50 border border-gray-300 text-gray-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        />
+                        <button
+                            type="submit"
+                            id="add-new-player-btn"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                            ${icons.plus}
+                        </button>
+                    </div>
+                </form>
+            </div>
+            ` : '';
+
+            return `
+                <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200">
+                    ${addPlayerFormHtml}
+                    <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200">
+                        <h3 class="text-xl font-semibold mb-4 text-purple-600 flex items-center gap-2">
+                            ${icons.users}
+                            Jogadores Inscritos (${playerCount})
+                        </h3>
+                        <div class="max-h-96 overflow-y-auto pr-2 space-y-2">
+                            ${playersListHtml}
+                        </div>
+                    </div>
+                    ${appState.isAdmin ? generateButtonHtml : ''}
+                </div>
+            `;
+        };
+        
+        const renderRounds_Sortudo = () => {
+            const isDisabled = !appState.isAdmin ? 'disabled' : '';
+            const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
+            const isFinished = champInfo?.status === 'finished';
+
+            const { leaderboard, allScoresFilled } = getLeaderboard_Sortudo();
+
+            // Tabela de Classificação (Leaderboard)
+            const leaderboardHtml = leaderboard.map((p, index) => {
+                let medal = '';
+                if (index === 0) medal = '🥇';
+                if (index === 1) medal = '🥈';
+                if (index === 2) medal = '🥉';
+                const isCoveiro = index === leaderboard.length - 1;
+
+                return `
+                <tr class="border-b border-purple-100 ${isCoveiro ? 'opacity-70' : ''}">
+                    <td class="p-3 font-bold text-lg text-purple-600">${index + 1}º ${medal}</td>
+                    <td class="p-3 font-medium text-gray-800">${p.name} ${isCoveiro ? '👻' : ''}</td>
+                    <td class="p-3 font-bold text-xl text-orange-600">${p.totalGames}</td>
+                </tr>
+                `
+            }).join('');
+
+            const leaderboardCard = `
+            <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 animate-fade-in border border-gray-200">
+                <h3 class="text-3xl font-bold mb-5 text-purple-600">${icons.list} Classificação ao Vivo</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-max text-left">
+                        <thead>
+                            <tr class="bg-purple-100">
+                                <th class="p-3 rounded-tl-lg text-gray-600">Pos.</th>
+                                <th class="p-3 text-gray-600">Jogador</th>
+                                <th class="p-3 rounded-tr-lg text-gray-600">Total Games</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${leaderboardHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            `;
+
+            // Rodadas
+            const roundsHtml = activeChampionship.rounds.map((round, roundIndex) => {
+                
+                // Jogos da rodada
+                const matchesHtml = round.matches.map((match, matchIndex) => {
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
+                    const pair1Name = `${activeChampionship.players.find(p => p.id === match.p[0])?.name || '?'} / ${activeChampionship.players.find(p => p.id === match.p[1])?.name || '?'}`;
+                    const pair2Name = `${activeChampionship.players.find(p => p.id === match.p[2])?.name || '?'} / ${activeChampionship.players.find(p => p.id === match.p[3])?.name || '?'}`;
+
+                    return `
+                    <div class="bg-amber-50 p-3 sm:p-4 rounded-lg border border-amber-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+                            <span class="text-sm text-gray-700 text-center sm:text-left">${pair1Name}</span>
+                            <span class="font-bold text-cyan-600">vs</span>
+                            <span class="text-sm text-gray-700 text-center sm:text-right">${pair2Name}</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-3 mt-3">
+                            <input
+                                type="number"
+                                min="0"
+                                value="${score1 === null ? '' : score1}"
+                                id="s-${roundIndex}-m-${matchIndex}-s0" 
+                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
+                                ${isDisabled}
+                            />
+                            <span class="text-gray-500">-</span>
+                            <input
+                                type="number"
+                                min="0"
+                                value="${score2 === null ? '' : score2}"
+                                id="s-${roundIndex}-m-${matchIndex}-s1"
+                                class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDisabled ? 'opacity-70' : ''}"
+                                ${isDisabled}
+                            />
+                            <button 
+                                class="confirm-sortudo-score-btn p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all ${isDisabled ? 'hidden' : ''}"
+                                data-round-index="${roundIndex}"
+                                data-match-index="${matchIndex}"
+                                title="Confirmar Placar">
+                                ${icons.check}
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+                // "Sortudos" da rodada
+                const luckyPlayers = round.luckyPlayers.map(pId => activeChampionship.players.find(p => p.id === pId)?.name || 'Erro');
+                const luckyHtml = luckyPlayers.length > 0 ? `
+                <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                    <h5 class="text-sm font-semibold text-emerald-700 text-center">
+                        ${icons.shield} Sortudos (BYE) ${icons.shield}
+                    </h5>
+                    <p class="text-center text-gray-800 font-medium mt-1">${luckyPlayers.join(' / ')}</p>
+                    <p class="text-center text-xs text-gray-500">(+${activeChampionship.config.luckyGames} games cada)</p>
+                </div>
+                ` : '';
+
+                return `
+                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in border border-gray-200">
+                    <h3 class="text-2xl font-bold text-cyan-600 mb-5">Rodada ${roundIndex + 1}</h3>
+                    <div class="space-y-4">
+                        ${matchesHtml}
+                        ${luckyHtml}
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            // Botão de Finalização
+            let finalizeButtonHtml = '';
+            if (appState.isAdmin && !isFinished && allScoresFilled) {
+                finalizeButtonHtml = `
+                <div class="bg-white rounded-2xl shadow-xl p-6 mt-8 animate-fade-in border-4 border-emerald-500 text-center">
+                    <h3 class="text-2xl font-bold text-emerald-600 mb-4">Pronto para Finalizar!</h3>
+                    <p class="text-gray-700 mb-5">Todos os placares do Torneio Sortudo foram preenchidos. Clique abaixo para calcular os pontos e lançar os resultados no Ranking Geral.</p>
+                    <button
+                        id="manual-finalize-btn-sortudo"
+                        class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-lg shadow-xl transition-all flex items-center justify-center gap-3 text-lg mx-auto">
+                        ${icons.trophy}
+                        Finalizar e Lançar no Ranking
+                    </button>
+                </div>
+                `;
+            } else if (appState.isAdmin && !isFinished && !allScoresFilled) {
+                 finalizeButtonHtml = `
+                <div class="bg-white rounded-2xl shadow-md p-6 mt-8 animate-fade-in border border-gray-200 text-center">
+                    <p class="text-gray-600">Preencha todos os placares de todas as rodadas para habilitar o botão de finalização.</p>
+                </div>
+                `;
+            }
+            
+            return leaderboardCard + `<div class="space-y-8 mt-8">${roundsHtml}</div>` + finalizeButtonHtml;
+        };
+
+
+        // =================================================================
+        // === TELÃO (Bifurcação)
+        // =================================================================
         const renderTelaoView = () => {
              if (!activeChampionship) {
                 mainContent.innerHTML = `
@@ -1346,17 +1770,18 @@
             }
             const champInfo = championships.find(c => c.id === appState.currentChampionshipId);
             const champName = champInfo ? champInfo.name : "Campeonato";
+            const champType = champInfo?.type || 'mata-mata';
+            
             let html = `<h1 class="text-4xl sm:text-6xl font-bold text-center text-cyan-600 my-8 animate-fade-in">🏖️ ${champName} 🎾</h1>`;
             let contentHtml = '';
-            if (champInfo?.status === 'finished') {
-                contentHtml = renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(true);
-            } else if (activeChampionship.status === 'knockout') {
-                contentHtml = renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(false);
-            } else if (activeChampionship.status === 'groups') {
-                contentHtml = renderGroupStage_ReadOnly();
-            } else { 
-                contentHtml = renderPlayerRegistration_ReadOnly();
+
+            // --- Roteador de View (Telão) ---
+            if (champType === 'sortudo') {
+                contentHtml = renderTelaoView_Sortudo(champInfo);
+            } else {
+                contentHtml = renderTelaoView_MataMata(champInfo);
             }
+
             if (activeChampionship.status !== 'registration') {
                 html += `
                 <div class="flex flex-wrap justify-center gap-6 animate-fade-in">
@@ -1371,6 +1796,33 @@
                  document.body.style.backgroundColor = '#FFFAF0'; 
             }
         };
+        
+        // --- Telão (Mata-Mata)
+        const renderTelaoView_MataMata = (champInfo) => {
+            if (champInfo?.status === 'finished') {
+                return renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(true);
+            } else if (activeChampionship.status === 'knockout') {
+                return renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(false);
+            } else if (activeChampionship.status === 'groups') {
+                return renderGroupStage_ReadOnly();
+            } else { 
+                return renderPlayerRegistration_ReadOnly();
+            }
+        };
+
+        // --- Telão (Sortudo) ---
+        const renderTelaoView_Sortudo = (champInfo) => {
+            if (activeChampionship.status === 'registration') {
+                 return renderPlayerRegistration_ReadOnly();
+            }
+            
+            if (activeChampionship.status === 'rounds' || champInfo?.status === 'finished') {
+                return renderRounds_Sortudo_ReadOnly();
+            }
+
+            return '<p class="text-2xl text-center text-gray-600">Aguardando início do torneio...</p>';
+        };
+
         const renderPlayerRegistration_ReadOnly = () => {
             const playerCount = activeChampionship.players.length;
             const playersListHtml = playerCount === 0
@@ -1459,7 +1911,7 @@
             const silverHtml = renderBracket_ReadOnly('Série Prata 🥈', activeChampionship.silverBracket, 'silverBracket', isFinished);
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
-                const stats = getGlobalTournamentStats(activeChampionship);
+                const stats = getGlobalTournamentStats_MataMata(activeChampionship);
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
                     const coveiros = stats.filter(p => p.gamesWon === minGames);
@@ -1611,6 +2063,105 @@
             </div>
             `;
         };
+        
+        // --- Telão (Sortudo - ReadOnly) ---
+        const renderRounds_Sortudo_ReadOnly = () => {
+            const { leaderboard } = getLeaderboard_Sortudo();
+
+            // Tabela de Classificação (Leaderboard)
+            const leaderboardHtml = leaderboard.map((p, index) => {
+                let medal = '';
+                if (index === 0) medal = '🥇';
+                if (index === 1) medal = '🥈';
+                if (index === 2) medal = '🥉';
+                const isCoveiro = index === leaderboard.length - 1;
+
+                return `
+                <tr class="border-b border-purple-100 ${isCoveiro ? 'opacity-70' : ''}">
+                    <td class="p-3 font-bold text-lg text-purple-600">${index + 1}º ${medal}</td>
+                    <td class="p-3 font-medium text-lg text-gray-800">${p.name} ${isCoveiro ? '👻' : ''}</td>
+                    <td class="p-3 font-bold text-xl text-orange-600">${p.totalGames}</td>
+                </tr>
+                `
+            }).join('');
+
+            const leaderboardCard = `
+            <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 animate-fade-in w-full sm:max-w-md border border-gray-200">
+                <h3 class="text-3xl font-bold mb-5 text-purple-600">${icons.list} Classificação</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-max text-left">
+                        <thead>
+                            <tr class="bg-purple-100">
+                                <th class="p-3 rounded-tl-lg text-gray-600">Pos.</th>
+                                <th class="p-3 text-gray-600">Jogador</th>
+                                <th class="p-3 rounded-tr-lg text-gray-600">Total Games</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${leaderboardHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            `;
+
+            // Rodadas
+            const roundsHtml = activeChampionship.rounds.map((round, roundIndex) => {
+                
+                // Jogos da rodada
+                const matchesHtml = round.matches.map((match, matchIndex) => {
+                    const score1 = match.score[0];
+                    const score2 = match.score[1];
+                    const pair1Name = `${activeChampionship.players.find(p => p.id === match.p[0])?.name || '?'} / ${activeChampionship.players.find(p => p.id === match.p[1])?.name || '?'}`;
+                    const pair2Name = `${activeChampionship.players.find(p => p.id === match.p[2])?.name || '?'} / ${activeChampionship.players.find(p => p.id === match.p[3])?.name || '?'}`;
+
+                    return `
+                    <div class="bg-amber-100 p-3 sm:p-4 rounded-lg border border-amber-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+                            <span class="text-base text-gray-700 text-center sm:text-left">${pair1Name}</span>
+                            <span class="font-bold text-cyan-600">vs</span>
+                            <span class="text-base text-gray-700 text-center sm:text-right">${pair2Name}</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-3 mt-3">
+                            <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
+                                ${score1 === null ? '-' : score1}
+                            </span>
+                            <span class="text-gray-500 text-xl">-</span>
+                            <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
+                                ${score2 === null ? '-' : score2}
+                            </span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+                // "Sortudos" da rodada
+                const luckyPlayers = round.luckyPlayers.map(pId => activeChampionship.players.find(p => p.id === pId)?.name || 'Erro');
+                const luckyHtml = luckyPlayers.length > 0 ? `
+                <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                    <h5 class="text-sm font-semibold text-emerald-700 text-center">
+                        ${icons.shield} Sortudos (BYE) ${icons.shield}
+                    </h5>
+                    <p class="text-center text-gray-800 font-medium mt-1">${luckyPlayers.join(' / ')}</p>
+                    <p class="text-center text-xs text-gray-500">(+${activeChampionship.config.luckyGames} games cada)</p>
+                </div>
+                ` : '';
+
+                return `
+                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:max-w-md border border-gray-200">
+                    <h3 class="text-3xl font-bold text-cyan-600 mb-5">Rodada ${roundIndex + 1}</h3>
+                    <div class="space-y-4">
+                        ${matchesHtml}
+                        ${luckyHtml}
+                    </div>
+                </div>
+                `;
+            }).join('');
+            
+            return leaderboardCard + roundsHtml;
+        };
+
+
         const handleLaunchTelao = () => {
             const champId = appState.currentChampionshipId;
             if (!champId) {
@@ -1688,7 +2239,11 @@
             };
             await saveActiveChampionship(newChampData);
         };
-        const handleGenerateChampionship = async () => {
+
+        // =================================================================
+        // === LÓGICA (Mata-Mata)
+        // =================================================================
+        const handleGenerateChampionship_MataMata = async () => {
             const playerCount = activeChampionship.players.length;
             const isMultypleOfFour = playerCount % 4 === 0;
 
@@ -1903,9 +2458,8 @@
 
             try {
                 // 3. Gerar chaves com a lógica de Byes
-                // CORREÇÃO: Passando "gold" e "silver" como prefixos
-                const goldBracket = createBracketWithByes(rankedGoldPairs, 'gold');
-                const silverBracket = createBracketWithByes(rankedSilverPairs, 'silver');
+                const goldBracket = createBracketWithByes(rankedGoldPairs, 'gold'); // <-- Prefixo
+                const silverBracket = createBracketWithByes(rankedSilverPairs, 'silver'); // <-- Prefixo
 
                 const newChampData = {
                     ...activeChampionship,
@@ -1924,6 +2478,7 @@
                 showModal("Erro", "Ocorreu um erro ao gerar as chaves. " + error.message);
             }
         };
+
         const getNextPowerOfTwo = (n) => {
             if (n <= 1) return 2;
             let power = 2;
@@ -1933,8 +2488,7 @@
             return power;
         };
 
-        // CORREÇÃO: Adicionado 'prefix' ("gold" ou "silver") para garantir IDs únicos
-        const createBracketWithByes = (rankedPairs, prefix) => {
+        const createBracketWithByes = (rankedPairs, prefix) => { // <-- Prefixo
             const numPairs = rankedPairs.length;
             const targetSize = getNextPowerOfTwo(numPairs);
             const numByes = targetSize - numPairs;
@@ -1949,55 +2503,41 @@
             }
 
             // 2. Embaralha as duplas que VÃO JOGAR a primeira rodada
-            // Ex: Em 5 duplas (3 Byes), as 2 duplas restantes (4ª e 5ª) jogam.
             pairsForBracket.sort(() => 0.5 - Math.random());
             
             const bracket = [];
             const numRounds = Math.log2(targetSize);
+            
             // 3. Prepara a Rodada 1
             let round1Matches = [];
             let nextMatchIndex = 0;
-            const matchesInRound1 = targetSize / 2; // Ex: Chave de 8 tem 4 jogos na R1 (incluindo Byes)
+            const matchesInRound1 = targetSize / 2; 
 
-            // A. Duplas com Bye avançam para a próxima rodada (R2)
-            // Na Rodada 1 (Round 1), as duplas com Bye são pareadas com 'BYE'
-            
             let byeCursor = 0;
             let pairCursor = 0;
 
             for (let m = 0; m < matchesInRound1; m++) {
+                const matchId = `${prefix}_R1_M${m + 1}`; // <-- Prefixo no ID
+                const nextRoundMatchIndex = Math.floor(m / 2);
+                const nextMatchId = `${prefix}_R2_M${nextRoundMatchIndex + 1}`; // <-- Prefixo no ID
+
                 let match = {
-                    // CORREÇÃO: ID com prefixo
-                    id: `${prefix}_R1_M${m + 1}`,
+                    id: matchId,
                     round: 1, 
                     pairs: [null, null], 
                     score: [null, null],
                     winner: null,
-                    nextMatchId: null,
+                    nextMatchId: nextMatchId,
                     nextMatchSlot: m % 2,
                 };
 
-                // Define o slot do próximo jogo (R2)
-                const nextRoundMatchIndex = Math.floor(m / 2);
-                // CORREÇÃO: ID do próximo jogo com prefixo
-                match.nextMatchId = `${prefix}_R2_M${nextRoundMatchIndex + 1}`;
-
-                // Se ainda houver Byes para distribuir
                 if (byeCursor < numByes) {
-                    // Distribui os Byes (que avançam automaticamente)
-                    // Coloca o Bye no slot 1 e a dupla de melhor classificação no slot 0
-                    // A lógica de seed não é estrita (1v8, 4v5, 2v7, 3v6), mas o critério de justiça (melhores pegam Byes) foi cumprido.
-                    
                     match.pairs[0] = byesForBracket[byeCursor];
-                    match.pairs[1] = 'BYE'; // Marcador especial para Bye
-                    match.score = [1, 0]; // Garante que a dupla do Bye vença
-                    match.winner = byesForBracket[byeCursor]; // O vencedor é o próprio que recebeu o Bye
-                    
+                    match.pairs[1] = 'BYE'; 
+                    match.score = [1, 0]; 
+                    match.winner = byesForBracket[byeCursor]; 
                     byeCursor++;
-                    
                 } else {
-                    // Distribui as duplas que vão jogar o Play-in
-                    // Como pairsForBracket já está embaralhada, é só distribuir
                     match.pairs[0] = pairsForBracket[pairCursor] || null;
                     match.pairs[1] = pairsForBracket[pairCursor + 1] || null;
                     pairCursor += 2;
@@ -2011,15 +2551,13 @@
                 const matchesInRound = targetSize / Math.pow(2, r);
 
                 for (let m = 0; m < matchesInRound; m++) { 
-                    // CORREÇÃO: ID com prefixo
-                    const matchId = `${prefix}_R${r}_M${m+1}`;
+                    const matchId = `${prefix}_R${r}_M${m+1}`; // <-- Prefixo no ID
                     let nextMatchId = null;
                     let nextMatchSlot = null; 
 
                     if (r < numRounds) { 
                         const nextRoundMatchIndex = Math.floor(m / 2); 
-                        // CORREÇÃO: ID do próximo jogo com prefixo
-                        nextMatchId = `${prefix}_R${r+1}_M${nextRoundMatchIndex+1}`;
+                        nextMatchId = `${prefix}_R${r+1}_M${nextRoundMatchIndex+1}`; // <-- Prefixo no ID
                         nextMatchSlot = m % 2; 
                     }
 
@@ -2037,7 +2575,6 @@
             }
             
             // 5. Conecta os vencedores dos Byes à R2 (Rounds > 1)
-            // Percorre a Rodada 1 novamente e joga os vencedores (os Byes) para a R2
             bracket.filter(m => m.round === 1 && m.pairs.includes('BYE')).forEach(match => {
                 const nextMatch = bracket.find(m => m.id === match.nextMatchId);
                 if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
@@ -2045,13 +2582,11 @@
             
             return bracket;
         };
-        
         const handleConfirmKnockoutScore = async (bracketType, matchId) => {
             const val0 = document.getElementById(`k-${matchId}-s0`).value;
             const val1 = document.getElementById(`k-${matchId}-s1`).value;
             const score0 = val0 === '' ? null : parseInt(val0, 10);
             const score1 = val1 === '' ? null : parseInt(val1, 10);
-
             if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
                 showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
                 return;
@@ -2060,325 +2595,248 @@
                 showModal("Placar Inválido", "O placar do mata-mata não pode ser um empate.");
                 return;
             }
-
+            
             const newChampData = JSON.parse(JSON.stringify(activeChampionship));
             const bracketToUpdate = newChampData[bracketType];
-            const match = bracketToUpdate.find(m => m.id === matchId);
+            
+            // Função recursiva para limpar vencedores antigos
+            const clearNextMatches = (currentMatchId, oldWinnerId) => {
+                const currentMatch = bracketToUpdate.find(m => m.id === currentMatchId);
+                if (!currentMatch || !currentMatch.nextMatchId) return;
 
-            if (match) {
-                const oldWinnerId = match.winner ? match.winner.id : null;
-                const newWinner = (score0 > score1) ? match.pairs[0] : match.pairs[1];
-                const newWinnerId = newWinner ? newWinner.id : null;
+                const nextMatch = bracketToUpdate.find(m => m.id === currentMatch.nextMatchId);
+                if (!nextMatch) return;
 
-                // Se o vencedor mudou, precisamos limpar o caminho do vencedor antigo
-                if (oldWinnerId && oldWinnerId !== newWinnerId) {
+                // Se o vencedor antigo estava no próximo jogo
+                if (nextMatch.pairs[currentMatch.nextMatchSlot]?.id === oldWinnerId) {
+                    nextMatch.pairs[currentMatch.nextMatchSlot] = null;
                     
-                    // Função recursiva para limpar os jogos seguintes
-                    const clearNextMatches = (currentMatchId, winnerToRemoveId) => {
-                        // Encontra o próximo jogo
-                        const nextMatchDef = bracketToUpdate.find(m => m.id === currentMatchId);
-                        if (!nextMatchDef) return; 
+                    const oldWinnerOfNextMatch = nextMatch.winner;
+                    
+                    nextMatch.winner = null; 
+                    nextMatch.score = [null, null];
 
-                        // Verifica se o vencedor antigo está em algum slot desse próximo jogo
-                        const slotToRemove = nextMatchDef.pairs.findIndex(p => p && p.id === winnerToRemoveId);
-                        
-                        // Se o vencedor antigo estava lá, limpa o slot
-                        if (slotToRemove !== -1) {
-                            nextMatchDef.pairs[slotToRemove] = null;
-                        }
-
-                        // Se o vencedor desse próximo jogo era o vencedor antigo,
-                        // significa que ele já tinha jogado e vencido. Precisamos limpar tudo.
-                        const nextWinnerId = nextMatchDef.winner ? nextMatchDef.winner.id : null;
-                        
-                        if (nextWinnerId && nextWinnerId === winnerToRemoveId) {
-                            nextMatchDef.winner = null;
-                            nextMatchDef.score = [null, null];
-
-                            // Continua a limpeza recursiva para os próximos jogos
-                            if (nextMatchDef.nextMatchId) {
-                                clearNextMatches(nextMatchDef.nextMatchId, winnerToRemoveId);
-                            }
-                        }
-                    };
-
-                    // Inicia a limpeza a partir do próximo jogo
-                    if (match.nextMatchId) {
-                        clearNextMatches(match.nextMatchId, oldWinnerId);
+                    // Se o próximo jogo também tinha um vencedor, limpa recursivamente
+                    if (oldWinnerOfNextMatch) {
+                        clearNextMatches(nextMatch.id, oldWinnerOfNextMatch.id);
                     }
                 }
+            };
 
-                // Agora, atualiza o placar e o vencedor do jogo ATUAL
+            const match = bracketToUpdate.find(m => m.id === matchId);
+            if (match) {
+                const oldWinner = match.winner;
+                
+                // Se já houver um vencedor, precisamos reverter o avanço dele
+                if (oldWinner && match.nextMatchId) {
+                    clearNextMatches(match.id, oldWinner.id);
+                }
+
+                // Define o novo placar e vencedor
                 match.score[0] = score0;
                 match.score[1] = score1;
-                match.winner = newWinner; 
+                if (score0 > score1) match.winner = match.pairs[0]; 
+                else if (score1 > score0) match.winner = match.pairs[1];
 
-                // E avança o NOVO vencedor para o próximo jogo
+                // Avança o novo vencedor
                 if (match.winner && match.nextMatchId) {
                     const nextMatch = bracketToUpdate.find(m => m.id === match.nextMatchId);
                     if (nextMatch) {
-                        // Coloca o novo vencedor no slot correto do próximo jogo
                         nextMatch.pairs[match.nextMatchSlot] = match.winner;
                     }
                 }
                 
-                // Salva todas as mudanças (a chave inteira)
                 await saveActiveChampionship(newChampData); 
+                // REMOVIDO: checkAndFinalizeChampionship(newChampData); (Agora é manual)
             }
         };
 
-        const handleManualFinalize = async () => {
-            const button = document.getElementById('manual-finalize-btn');
-            if(button) button.disabled = true;
-
-            showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+        const handleManualFinalize_MataMata = async () => {
+            if (!confirm("Confirmar Finalização?\nEsta ação irá calcular os pontos, lançar no ranking e marcar o campeonato como 'Finalizado'. Esta ação não pode ser desfeita.")) {
+                return;
+            }
 
             const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
             const champDoc = await getDoc(champRef);
             if (!champDoc.exists()) {
-                 showModal("Erro Crítico", "Não foi possível encontrar o documento principal do campeonato.");
-                 if(button) button.disabled = false;
+                 showModal("Erro Crítico", "Documento principal do campeonato não encontrado.");
                  return;
-            } 
+            }
             
-            const champDocData = champDoc.data();
-            const rankingId = champDocData.rankingId;
+            const champInfo = champDoc.data();
+            const rankingId = champInfo.rankingId;
+            const pointsConfig = champInfo.pointsConfig || DEFAULT_POINTS_MATA_MATA;
+            
             if (!rankingId) {
                 showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
-                console.error("Erro Crítico: Campeonato sem rankingId.");
-                if(button) button.disabled = false;
                 return;
             }
-
-            // Pega os dados mais recentes do activeChampionship (que está em memória)
-            const champData = JSON.parse(JSON.stringify(activeChampionship));
-
-            const maxRoundGold = Math.max(...(champData.goldBracket || []).map(m => m.round));
-            const goldFinal = (champData.goldBracket || []).find(m => m.round === maxRoundGold);
-            const goldWinner = goldFinal?.winner; 
-
-            const maxRoundSilver = Math.max(...(champData.silverBracket || []).map(m => m.round));
-            const silverFinal = (champData.silverBracket || []).find(m => m.round === maxRoundSilver);
-            const silverWinner = silverFinal?.winner;
-
-            // Validação final
-            if (!goldWinner || !silverWinner) {
-                 showModal("Erro", "Não foi possível identificar os vencedores das finais Ouro ou Prata. Verifique os placares.");
-                 if(button) button.disabled = false;
-                 return;
-            }
+            
+            showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
 
             try {
-                // =================================================================
-                // === MUDANÇA: Nova lógica de coleta de vencedores e pontos
-                // =================================================================
+                // 1. Identificar todos os vencedores e perdedores
+                const playerPlacements = getPlayerPlacements_MataMata(activeChampionship, pointsConfig);
                 
-                // Pega a configuração de pontos do campeonato
-                const effectivePoints = champDocData.pointsConfig || DEFAULT_RANKING_POINTS;
+                // 2. Calcular pontos de grupo
+                const playerGroupPoints = getPlayerGroupPoints_MataMata(activeChampionship, pointsConfig.groupWin);
 
-                // Encontra todos os jogadores e duplas que chegaram em cada fase
-                const results = {
-                    gold_R4: goldWinner ? goldWinner.players : [], // Campeão Ouro
-                    gold_R3: goldFinal.pairs.find(p => p.id !== goldWinner.id)?.players || [], // Vice Ouro
-                    
-                    silver_R4: silverWinner ? silverWinner.players : [], // Campeão Prata
-                    silver_R3: silverFinal.pairs.find(p => p.id !== silverWinner.id)?.players || [], // Vice Prata
-                };
+                // 3. Atualizar o Ranking (Transação)
+                await updateGlobalRanking_MataMata(
+                    activeChampionship.players, 
+                    playerPlacements, 
+                    playerGroupPoints, 
+                    pointsConfig, 
+                    rankingId
+                );
 
-                // Lógica para encontrar perdedores das semis (3º/4º lugares)
-                const goldSemiFinals = (champData.goldBracket || []).filter(m => m.round === maxRoundGold - 1);
-                const silverSemiFinals = (champData.silverBracket || []).filter(m => m.round === maxRoundSilver - 1);
-
-                results.gold_R2 = []; // Perdedores da Semi Ouro (3º/4º Ouro)
-                goldSemiFinals.forEach(semi => {
-                    const loser = semi.pairs.find(p => p && p.id !== semi.winner.id);
-                    if (loser && loser.players) results.gold_R2.push(...loser.players);
-                });
-
-                results.silver_R2 = []; // Perdedores da Semi Prata (3º/4º Prata)
-                silverSemiFinals.forEach(semi => {
-                    const loser = semi.pairs.find(p => p && p.id !== semi.winner.id);
-                    if (loser && loser.players) results.silver_R2.push(...loser.players);
-                });
-                
-                // Lógica para encontrar perdedores das fases anteriores (ex: Quartas)
-                // (Isso pode ser expandido se houver mais de 4 rodadas)
-                const goldQuarterFinals = (champData.goldBracket || []).filter(m => m.round === maxRoundGold - 2);
-                results.gold_R1 = []; // Perdedores das Quartas Ouro
-                goldQuarterFinals.forEach(quarter => {
-                    const loser = quarter.pairs.find(p => p && p.id !== quarter.winner.id);
-                    if (loser && loser.players) results.gold_R1.push(...loser.players);
-                });
-                
-                const silverQuarterFinals = (champData.silverBracket || []).filter(m => m.round === maxRoundSilver - 2);
-                results.silver_R1 = []; // Perdedores das Quartas Prata
-                silverQuarterFinals.forEach(quarter => {
-                    const loser = quarter.pairs.find(p => p && p.id !== quarter.winner.id);
-                    if (loser && loser.players) results.silver_R1.push(...loser.players);
-                });
-
-                // Encontra o(s) Coveiro(s)
-                const stats = getGlobalTournamentStats(champData);
-                const minGames = stats.length > 0 ? stats[0].gamesWon : 0;
-                const coveiros = stats.length > 0 ? stats.filter(p => p.gamesWon === minGames) : [];
-                // =================================================================
-                
-                // Atualiza o Ranking Global
-                await updateGlobalRanking(champData, results, coveiros, effectivePoints, rankingId);
-                
-                // Atualiza o Status do Campeonato (documento principal)
+                // 4. Marcar o campeonato como finalizado
                 await setDoc(champRef, {
                     status: 'finished',
-                    winnerGold: goldWinner.name, 
-                    winnerSilver: silverWinner.name
                 }, { merge: true });
 
-                // Atualiza o Status (documento data/main)
-                // Isso é importante para o app parar de mostrar o botão "Finalizar"
-                const newChampData = {
-                    ...champData,
-                    status: 'finished',
-                };
-                await saveActiveChampionship(newChampData);
-
                 hideModal();
-                showModal("Sucesso!", `Ranking global atualizado! 🥇 Campeões Ouro: ${goldWinner.name}. 🥈 Campeões Prata: ${silverWinner.name}.`);
+                showModal("Sucesso!", `Ranking global atualizado! Campeonato finalizado.`);
 
             } catch (error) {
-                console.error("Erro ao finalizar e aplicar ranking:", error);
-                showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes.");
-                if(button) button.disabled = false;
+                console.error("Erro ao finalizar (manual) campeonato:", error);
+                showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes: " + error.message);
             }
         };
 
-        // =================================================================
-        // === MUDANÇA: Lógica de Pontuação Granular
-        // =================================================================
-        const updateGlobalRanking = async (champData, results, coveiros, pointsConfig, rankingId) => {
+        // Função Auxiliar para encontrar colocações
+        const getPlayerPlacements_MataMata = (champData, pointsConfig) => {
+            const placements = new Map(); // Key: playerId, Value: 'gold_R4_win'
             
-            // 1. Mapear vitórias na fase de grupos para cada jogador
-            const groupWinsMap = new Map();
+            const processBracket = (bracket, prefix) => {
+                if (!bracket || bracket.length === 0) return;
+                
+                const maxRound = Math.max(...bracket.map(m => m.round));
+                
+                bracket.forEach(match => {
+                    const [pair1, pair2] = match.pairs;
+                    if (!pair1 || !pair2 || pair1 === 'BYE' || pair2 === 'BYE') return;
+
+                    const loser = (match.winner && match.winner.id === pair1.id) ? pair2 : pair1;
+                    const roundKey = `${prefix}_R${match.round}_win`; // ex: 'gold_R2_win'
+                    
+                    // Se a config de pontos tiver uma chave para esta rodada (ex: Perdeu Quartas Ouro)
+                    if (pointsConfig.hasOwnProperty(roundKey)) {
+                        loser.players.forEach(p => {
+                            if (!placements.has(p.id)) { // Só define se não tiver uma colocação melhor
+                                placements.set(p.id, roundKey);
+                            }
+                        });
+                    }
+                });
+
+                // Tratar o Campeão (que não é perdedor)
+                const final = bracket.find(m => m.round === maxRound);
+                if (final && final.winner) {
+                    const championKey = `${prefix}_R${maxRound+1}_win`; // ex: 'gold_R4_win' (para uma final de 3 rodadas)
+                    if (pointsConfig.hasOwnProperty(championKey)) {
+                         final.winner.players.forEach(p => {
+                            placements.set(p.id, championKey); // Campeão sempre sobrescreve
+                        });
+                    }
+                }
+            };
+            
+            processBracket(champData.goldBracket, 'gold');
+            processBracket(champData.silverBracket, 'silver');
+            
+            return placements;
+        };
+
+        // Função Auxiliar para calcular pontos de grupo
+        const getPlayerGroupPoints_MataMata = (champData, groupWinPoints) => {
+            const groupPoints = new Map(); // Key: playerId, Value: points
+            
+            champData.players.forEach(p => groupPoints.set(p.id, 0));
+
+            if (!champData.groups || groupWinPoints === 0) return groupPoints;
+
             champData.groups.forEach(group => {
                 group.matches.forEach(match => {
-                    if (match.score[0] === null || match.score[1] === null) return; // Ignora jogos sem placar
-
-                    const [p1, p2, p3, p4] = match.p; // IDs dos jogadores
+                    const [p1, p2, p3, p4] = match.p;
                     const [s1, s2] = match.score;
+                    
+                    if (s1 === null || s2 === null || s1 === s2) return; // Ignora se não jogado ou empate
 
                     if (s1 > s2) {
-                        // Dupla 1 venceu (p1, p2)
-                        groupWinsMap.set(p1, (groupWinsMap.get(p1) || 0) + 1);
-                        groupWinsMap.set(p2, (groupWinsMap.get(p2) || 0) + 1);
+                        groupPoints.set(p1, (groupPoints.get(p1) || 0) + groupWinPoints);
+                        groupPoints.set(p2, (groupPoints.get(p2) || 0) + groupWinPoints);
                     } else if (s2 > s1) {
-                        // Dupla 2 venceu (p3, p4)
-                        groupWinsMap.set(p3, (groupWinsMap.get(p3) || 0) + 1);
-                        groupWinsMap.set(p4, (groupWinsMap.get(p4) || 0) + 1);
+                        groupPoints.set(p3, (groupPoints.get(p3) || 0) + groupWinPoints);
+                        groupPoints.set(p4, (groupPoints.get(p4) || 0) + groupWinPoints);
                     }
                 });
             });
-
-            // 2. Mapear o bônus máximo que cada jogador recebeu
-            const bonusMap = new Map();
-            const phaseOrder = [ // Da menor para a maior
-                'silver_R1', 'silver_R2', 'silver_R3', 'silver_R4',
-                'gold_R1', 'gold_R2', 'gold_R3', 'gold_R4'
-            ];
-            
-            // Itera da fase MENOR para a MAIOR, garantindo que o bônus maior (da fase final)
-            // substitua o bônus da fase anterior.
-            phaseOrder.forEach(phaseKey => {
-                const bonusPoints = pointsConfig[`${phaseKey}_win`] || 0;
-                const playersInThisPhase = results[phaseKey] || [];
-                
-                playersInThisPhase.forEach(player => {
-                    // Se o jogador existe (pode ser 'undefined' se a dupla não foi encontrada)
-                    if (player && player.id) { 
-                        // Define o bônus para este jogador. Se ele já tinha um bônus
-                        // de uma fase anterior (ex: perdedor das quartas),
-                        // este bônus (ex: perdedor da semi) irá substituí-lo.
-                        bonusMap.set(player.id, bonusPoints);
-                    }
-                });
-            });
-
-            // 3. Mapear coveiros
-            const coveiroMap = new Map();
-            coveiros.forEach(coveiro => {
-                coveiroMap.set(coveiro.id, 1);
-            });
-
-            // 4. Mapear Títulos (para estatística)
-            const goldWinMap = new Map();
-            (results.gold_R4 || []).forEach(player => {
-                if(player && player.id) goldWinMap.set(player.id, 1);
-            });
-            
-            const silverWinMap = new Map();
-            (results.silver_R4 || []).forEach(player => {
-                if(player && player.id) silverWinMap.set(player.id, 1);
-            });
-
-
-            // 5. Executar a Transação no Banco de Dados
+            return groupPoints;
+        };
+        
+        const updateGlobalRanking_MataMata = async (players, placements, groupPoints, pointsConfig, rankingId) => {
             await runTransaction(db, async (transaction) => {
                 
-                const playerDocsData = new Map(); // Cache para os documentos lidos
+                // 1. Prepara o mapa de pontos a serem adicionados
+                const playerPointsMap = new Map();
+                
+                players.forEach(player => {
+                    const basePoints = pointsConfig.participation || 0;
+                    const bonusKey = placements.get(player.id); // ex: 'gold_R4_win'
+                    const bonusPoints = bonusKey ? (pointsConfig[bonusKey] || 0) : 0;
+                    const grpPoints = groupPoints.get(player.id) || 0;
+                    
+                    const totalPointsToAdd = basePoints + bonusPoints + grpPoints;
+                    
+                    // Contabiliza vitórias Ouro/Prata (para estatísticas)
+                    const goldWins = (bonusKey === 'gold_R5_win' || bonusKey === 'gold_R4_win' || bonusKey === 'gold_R3_win') ? 1 : 0; // Chave de 16, 8, 4
+                    const silverWins = (bonusKey === 'silver_R5_win' || bonusKey === 'silver_R4_win' || bonusKey === 'silver_R3_win') ? 1 : 0;
 
-                // Pré-leitura de todos os jogadores (Obrigatório para transações)
-                for (const player of champData.players) {
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', player.id);
+                    playerPointsMap.set(player.id, {
+                        name: player.name,
+                        pointsToAdd: totalPointsToAdd,
+                        goldWinsToAdd: goldWins,
+                        silverWinsToAdd: silverWins,
+                        coveiroWinsToAdd: 0 // Coveiro é contado no 'sortudo' ou stats globais
+                    });
+                });
+
+                // 2. Cria um Map para os documentos dos jogadores (para evitar leituras repetidas)
+                const playerDocsData = new Map();
+                for (const playerId of playerPointsMap.keys()) {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
                     const playerDoc = await transaction.get(playerRef); 
-                    playerDocsData.set(player.id, playerDoc); 
+                    playerDocsData.set(playerId, playerDoc); 
                 }
 
-                // Cálculo e escrita
-                for (const player of champData.players) {
-                    const playerId = player.id;
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
-                    const playerDoc = playerDocsData.get(playerId);
-
-                    // Calcula os pontos base
-                    const participationPoints = pointsConfig.participation || 0;
-                    const groupWinPoints = (groupWinsMap.get(playerId) || 0) * (pointsConfig.groupWin || 0);
+                // 3. Aplica as atualizações na transação
+                for (const [playerId, data] of playerPointsMap.entries()) {
+                    const playerDoc = playerDocsData.get(playerId); 
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
                     
-                    // Pega o bônus MÁXIMO (fixo) que o jogador alcançou
-                    const bonusPhasePoints = bonusMap.get(playerId) || 0;
-                    
-                    // Soma total
-                    const totalPointsGanhos = participationPoints + groupWinPoints + bonusPhasePoints;
-                    
-                    // Pega as estatísticas
-                    const goldWinsGanhos = goldWinMap.get(playerId) || 0;
-                    const silverWinsGanhos = silverWinMap.get(playerId) || 0;
-                    const coveiroWinsGanhos = coveiroMap.get(playerId) || 0;
-
                     if (!playerDoc.exists()) {
-                        // Se o jogador é novo no ranking
                         transaction.set(playerRef, {
-                            name: player.name,
-                            points: totalPointsGanhos,
-                            goldWins: goldWinsGanhos,
-                            silverWins: silverWinsGanhos,
-                            coveiroWins: coveiroWinsGanhos 
+                            name: data.name,
+                            points: data.pointsToAdd,
+                            goldWins: data.goldWinsToAdd,
+                            silverWins: data.silverWinsToAdd,
+                            coveiroWins: 0 
                         });
                     } else {
-                        // Se o jogador já existe, soma os pontos e estatísticas
                         const oldData = playerDoc.data();
                         transaction.update(playerRef, {
-                            name: player.name, // Garante que o nome está atualizado
-                            points: (oldData.points || 0) + totalPointsGanhos,
-                            goldWins: (oldData.goldWins || 0) + goldWinsGanhos,
-                            silverWins: (oldData.silverWins || 0) + silverWinsGanhos,
-                            coveiroWins: (oldData.coveiroWins || 0) + coveiroWinsGanhos 
+                            name: data.name, // Garante que o nome está atualizado
+                            points: (oldData.points || 0) + data.pointsToAdd,
+                            goldWins: (oldData.goldWins || 0) + data.goldWinsToAdd,
+                            silverWins: (oldData.silverWins || 0) + data.silverWinsToAdd,
+                            coveiroWins: (oldData.coveiroWins || 0) // Mata-mata não atualiza coveiro
                         });
                     }
                 }
             });
         };
-        // =================================================================
-        // === Fim da Mudança
-        // =================================================================
-        
+
         const getRankings = (group) => {
             const playerStats = {};
             group.players.forEach(p => {
@@ -2388,17 +2846,17 @@
                 const [p1, p2, p3, p4] = match.p;
                 const [s1, s2] = match.score;
                 if (s1 !== null && !isNaN(s1)) {
-                    playerStats[p1].gamesWon += s1;
-                    playerStats[p2].gamesWon += s1;
+                    if (playerStats[p1]) playerStats[p1].gamesWon += s1;
+                    if (playerStats[p2]) playerStats[p2].gamesWon += s1;
                 }
                 if (s2 !== null && !isNaN(s2)) {
-                    playerStats[p3].gamesWon += s2;
-                    playerStats[p4].gamesWon += s2;
+                    if (playerStats[p3]) playerStats[p3].gamesWon += s2;
+                    if (playerStats[p4]) playerStats[p4].gamesWon += s2;
                 }
             });
             return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
         };
-        const getGlobalTournamentStats = (champData) => {
+        const getGlobalTournamentStats_MataMata = (champData) => {
             const playerStats = {};
             champData.players.forEach(p => {
                 playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
@@ -2440,6 +2898,261 @@
             });
             return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
         };
+
+
+        // =================================================================
+        // === LÓGICA (Sortudo)
+        // =================================================================
+        
+        const handleGenerateChampionship_Sortudo = async () => {
+            const playerCount = activeChampionship.players.length;
+            const numRounds = activeChampionship.config.numRounds;
+
+            if (!confirm(`Sortear ${numRounds} rodadas para ${playerCount} jogadores?`)) {
+                return;
+            }
+
+            try {
+                const newRounds = [];
+                const playerIds = activeChampionship.players.map(p => p.id);
+
+                for (let i = 0; i < numRounds; i++) {
+                    const shuffledPlayers = [...playerIds].sort(() => 0.5 - Math.random());
+                    const luckyPlayers = [];
+                    const playersInGames = [];
+
+                    // Calcula quantos "sortudos" (BYE)
+                    const numLucky = playerCount % 4;
+                    if (numLucky > 0) {
+                        for (let j = 0; j < numLucky; j++) {
+                            luckyPlayers.push(shuffledPlayers.pop());
+                        }
+                    }
+                    
+                    // Monta as duplas
+                    const matches = [];
+                    const numMatches = shuffledPlayers.length / 4;
+                    for (let m = 0; m < numMatches; m++) {
+                        // Sorteia 4 jogadores para o jogo
+                        const p1 = shuffledPlayers[m * 4 + 0];
+                        const p2 = shuffledPlayers[m * 4 + 1];
+                        const p3 = shuffledPlayers[m * 4 + 2];
+                        const p4 = shuffledPlayers[m * 4 + 3];
+                        
+                        // Sorteia as duplas dentro do jogo
+                        const gamePlayers = [p1, p2, p3, p4].sort(() => 0.5 - Math.random());
+                        
+                        matches.push({
+                            id: `R${i}_M${m}`,
+                            p: [gamePlayers[0], gamePlayers[1], gamePlayers[2], gamePlayers[3]], // p1/p2 vs p3/p4
+                            score: [null, null]
+                        });
+                    }
+                    
+                    newRounds.push({
+                        id: `Round_${i + 1}`,
+                        matches: matches,
+                        luckyPlayers: luckyPlayers
+                    });
+                }
+
+                const newChampData = {
+                    ...activeChampionship,
+                    status: 'rounds',
+                    rounds: newRounds 
+                };
+                await saveActiveChampionship(newChampData);
+                
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                await setDoc(champRef, { status: 'rounds' }, { merge: true });
+
+            } catch (error) {
+                console.error("Erro ao gerar rodadas do Torneio Sortudo:", error);
+                showModal("Erro", "Não foi possível gerar as rodadas. " + error.message);
+            }
+        };
+
+        const handleConfirmSortudoScore = (roundIndex, matchIndex) => {
+            const val0 = document.getElementById(`s-${roundIndex}-m-${matchIndex}-s0`).value;
+            const val1 = document.getElementById(`s-${roundIndex}-m-${matchIndex}-s1`).value;
+            const score0 = val0 === '' ? null : parseInt(val0, 10);
+            const score1 = val1 === '' ? null : parseInt(val1, 10);
+            
+            if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                return;
+            }
+            
+            const newChampData = JSON.parse(JSON.stringify(activeChampionship));
+            newChampData.rounds[roundIndex].matches[matchIndex].score[0] = score0;
+            newChampData.rounds[roundIndex].matches[matchIndex].score[1] = score1;
+            saveActiveChampionship(newChampData); 
+        };
+
+        const getLeaderboard_Sortudo = () => {
+            const playerStats = new Map(); // Key: playerId, Value: { id, name, totalGames }
+            activeChampionship.players.forEach(p => {
+                playerStats.set(p.id, { id: p.id, name: p.name, totalGames: 0 });
+            });
+
+            let allScoresFilled = true;
+            const luckyGames = activeChampionship.config.luckyGames || 0;
+
+            activeChampionship.rounds.forEach(round => {
+                // Adiciona games dos "Sortudos" (BYE)
+                round.luckyPlayers.forEach(pId => {
+                    const stats = playerStats.get(pId);
+                    if (stats) stats.totalGames += luckyGames;
+                });
+
+                // Adiciona games dos jogos
+                round.matches.forEach(match => {
+                    const [s1, s2] = match.score;
+                    if (s1 === null || s2 === null) {
+                        allScoresFilled = false;
+                        return; // Não conta placar incompleto
+                    }
+                    
+                    const [p1, p2, p3, p4] = match.p;
+                    
+                    if (playerStats.has(p1)) playerStats.get(p1).totalGames += s1;
+                    if (playerStats.has(p2)) playerStats.get(p2).totalGames += s1;
+                    if (playerStats.has(p3)) playerStats.get(p3).totalGames += s2;
+                    if (playerStats.has(p4)) playerStats.get(p4).totalGames += s2;
+                });
+            });
+
+            const leaderboard = Array.from(playerStats.values())
+                                   .sort((a, b) => b.totalGames - a.totalGames);
+
+            return { leaderboard, allScoresFilled };
+        };
+
+        const handleManualFinalize_Sortudo = async () => {
+            if (!confirm("Confirmar Finalização?\nEsta ação irá calcular os pontos, lançar no ranking e marcar o campeonato como 'Finalizado'. Esta ação não pode ser desfeita.")) {
+                return;
+            }
+            
+            const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+            const champDoc = await getDoc(champRef);
+            if (!champDoc.exists()) {
+                 showModal("Erro Crítico", "Documento principal do campeonato não encontrado.");
+                 return;
+            }
+            
+            const champInfo = champDoc.data();
+            const rankingId = champInfo.rankingId;
+            const pointsConfig = champInfo.pointsConfig || DEFAULT_POINTS_SORTUDO;
+            
+            if (!rankingId) {
+                showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
+                return;
+            }
+            
+            showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+
+            try {
+                // 1. Obter a classificação final (leaderboard)
+                const { leaderboard } = getLeaderboard_Sortudo();
+                
+                // 2. Atualizar o Ranking (Transação)
+                await updateGlobalRanking_Sortudo(
+                    leaderboard,
+                    pointsConfig,
+                    rankingId
+                );
+
+                // 3. Marcar o campeonato como finalizado
+                await setDoc(champRef, {
+                    status: 'finished',
+                }, { merge: true });
+
+                hideModal();
+                showModal("Sucesso!", `Ranking global atualizado! Campeonato finalizado.`);
+
+            } catch (error) {
+                console.error("Erro ao finalizar (manual) torneio sortudo:", error);
+                showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes: " + error.message);
+            }
+        };
+
+        const updateGlobalRanking_Sortudo = async (leaderboard, pointsConfig, rankingId) => {
+            await runTransaction(db, async (transaction) => {
+                
+                // 1. Prepara o mapa de pontos a serem adicionados
+                const playerPointsMap = new Map();
+                
+                leaderboard.forEach((player, index) => {
+                    const rank = index + 1;
+                    const basePoints = pointsConfig.participation || 0;
+                    const gamePoints = (player.totalGames || 0) * (pointsConfig.perGame || 0);
+                    
+                    let bonusPoints = 0;
+                    if (rank === 1 && pointsConfig.bonus_1st) bonusPoints = pointsConfig.bonus_1st;
+                    if (rank === 2 && pointsConfig.bonus_2nd) bonusPoints = pointsConfig.bonus_2nd;
+                    if (rank === 3 && pointsConfig.bonus_3rd) bonusPoints = pointsConfig.bonus_3rd;
+
+                    const totalPointsToAdd = basePoints + gamePoints + bonusPoints;
+                    
+                    const goldWins = (rank === 1) ? 1 : 0; // Contamos 1º lugar do Sortudo como "Ouro"
+                    const isCoveiro = (rank === leaderboard.length && leaderboard.length > 3); // Só é coveiro se não for pódio
+
+                    playerPointsMap.set(player.id, {
+                        name: player.name,
+                        pointsToAdd: totalPointsToAdd,
+                        goldWinsToAdd: goldWins,
+                        silverWinsToAdd: 0, // Sortudo não dá prata
+                        coveiroWinsToAdd: isCoveiro ? 1 : 0
+                    });
+                });
+
+                // 2. Cria um Map para os documentos dos jogadores (para evitar leituras repetidas)
+                const playerDocsData = new Map();
+                for (const playerId of playerPointsMap.keys()) {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                    const playerDoc = await transaction.get(playerRef); 
+                    playerDocsData.set(playerId, playerDoc); 
+                }
+
+                // 3. Aplica as atualizações na transação
+                for (const [playerId, data] of playerPointsMap.entries()) {
+                    const playerDoc = playerDocsData.get(playerId); 
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
+                    
+                    if (!playerDoc.exists()) {
+                        transaction.set(playerRef, {
+                            name: data.name,
+                            points: data.pointsToAdd,
+                            goldWins: data.goldWinsToAdd,
+                            silverWins: data.silverWinsToAdd,
+                            coveiroWins: data.coveiroWinsToAdd 
+                        });
+                    } else {
+                        const oldData = playerDoc.data();
+                        transaction.update(playerRef, {
+                            name: data.name, 
+                            points: (oldData.points || 0) + data.pointsToAdd,
+                            goldWins: (oldData.goldWins || 0) + data.goldWinsToAdd,
+                            silverWins: (oldData.silverWins || 0) + data.silverWinsToAdd,
+                            coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWinsToAdd 
+                        });
+                    }
+                }
+            });
+        };
+
+
+        // =================================================================
+        // === PDF (Bifurcação)
+        // =================================================================
+        const handlePrintChampionshipPDF = (champType) => {
+            if (champType === 'sortudo') {
+                handlePrintChampionshipPDF_Sortudo();
+            } else {
+                handlePrintChampionshipPDF_MataMata();
+            }
+        };
+
         const handlePrintRankingPDF = () => {
             const { jsPDF } = window.jspdf;
             if (!jsPDF) {
@@ -2480,7 +3193,8 @@
                 showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
             }
         };
-        const handlePrintChampionshipPDF = () => {
+        
+        const handlePrintChampionshipPDF_MataMata = () => {
             const { jsPDF } = window.jspdf;
             if (!jsPDF) {
                 showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
@@ -2498,9 +3212,11 @@
                 doc.text(champ.name, 105, yPos, { align: 'center' });
                 yPos += 10;
                 doc.setFontSize(14);
-                doc.text("Resultados Finais", 14, yPos);
+                doc.text("Resultados Finais (Mata-Mata)", 14, yPos);
                 yPos += 7;
+                
                 const finalResults = [];
+                // Lógica de 3º Lugar (Idêntica à renderBracket)
                 const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
                 const goldFinal = activeChampionship.goldBracket.find(m => m.round === maxRoundGold);
                 const goldSemiFinals = activeChampionship.goldBracket.filter(m => m.round === maxRoundGold - 1);
@@ -2540,7 +3256,7 @@
                     }
                 }
 
-                const stats = getGlobalTournamentStats(activeChampionship);
+                const stats = getGlobalTournamentStats_MataMata(activeChampionship);
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
                     const coveiros = stats.filter(p => p.gamesWon === minGames);
@@ -2555,13 +3271,15 @@
                     theme: 'striped',
                 });
                 yPos = doc.autoTable.previous.finalY + 10; 
+                
+                // Adiciona Página de Grupos
                 doc.addPage();
                 yPos = 22;
                 doc.setFontSize(18);
                 doc.text("Resultados da Fase de Grupos", 105, yPos, { align: 'center' });
                 yPos += 10;
                 activeChampionship.groups.forEach((group, index) => {
-                    if (yPos > 240) {
+                    if (yPos > 240) { // Previne quebra de página ruim
                         doc.addPage();
                         yPos = 22;
                     }
@@ -2598,7 +3316,9 @@
                     });
                     yPos = doc.autoTable.previous.finalY + 12;
                 });
-                if (yPos > 180) { 
+                
+                // Adiciona Página de Mata-Mata
+                if (yPos > 180) { // Adiciona nova página se não houver espaço
                     doc.addPage();
                     yPos = 22;
                 } else {
@@ -2662,12 +3382,120 @@
                     styles: { halign: 'center', textColor: [31, 41, 55] },
                     columnStyles: { 1: { halign: 'left' }, 3: { halign: 'right' } }
                 });
-                doc.save(`resultados_${champ.name.toLowerCase().replace(/\s/g, '_')}.pdf`);
+                doc.save(`resultados_mm_${champ.name.toLowerCase().replace(/\s/g, '_')}.pdf`);
             } catch (error) {
-                 console.error("Erro ao gerar PDF do campeonato:", error);
+                 console.error("Erro ao gerar PDF do campeonato Mata-Mata:", error);
                 showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
             }
         };
+
+        const handlePrintChampionshipPDF_Sortudo = () => {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
+                return;
+            }
+            const champ = championships.find(c => c.id === appState.currentChampionshipId);
+            if (!champ || !activeChampionship) {
+                showModal("Erro", "Dados do campeonato não carregados.");
+                return;
+            }
+            try {
+                const doc = new jsPDF();
+                let yPos = 22; 
+                doc.setFontSize(18);
+                doc.text(champ.name, 105, yPos, { align: 'center' });
+                yPos += 10;
+                doc.setFontSize(14);
+                doc.text("Resultados Finais (Torneio Sortudo)", 14, yPos);
+                yPos += 7;
+
+                const { leaderboard } = getLeaderboard_Sortudo();
+                
+                const head = [['Pos.', 'Jogador', 'Total Games']];
+                const body = leaderboard.map((p, index) => {
+                    let medal = '';
+                    if (index === 0) medal = '🥇';
+                    if (index === 1) medal = '🥈';
+                    if (index === 2) medal = '🥉';
+                    const isCoveiro = index === leaderboard.length - 1;
+                    
+                    return [
+                        `${index + 1}º ${medal}`,
+                        `${p.name} ${isCoveiro ? '👻' : ''}`,
+                        p.totalGames
+                    ];
+                });
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: head,
+                    body: body,
+                    headStyles: { fillColor: [139, 92, 246], textColor: [255, 255, 255] }, // Cor Roxo
+                    styles: { halign: 'center', textColor: [31, 41, 55] },
+                    theme: 'striped',
+                    columnStyles: {
+                        1: { halign: 'left' } 
+                    }
+                });
+                yPos = doc.autoTable.previous.finalY + 10; 
+
+                // Adiciona Página de Rodadas
+                doc.addPage();
+                yPos = 22;
+                doc.setFontSize(18);
+                doc.text("Resultados das Rodadas", 105, yPos, { align: 'center' });
+                yPos += 10;
+                
+                activeChampionship.rounds.forEach((round, roundIndex) => {
+                    if (yPos > 240) { 
+                        doc.addPage();
+                        yPos = 22;
+                    }
+                    doc.setFontSize(14);
+                    doc.text(`Rodada ${roundIndex + 1}`, 14, yPos);
+                    yPos += 7;
+
+                    const matchesBody = round.matches.map(m => {
+                        const pair1Name = `${activeChampionship.players.find(p => p.id === m.p[0])?.name || '?'} / ${activeChampionship.players.find(p => p.id === m.p[1])?.name || '?'}`;
+                        const pair2Name = `${activeChampionship.players.find(p => p.id === m.p[2])?.name || '?'} / ${activeChampionship.players.find(p => p.id === m.p[3])?.name || '?'}`;
+                        return [
+                            pair1Name,
+                            `${m.score[0] === null ? '-' : m.score[0]} vs ${m.score[1] === null ? '-' : m.score[1]}`,
+                            pair2Name
+                        ];
+                    });
+                    
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Dupla 1', 'Placar', 'Dupla 2']],
+                        body: matchesBody,
+                        headStyles: { fillColor: [8, 145, 178], textColor: [255, 255, 255] }, 
+                        styles: { halign: 'center', textColor: [31, 41, 55] },
+                        columnStyles: { 0: { halign: 'left' }, 2: { halign: 'right' } }
+                    });
+                    yPos = doc.autoTable.previous.finalY + 5;
+
+                    // Adiciona Sortudos (BYE)
+                    const luckyPlayers = round.luckyPlayers.map(pId => activeChampionship.players.find(p => p.id === pId)?.name || 'Erro');
+                    if (luckyPlayers.length > 0) {
+                        doc.setFontSize(10);
+                        doc.text(`Sortudos (BYE): ${luckyPlayers.join(' / ')} (+${activeChampionship.config.luckyGames} games)`, 14, yPos);
+                        yPos += 7;
+                    }
+                    yPos += 5; // Espaço extra
+                });
+
+                doc.save(`resultados_sortudo_${champ.name.toLowerCase().replace(/\s/g, '_')}.pdf`);
+            } catch (error) {
+                 console.error("Erro ao gerar PDF do Torneio Sortudo:", error);
+                showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
+            }
+        };
+
+        // =================================================================
+        // === INICIALIZAÇÃO E LISTENERS GLOBAIS
+        // =================================================================
         const listenToGlobalPlayers = () => {
             unsubscribeGlobalPlayers(); 
             if (!appState.currentRankingId) {
@@ -2675,6 +3503,7 @@
                 if(appState.currentView === 'globalRanking') render();
                 return;
             }
+            // MUDANÇA: O caminho para os players é DENTRO da coleção 'rankings'
             const playersCollectionRef = collection(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players');
             const q = query(playersCollectionRef);
             unsubscribeGlobalPlayers = onSnapshot(q, (querySnapshot) => {
@@ -2730,6 +3559,7 @@
         };
         const listenToRankingsList = () => {
             unsubscribeRankingsList();
+            // MUDANÇA: O caminho para a lista de rankings é 'app_data/rankings'
             const rankingsDocRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
             unsubscribeRankingsList = onSnapshot(rankingsDocRef, async (docSnap) => {
                 let list = [];
@@ -2737,6 +3567,7 @@
                     list = docSnap.data().list || [];
                 }
                 if (list.length === 0) {
+                    // Se não houver nenhum ranking, cria um "Ranking Geral" padrão
                     try {
                         const defaultRanking = { id: "ranking_geral", name: "Ranking Geral" };
                         await setDoc(rankingsDocRef, { list: [defaultRanking] });
@@ -2749,13 +3580,19 @@
                 } else {
                     allRankings = list;
                 }
+                
+                // Define o ranking atual se não estiver definido ou não existir mais
                 const selectedRankingExists = allRankings.some(r => r.id === appState.currentRankingId);
                 if ((!appState.currentRankingId || !selectedRankingExists) && allRankings.length > 0) {
                     appState.currentRankingId = allRankings[0].id;
                 } else if (allRankings.length === 0) {
                     appState.currentRankingId = null; 
                 }
+                
+                // (Re)inicia o listener de jogadores para o ranking (novo ou antigo)
                 listenToGlobalPlayers();
+                
+                // Renderiza a view atual (ex: championshipList) que depende da lista de rankings
                 if (!appState.isTelaoMode) {
                     render();
                 }
@@ -2775,7 +3612,6 @@
                         errorMessage = "Erro de Autenticação: O 'Login Anônimo' (Anonymous) não está ATIVADO no seu painel do Firebase.";
                     }
                     showModal("Erro de Autenticação", errorMessage);
-
                     return;
                 }
             }
@@ -2783,11 +3619,16 @@
                 const effectiveUserId = MESTRE_USER_ID; 
                 appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
                 userIdFooter.textContent = effectiveUserId; 
+                
                 const urlParams = new URLSearchParams(window.location.search);
                 const telaoChampId = urlParams.get('champId');
+
+                // Carrega os listeners principais
                 listenToChampionships();
-                listenToRankingsList(); 
+                listenToRankingsList(); // Este listener agora também chama listenToGlobalPlayers
+                
                 if (urlParams.has('telao') && telaoChampId) {
+                    // MODO TELÃO
                     appState.isTelaoMode = true;
                     appState.isAdmin = false; 
                     const telaoStyles = document.createElement('style');
@@ -2799,6 +3640,1071 @@
                     document.head.appendChild(telaoStyles);
                     navigateTo('telaoView', telaoChampId);
                 } else {
+                    // MODO ADMIN/VISITANTE
+                    appState.isTelaoMode = false;
+                    navigateTo('login');
+                }
+            }
+        });
+    </script>
+    <div class="aviso-rodape text-center text-xs text-gray-500 py-3 bg-gray-100 mt-8">
+        ............................ ............................
+    </div>
+</body>
+</html>
+
+        // Função Auxiliar para calcular pontos de grupo
+        const getPlayerGroupPoints_MataMata = (champData, groupWinPoints) => {
+            const groupPoints = new Map(); // Key: playerId, Value: points
+            
+            champData.players.forEach(p => groupPoints.set(p.id, 0));
+
+            if (!champData.groups || groupWinPoints === 0) return groupPoints;
+
+            champData.groups.forEach(group => {
+                group.matches.forEach(match => {
+                    const [p1, p2, p3, p4] = match.p;
+                    const [s1, s2] = match.score;
+                    
+                    if (s1 === null || s2 === null || s1 === s2) return; // Ignora se não jogado ou empate
+
+                    if (s1 > s2) {
+                        groupPoints.set(p1, (groupPoints.get(p1) || 0) + groupWinPoints);
+                        groupPoints.set(p2, (groupPoints.get(p2) || 0) + groupWinPoints);
+                    } else if (s2 > s1) {
+                        groupPoints.set(p3, (groupPoints.get(p3) || 0) + groupWinPoints);
+                        groupPoints.set(p4, (groupPoints.get(p4) || 0) + groupWinPoints);
+                    }
+                });
+            });
+            return groupPoints;
+        };
+        
+        const updateGlobalRanking_MataMata = async (players, placements, groupPoints, pointsConfig, rankingId) => {
+            await runTransaction(db, async (transaction) => {
+                
+                // 1. Prepara o mapa de pontos a serem adicionados
+                const playerPointsMap = new Map();
+                
+                players.forEach(player => {
+                    const basePoints = pointsConfig.participation || 0;
+                    const bonusKey = placements.get(player.id); // ex: 'gold_R4_win'
+                    const bonusPoints = bonusKey ? (pointsConfig[bonusKey] || 0) : 0;
+                    const grpPoints = groupPoints.get(player.id) || 0;
+                    
+                    const totalPointsToAdd = basePoints + bonusPoints + grpPoints;
+                    
+                    // Contabiliza vitórias Ouro/Prata (para estatísticas)
+                    const goldWins = (bonusKey === 'gold_R5_win' || bonusKey === 'gold_R4_win' || bonusKey === 'gold_R3_win') ? 1 : 0; // Chave de 16, 8, 4
+                    const silverWins = (bonusKey === 'silver_R5_win' || bonusKey === 'silver_R4_win' || bonusKey === 'silver_R3_win') ? 1 : 0;
+
+                    playerPointsMap.set(player.id, {
+                        name: player.name,
+                        pointsToAdd: totalPointsToAdd,
+                        goldWinsToAdd: goldWins,
+                        silverWinsToAdd: silverWins,
+                        coveiroWinsToAdd: 0 // Coveiro é contado no 'sortudo' ou stats globais
+                    });
+                });
+
+                // 2. Cria um Map para os documentos dos jogadores (para evitar leituras repetidas)
+                const playerDocsData = new Map();
+                for (const playerId of playerPointsMap.keys()) {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                    const playerDoc = await transaction.get(playerRef); 
+                    playerDocsData.set(playerId, playerDoc); 
+                }
+
+                // 3. Aplica as atualizações na transação
+                for (const [playerId, data] of playerPointsMap.entries()) {
+                    const playerDoc = playerDocsData.get(playerId); 
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
+                    
+                    if (!playerDoc.exists()) {
+                        transaction.set(playerRef, {
+                            name: data.name,
+                            points: data.pointsToAdd,
+                            goldWins: data.goldWinsToAdd,
+                            silverWins: data.silverWinsToAdd,
+                            coveiroWins: 0 
+                        });
+                    } else {
+                        const oldData = playerDoc.data();
+                        transaction.update(playerRef, {
+                            name: data.name, // Garante que o nome está atualizado
+                            points: (oldData.points || 0) + data.pointsToAdd,
+                            goldWins: (oldData.goldWins || 0) + data.goldWinsToAdd,
+                            silverWins: (oldData.silverWins || 0) + data.silverWinsToAdd,
+                            coveiroWins: (oldData.coveiroWins || 0) // Mata-mata não atualiza coveiro
+                        });
+                    }
+                }
+            });
+        };
+
+        const getRankings = (group) => {
+            const playerStats = {};
+            group.players.forEach(p => {
+                playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
+            });
+            group.matches.forEach(match => {
+                const [p1, p2, p3, p4] = match.p;
+                const [s1, s2] = match.score;
+                if (s1 !== null && !isNaN(s1)) {
+                    if (playerStats[p1]) playerStats[p1].gamesWon += s1;
+                    if (playerStats[p2]) playerStats[p2].gamesWon += s1;
+                }
+                if (s2 !== null && !isNaN(s2)) {
+                    if (playerStats[p3]) playerStats[p3].gamesWon += s2;
+                    if (playerStats[p4]) playerStats[p4].gamesWon += s2;
+                }
+            });
+            return Object.values(playerStats).sort((a, b) => b.gamesWon - a.gamesWon);
+        };
+        const getGlobalTournamentStats_MataMata = (champData) => {
+            const playerStats = {};
+            champData.players.forEach(p => {
+                playerStats[p.id] = { id: p.id, name: p.name, gamesWon: 0 };
+            });
+            if (champData.groups) {
+                champData.groups.forEach(group => {
+                    group.matches.forEach(match => {
+                        const [p1, p2, p3, p4] = match.p;
+                        const [s1, s2] = match.score;
+                        if (s1 !== null && !isNaN(s1)) {
+                            if (playerStats[p1]) playerStats[p1].gamesWon += s1;
+                            if (playerStats[p2]) playerStats[p2].gamesWon += s1;
+                        }
+                        if (s2 !== null && !isNaN(s2)) {
+                            if (playerStats[p3]) playerStats[p3].gamesWon += s2;
+                            if (playerStats[p4]) playerStats[p4].gamesWon += s2;
+                        }
+                    });
+                });
+            }
+            const allKnockoutMatches = (champData.goldBracket || []).concat(champData.silverBracket || []);
+            allKnockoutMatches.forEach(match => {
+                const [pair1, pair2] = match.pairs;
+                const [s0, s1] = match.score;
+                if (s0 !== null && !isNaN(s0) && pair1 && pair1.players) {
+                    pair1.players.forEach(player => {
+                        if (playerStats[player.id]) {
+                            playerStats[player.id].gamesWon += s0;
+                        }
+                    });
+                }
+                if (s1 !== null && !isNaN(s1) && pair2 && pair2.players) {
+                    pair2.players.forEach(player => {
+                        if (playerStats[player.id]) {
+                            playerStats[player.id].gamesWon += s1;
+                        }
+                    });
+                }
+            });
+            return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
+        };
+
+
+        // =================================================================
+        // === LÓGICA (Sortudo)
+        // =================================================================
+        
+        const handleGenerateChampionship_Sortudo = async () => {
+            const playerCount = activeChampionship.players.length;
+            const numRounds = activeChampionship.config.numRounds;
+
+            if (!confirm(`Sortear ${numRounds} rodadas para ${playerCount} jogadores?`)) {
+                return;
+            }
+
+            try {
+                const newRounds = [];
+                const playerIds = activeChampionship.players.map(p => p.id);
+
+                for (let i = 0; i < numRounds; i++) {
+                    const shuffledPlayers = [...playerIds].sort(() => 0.5 - Math.random());
+                    const luckyPlayers = [];
+                    const playersInGames = [];
+
+                    // Calcula quantos "sortudos" (BYE)
+                    const numLucky = playerCount % 4;
+                    if (numLucky > 0) {
+                        for (let j = 0; j < numLucky; j++) {
+                            luckyPlayers.push(shuffledPlayers.pop());
+                        }
+                    }
+                    
+                    // Monta as duplas
+                    const matches = [];
+                    const numMatches = shuffledPlayers.length / 4;
+                    for (let m = 0; m < numMatches; m++) {
+                        // Sorteia 4 jogadores para o jogo
+                        const p1 = shuffledPlayers[m * 4 + 0];
+                        const p2 = shuffledPlayers[m * 4 + 1];
+                        const p3 = shuffledPlayers[m * 4 + 2];
+                        const p4 = shuffledPlayers[m * 4 + 3];
+                        
+                        // Sorteia as duplas dentro do jogo
+                        const gamePlayers = [p1, p2, p3, p4].sort(() => 0.5 - Math.random());
+                        
+                        matches.push({
+                            id: `R${i}_M${m}`,
+                            p: [gamePlayers[0], gamePlayers[1], gamePlayers[2], gamePlayers[3]], // p1/p2 vs p3/p4
+                            score: [null, null]
+                        });
+                    }
+                    
+                    newRounds.push({
+                        id: `Round_${i + 1}`,
+                        matches: matches,
+                        luckyPlayers: luckyPlayers
+                    });
+                }
+
+                const newChampData = {
+                    ...activeChampionship,
+                    status: 'rounds',
+                    rounds: newRounds 
+                };
+                await saveActiveChampionship(newChampData);
+                
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                await setDoc(champRef, { status: 'rounds' }, { merge: true });
+
+            } catch (error) {
+                console.error("Erro ao gerar rodadas do Torneio Sortudo:", error);
+                showModal("Erro", "Não foi possível gerar as rodadas. " + error.message);
+            }
+        };
+
+        const handleConfirmSortudoScore = (roundIndex, matchIndex) => {
+            const val0 = document.getElementById(`s-${roundIndex}-m-${matchIndex}-s0`).value;
+            const val1 = document.getElementById(`s-${roundIndex}-m-${matchIndex}-s1`).value;
+            const score0 = val0 === '' ? null : parseInt(val0, 10);
+            const score1 = val1 === '' ? null : parseInt(val1, 10);
+            
+            if (score0 === null || score1 === null || isNaN(score0) || isNaN(score1) || score0 < 0 || score1 < 0) {
+                showModal("Placar Inválido", "Ambos os placares devem ser preenchidos com números positivos (ou 0).");
+                return;
+            }
+            
+            const newChampData = JSON.parse(JSON.stringify(activeChampionship));
+            newChampData.rounds[roundIndex].matches[matchIndex].score[0] = score0;
+            newChampData.rounds[roundIndex].matches[matchIndex].score[1] = score1;
+            saveActiveChampionship(newChampData); 
+        };
+
+        const getLeaderboard_Sortudo = () => {
+            const playerStats = new Map(); // Key: playerId, Value: { id, name, totalGames }
+            activeChampionship.players.forEach(p => {
+                playerStats.set(p.id, { id: p.id, name: p.name, totalGames: 0 });
+            });
+
+            let allScoresFilled = true;
+            const luckyGames = activeChampionship.config.luckyGames || 0;
+
+            activeChampionship.rounds.forEach(round => {
+                // Adiciona games dos "Sortudos" (BYE)
+                round.luckyPlayers.forEach(pId => {
+                    const stats = playerStats.get(pId);
+                    if (stats) stats.totalGames += luckyGames;
+                });
+
+                // Adiciona games dos jogos
+                round.matches.forEach(match => {
+                    const [s1, s2] = match.score;
+                    if (s1 === null || s2 === null) {
+                        allScoresFilled = false;
+                        return; // Não conta placar incompleto
+                    }
+                    
+                    const [p1, p2, p3, p4] = match.p;
+                    
+                    if (playerStats.has(p1)) playerStats.get(p1).totalGames += s1;
+                    if (playerStats.has(p2)) playerStats.get(p2).totalGames += s1;
+                    if (playerStats.has(p3)) playerStats.get(p3).totalGames += s2;
+                    if (playerStats.has(p4)) playerStats.get(p4).totalGames += s2;
+                });
+            });
+
+            const leaderboard = Array.from(playerStats.values())
+                                   .sort((a, b) => b.totalGames - a.totalGames);
+
+            return { leaderboard, allScoresFilled };
+        };
+
+        const handleManualFinalize_Sortudo = async () => {
+            if (!confirm("Confirmar Finalização?\nEsta ação irá calcular os pontos, lançar no ranking e marcar o campeonato como 'Finalizado'. Esta ação não pode ser desfeita.")) {
+                return;
+            }
+            
+            const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+            const champDoc = await getDoc(champRef);
+            if (!champDoc.exists()) {
+                 showModal("Erro Crítico", "Documento principal do campeonato não encontrado.");
+                 return;
+            }
+            
+            const champInfo = champDoc.data();
+            const rankingId = champInfo.rankingId;
+            const pointsConfig = champInfo.pointsConfig || DEFAULT_POINTS_SORTUDO;
+            
+            if (!rankingId) {
+                showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
+                return;
+            }
+            
+            showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
+
+            try {
+                // 1. Obter a classificação final (leaderboard)
+                const { leaderboard } = getLeaderboard_Sortudo();
+                
+                // 2. Atualizar o Ranking (Transação)
+                await updateGlobalRanking_Sortudo(
+                    leaderboard,
+                    pointsConfig,
+                    rankingId
+                );
+
+                // 3. Marcar o campeonato como finalizado
+                await setDoc(champRef, {
+                    status: 'finished',
+                }, { merge: true });
+
+                hideModal();
+                showModal("Sucesso!", `Ranking global atualizado! Campeonato finalizado.`);
+
+            } catch (error) {
+                console.error("Erro ao finalizar (manual) torneio sortudo:", error);
+                showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes: " + error.message);
+            }
+        };
+
+        const updateGlobalRanking_Sortudo = async (leaderboard, pointsConfig, rankingId) => {
+            await runTransaction(db, async (transaction) => {
+                
+                // 1. Prepara o mapa de pontos a serem adicionados
+                const playerPointsMap = new Map();
+                
+                leaderboard.forEach((player, index) => {
+                    const rank = index + 1;
+                    const basePoints = pointsConfig.participation || 0;
+                    const gamePoints = (player.totalGames || 0) * (pointsConfig.perGame || 0);
+                    
+                    let bonusPoints = 0;
+                    if (rank === 1 && pointsConfig.bonus_1st) bonusPoints = pointsConfig.bonus_1st;
+                    if (rank === 2 && pointsConfig.bonus_2nd) bonusPoints = pointsConfig.bonus_2nd;
+                    if (rank === 3 && pointsConfig.bonus_3rd) bonusPoints = pointsConfig.bonus_3rd;
+
+                    const totalPointsToAdd = basePoints + gamePoints + bonusPoints;
+                    
+                    const goldWins = (rank === 1) ? 1 : 0; // Contamos 1º lugar do Sortudo como "Ouro"
+                    const isCoveiro = (rank === leaderboard.length && leaderboard.length > 3); // Só é coveiro se não for pódio
+
+                    playerPointsMap.set(player.id, {
+                        name: player.name,
+                        pointsToAdd: totalPointsToAdd,
+                        goldWinsToAdd: goldWins,
+                        silverWinsToAdd: 0, // Sortudo não dá prata
+                        coveiroWinsToAdd: isCoveiro ? 1 : 0
+                    });
+                });
+
+                // 2. Cria um Map para os documentos dos jogadores (para evitar leituras repetidas)
+                const playerDocsData = new Map();
+                for (const playerId of playerPointsMap.keys()) {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                    const playerDoc = await transaction.get(playerRef); 
+                    playerDocsData.set(playerId, playerDoc); 
+                }
+
+                // 3. Aplica as atualizações na transação
+                for (const [playerId, data] of playerPointsMap.entries()) {
+                    const playerDoc = playerDocsData.get(playerId); 
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
+                    
+                    if (!playerDoc.exists()) {
+                        transaction.set(playerRef, {
+                            name: data.name,
+                            points: data.pointsToAdd,
+                            goldWins: data.goldWinsToAdd,
+                            silverWins: data.silverWinsToAdd,
+                            coveiroWins: data.coveiroWinsToAdd 
+                        });
+                    } else {
+                        const oldData = playerDoc.data();
+                        transaction.update(playerRef, {
+                            name: data.name, 
+                            points: (oldData.points || 0) + data.pointsToAdd,
+                            goldWins: (oldData.goldWins || 0) + data.goldWinsToAdd,
+                            silverWins: (oldData.silverWins || 0) + data.silverWinsToAdd,
+                            coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWinsToAdd 
+                        });
+                    }
+                }
+            });
+        };
+
+
+        // =================================================================
+        // === PDF (Bifurcação)
+        // =================================================================
+        const handlePrintChampionshipPDF = (champType) => {
+            if (champType === 'sortudo') {
+                handlePrintChampionshipPDF_Sortudo();
+            } else {
+                handlePrintChampionshipPDF_MataMata();
+            }
+        };
+
+        const handlePrintRankingPDF = () => {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
+                return;
+            }
+            try {
+                const doc = new jsPDF();
+                const currentRanking = allRankings.find(r => r.id === appState.currentRankingId);
+                const rankingName = currentRanking ? currentRanking.name : "Ranking";
+                const title = `Ranking Geral: ${rankingName}`;
+                doc.setFontSize(18);
+                doc.text(title, 105, 22, { align: 'center' }); 
+                const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
+                const head = [['Pos.', 'Jogador', 'Pontos', '🥇 Ouro', '🥈 Prata', '👻 Coveiro']];
+                const body = sortedPlayers.map((p, index) => [
+                    `${index + 1}º`,
+                    p.name,
+                    p.points || 0,
+                    p.goldWins || 0,
+                    p.silverWins || 0,
+                    p.coveiroWins || 0
+                ]);
+                doc.autoTable({
+                    startY: 30,
+                    head: head,
+                    body: body,
+                    headStyles: { fillColor: [8, 145, 178] }, 
+                    styles: { halign: 'center', textColor: [31, 41, 55] },
+                    headStyles: { fillColor: [254, 243, 199], textColor: [75, 85, 99] }, 
+                    columnStyles: {
+                        1: { halign: 'left' } 
+                    }
+                });
+                doc.save(`ranking_${rankingName.toLowerCase().replace(/\s/g, '_')}.pdf`);
+            } catch (error) {
+                console.error("Erro ao gerar PDF do ranking:", error);
+                showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
+            }
+        };
+        
+        const handlePrintChampionshipPDF_MataMata = () => {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
+                return;
+            }
+            const champ = championships.find(c => c.id === appState.currentChampionshipId);
+            if (!champ || !activeChampionship) {
+                showModal("Erro", "Dados do campeonato não carregados.");
+                return;
+            }
+            try {
+                const doc = new jsPDF();
+                let yPos = 22; 
+                doc.setFontSize(18);
+                doc.text(champ.name, 105, yPos, { align: 'center' });
+                yPos += 10;
+                doc.setFontSize(14);
+                doc.text("Resultados Finais (Mata-Mata)", 14, yPos);
+                yPos += 7;
+                
+                const finalResults = [];
+                // Lógica de 3º Lugar (Idêntica à renderBracket)
+                const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
+                const goldFinal = activeChampionship.goldBracket.find(m => m.round === maxRoundGold);
+                const goldSemiFinals = activeChampionship.goldBracket.filter(m => m.round === maxRoundGold - 1);
+                
+                if (goldFinal?.winner) {
+                    finalResults.push(['🥇 Campeões Ouro', goldFinal.winner.name]);
+                    const goldRunnerUp = goldFinal.pairs.find(p => p && p.id !== goldFinal.winner.id);
+                    if (goldRunnerUp) finalResults.push(['🥈 2º Lugar Ouro', goldRunnerUp.name]);
+
+                    if (goldSemiFinals.length === 2) {
+                        const championSemi = goldSemiFinals.find(sf => 
+                            sf.pairs.some(p => p && p.id === goldFinal.winner.id)
+                        );
+                        if(championSemi) {
+                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== goldFinal.winner.id);
+                            if (thirdPlace) finalResults.push(['🥉 3º Lugar Ouro', thirdPlace.name]);
+                        }
+                    }
+                }
+                const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
+                const silverFinal = activeChampionship.silverBracket.find(m => m.round === maxRoundSilver);
+                const silverSemiFinals = activeChampionship.silverBracket.filter(m => m.round === maxRoundSilver - 1);
+                
+                if (silverFinal?.winner) {
+                    finalResults.push(['🥈 Campeões Prata', silverFinal.winner.name]);
+                    const silverRunnerUp = silverFinal.pairs.find(p => p && p.id !== silverFinal.winner.id);
+                    if (silverRunnerUp) finalResults.push(['2º Lugar Prata', silverRunnerUp.name]);
+                    
+                    if (silverSemiFinals.length === 2) {
+                        const championSemi = silverSemiFinals.find(sf => 
+                            sf.pairs.some(p => p && p.id === silverFinal.winner.id)
+                        );
+                        if(championSemi) {
+                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== silverFinal.winner.id);
+                            if (thirdPlace) finalResults.push(['3º Lugar Prata', thirdPlace.name]);
+                        }
+                    }
+                }
+
+                const stats = getGlobalTournamentStats_MataMata(activeChampionship);
+                if (stats.length > 0) {
+                    const minGames = stats[0].gamesWon;
+                    const coveiros = stats.filter(p => p.gamesWon === minGames);
+                    finalResults.push(['👻 Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
+                }
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Prêmio', 'Dupla/Jogador']],
+                    body: finalResults,
+                    headStyles: { fillColor: [52, 73, 94], textColor: [255, 255, 255] },
+                    styles: { textColor: [31, 41, 55] },
+                    theme: 'striped',
+                });
+                yPos = doc.autoTable.previous.finalY + 10; 
+                
+                // Adiciona Página de Grupos
+                doc.addPage();
+                yPos = 22;
+                doc.setFontSize(18);
+                doc.text("Resultados da Fase de Grupos", 105, yPos, { align: 'center' });
+                yPos += 10;
+                activeChampionship.groups.forEach((group, index) => {
+                    if (yPos > 240) { // Previne quebra de página ruim
+                        doc.addPage();
+                        yPos = 22;
+                    }
+                    doc.setFontSize(14);
+                    doc.text(`Grupo ${index + 1}`, 14, yPos);
+                    yPos += 7;
+                    const matchesBody = group.matches.map(m => [
+                        m.names[0],
+                        `${m.score[0] === null ? '-' : m.score[0]} vs ${m.score[1] === null ? '-' : m.score[1]}`,
+                        m.names[1]
+                    ]);
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Dupla 1', 'Placar', 'Dupla 2']],
+                        body: matchesBody,
+                        headStyles: { fillColor: [8, 145, 178], textColor: [255, 255, 255] }, 
+                        styles: { halign: 'center', textColor: [31, 41, 55] },
+                        columnStyles: { 0: { halign: 'left' }, 2: { halign: 'right' } }
+                    });
+                    yPos = doc.autoTable.previous.finalY + 5;
+                    const rankings = getRankings(group);
+                    const rankingsBody = rankings.map((p, rIndex) => [
+                        `${rIndex + 1}º`,
+                        p.name,
+                        p.gamesWon
+                    ]);
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Pos.', 'Jogador', 'Games Vencidos']],
+                        body: rankingsBody,
+                        theme: 'grid',
+                        styles: { halign: 'center', fontSize: 9, textColor: [31, 41, 55] },
+                        headStyles: { fillColor: [254, 243, 199], textColor: [75, 85, 99], fontSize: 10 }, 
+                    });
+                    yPos = doc.autoTable.previous.finalY + 12;
+                });
+                
+                // Adiciona Página de Mata-Mata
+                if (yPos > 180) { // Adiciona nova página se não houver espaço
+                    doc.addPage();
+                    yPos = 22;
+                } else {
+                    yPos += 5; 
+                }
+                doc.setFontSize(18);
+                doc.text("Resultados do Mata-Mata", 105, yPos, { align: 'center' });
+                yPos += 10;
+                doc.setFontSize(16);
+                doc.text("Série Ouro 🥇", 14, yPos);
+                yPos += 7;
+                const goldBody = activeChampionship.goldBracket.map(m => {
+                    const roundTitle = m.round === maxRoundGold ? 'Final'
+                        : m.round === maxRoundGold - 1 ? 'Semi-Final'
+                        : m.round === maxRoundGold - 2 ? 'Quartas' : `Rodada ${m.round}`;
+                    const pair1Name = m.pairs[0]?.name || (m.pairs[0] === 'BYE' ? 'BYE (Folga)' : '-');
+                    const pair2Name = m.pairs[1]?.name || (m.pairs[1] === 'BYE' ? 'BYE (Folga)' : '-');
+                    const score = m.score[0] === null || m.score[1] === null 
+                        ? ' - '
+                        : `${m.score[0]} vs ${m.score[1]}`;
+                    return [
+                        roundTitle,
+                        pair1Name,
+                        score,
+                        pair2Name
+                    ];
+                });
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Rodada', 'Dupla 1', 'Placar', 'Dupla 2']],
+                    body: goldBody,
+                    headStyles: { fillColor: [249, 115, 22], textColor: [255, 255, 255] }, 
+                    styles: { halign: 'center', textColor: [31, 41, 55] },
+                    columnStyles: { 1: { halign: 'left' }, 3: { halign: 'right' } }
+                });
+                yPos = doc.autoTable.previous.finalY + 10;
+                doc.setFontSize(16);
+                doc.text("Série Prata 🥈", 14, yPos);
+                yPos += 7;
+                const silverBody = activeChampionship.silverBracket.map(m => {
+                    const roundTitle = m.round === maxRoundSilver ? 'Final'
+                        : m.round === maxRoundSilver - 1 ? 'Semi-Final'
+                        : m.round === maxRoundSilver - 2 ? 'Quartas' : `Rodada ${m.round}`;
+                    const pair1Name = m.pairs[0]?.name || (m.pairs[0] === 'BYE' ? 'BYE (Folga)' : '-');
+                    const pair2Name = m.pairs[1]?.name || (m.pairs[1] === 'BYE' ? 'BYE (Folga)' : '-');
+                    const score = m.score[0] === null || m.score[1] === null 
+                        ? ' - '
+                        : `${m.score[0]} vs ${m.score[1]}`;
+                    return [
+                        roundTitle,
+                        pair1Name,
+                        score,
+                        pair2Name
+                    ];
+                });
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Rodada', 'Dupla 1', 'Placar', 'Dupla 2']],
+                    body: silverBody,
+                    headStyles: { fillColor: [156, 163, 175], textColor: [31, 41, 55] }, 
+                    styles: { halign: 'center', textColor: [31, 41, 55] },
+                    columnStyles: { 1: { halign: 'left' }, 3: { halign: 'right' } }
+                });
+                doc.save(`resultados_mm_${champ.name.toLowerCase().replace(/\s/g, '_')}.pdf`);
+            } catch (error) {
+                 console.error("Erro ao gerar PDF do campeonato Mata-Mata:", error);
+                showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
+            }
+        };
+
+        const handlePrintChampionshipPDF_Sortudo = () => {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                showModal("Erro", "Biblioteca PDF (jsPDF) não foi carregada.");
+                return;
+            }
+            const champ = championships.find(c => c.id === appState.currentChampionshipId);
+            if (!champ || !activeChampionship) {
+                showModal("Erro", "Dados do campeonato não carregados.");
+                return;
+            }
+            try {
+                const doc = new jsPDF();
+                let yPos = 22; 
+                doc.setFontSize(18);
+                doc.text(champ.name, 105, yPos, { align: 'center' });
+                yPos += 10;
+                doc.setFontSize(14);
+                doc.text("Resultados Finais (Torneio Sortudo)", 14, yPos);
+                yPos += 7;
+
+                const { leaderboard } = getLeaderboard_Sortudo();
+                
+                const head = [['Pos.', 'Jogador', 'Total Games']];
+                const body = leaderboard.map((p, index) => {
+                    let medal = '';
+                    if (index === 0) medal = '🥇';
+                    if (index === 1) medal = '🥈';
+                    if (index === 2) medal = '🥉';
+                    const isCoveiro = index === leaderboard.length - 1;
+                    
+                    return [
+                        `${index + 1}º ${medal}`,
+                        `${p.name} ${isCoveiro ? '👻' : ''}`,
+                        p.totalGames
+                    ];
+                });
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: head,
+                    body: body,
+                    headStyles: { fillColor: [139, 92, 246], textColor: [255, 255, 255] }, // Cor Roxo
+                    styles: { halign: 'center', textColor: [31, 41, 55] },
+                    theme: 'striped',
+                    columnStyles: {
+                        1: { halign: 'left' } 
+                    }
+                });
+                yPos = doc.autoTable.previous.finalY + 10; 
+
+                // Adiciona Página de Rodadas
+                doc.addPage();
+                yPos = 22;
+                doc.setFontSize(18);
+                doc.text("Resultados das Rodadas", 105, yPos, { align: 'center' });
+                yPos += 10;
+                
+                activeChampionship.rounds.forEach((round, roundIndex) => {
+                    if (yPos > 240) { 
+                        doc.addPage();
+                        yPos = 22;
+                    }
+                    doc.setFontSize(14);
+                    doc.text(`Rodada ${roundIndex + 1}`, 14, yPos);
+                    yPos += 7;
+
+                    const matchesBody = round.matches.map(m => {
+                        const pair1Name = `${activeChampionship.players.find(p => p.id === m.p[0])?.name || '?'} / ${activeChampionship.players.find(p => p.id === m.p[1])?.name || '?'}`;
+                        const pair2Name = `${activeChampionship.players.find(p => p.id === m.p[2])?.name || '?'} / ${activeChampionship.players.find(p => p.id === m.p[3])?.name || '?'}`;
+                        return [
+                            pair1Name,
+                            `${m.score[0] === null ? '-' : m.score[0]} vs ${m.score[1] === null ? '-' : m.score[1]}`,
+                            pair2Name
+                        ];
+                    });
+                    
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Dupla 1', 'Placar', 'Dupla 2']],
+                        body: matchesBody,
+                        headStyles: { fillColor: [8, 145, 178], textColor: [255, 255, 255] }, 
+                        styles: { halign: 'center', textColor: [31, 41, 55] },
+                        columnStyles: { 0: { halign: 'left' }, 2: { halign: 'right' } }
+                    });
+                    yPos = doc.autoTable.previous.finalY + 5;
+
+                    // Adiciona Sortudos (BYE)
+                    const luckyPlayers = round.luckyPlayers.map(pId => activeChampionship.players.find(p => p.id === pId)?.name || 'Erro');
+                    if (luckyPlayers.length > 0) {
+                        doc.setFontSize(10);
+                        doc.text(`Sortudos (BYE): ${luckyPlayers.join(' / ')} (+${activeChampionship.config.luckyGames} games)`, 14, yPos);
+                        yPos += 7;
+                    }
+                    yPos += 5; // Espaço extra
+                });
+
+                doc.save(`resultados_sortudo_${champ.name.toLowerCase().replace(/\s/g, '_')}.pdf`);
+            } catch (error) {
+                 console.error("Erro ao gerar PDF do Torneio Sortudo:", error);
+                showModal("Erro", "Não foi possível gerar o PDF. " + error.message);
+            }
+        };
+
+        // =================================================================
+        // === INICIALIZAÇÃO E LISTENERS GLOBAIS
+        // =================================================================
+        const listenToGlobalPlayers = () => {
+            unsubscribeGlobalPlayers(); 
+            if (!appState.currentRankingId) {
+                globalPlayers = [];
+                if(appState.currentView === 'globalRanking') render();
+                return;
+            }
+            // MUDANÇA: O caminho para os players é DENTRO da coleção 'rankings'
+            const playersCollectionRef = collection(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players');
+            const q = query(playersCollectionRef);
+            unsubscribeGlobalPlayers = onSnapshot(q, (querySnapshot) => {
+                globalPlayers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (appState.currentView === 'globalRanking') {
+                    render();
+                }
+                if (appState.currentView === 'championshipView' && activeChampionship?.status === 'registration') {
+                    render();
+                }
+            }, (error) => {
+                console.error(`Erro ao carregar ranking ${appState.currentRankingId}:`, error);
+                showModal("Erro", "Não foi possível carregar o ranking selecionado.");
+                globalPlayers = [];
+                if(appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') render();
+            });
+        };
+        const listenToChampionships = () => {
+            unsubscribeChampionships();
+            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
+            const q = query(champCollectionRef);
+            unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
+                championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (appState.currentView === 'championshipList') {
+                    render();
+                }
+                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
+                    render();
+                }
+            }, (error) => {
+                console.error("Erro ao carregar campeonatos:", error);
+                showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
+            });
+        };
+        const listenToActiveChampionship = (champId) => {
+            unsubscribeActiveChampionship();
+            const champDataRef = doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main');
+            unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    activeChampionship = { id: docSnap.id, ...docSnap.data() };
+                    render(); 
+                } else {
+                    showModal("Erro", "Não foi possível carregar os dados deste campeonato. (O doc 'data/main' não foi encontrado).");
+                    if (!appState.isTelaoMode) navigateTo('championshipList');
+                    else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro: Campeonato não encontrado.</h1>`;
+                }
+            }, (error) => {
+                console.error("Erro ao carregar campeonato ativo:", error);
+                showModal("Erro", "Não foi possível carregar este campeonato. Verifique as regras do Firestore.");
+                if (!appState.isTelaoMode) navigateTo('championshipList');
+                else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro de conexão.</h1>`;
+            });
+        };
+        const listenToRankingsList = () => {
+            unsubscribeRankingsList();
+            // MUDANÇA: O caminho para a lista de rankings é 'app_data/rankings'
+            const rankingsDocRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
+            unsubscribeRankingsList = onSnapshot(rankingsDocRef, async (docSnap) => {
+                let list = [];
+                if (docSnap.exists()) {
+                    list = docSnap.data().list || [];
+                }
+                if (list.length === 0) {
+                    // Se não houver nenhum ranking, cria um "Ranking Geral" padrão
+                    try {
+                        const defaultRanking = { id: "ranking_geral", name: "Ranking Geral" };
+                        await setDoc(rankingsDocRef, { list: [defaultRanking] });
+                        allRankings = [defaultRanking];
+                    } catch (error) {
+                        console.error("Erro ao criar ranking padrão:", error);
+                        showModal("Erro Crítico", "Não foi possível inicializar a lista de rankings.");
+                        return;
+                    }
+                } else {
+                    allRankings = list;
+                }
+                
+                // Define o ranking atual se não estiver definido ou não existir mais
+                const selectedRankingExists = allRankings.some(r => r.id === appState.currentRankingId);
+                if ((!appState.currentRankingId || !selectedRankingExists) && allRankings.length > 0) {
+                    appState.currentRankingId = allRankings[0].id;
+                } else if (allRankings.length === 0) {
+                    appState.currentRankingId = null; 
+                }
+                
+                // (Re)inicia o listener de jogadores para o ranking (novo ou antigo)
+                listenToGlobalPlayers();
+                
+                // Renderiza a view atual (ex: championshipList) que depende da lista de rankings
+                if (!appState.isTelaoMode) {
+                    render();
+                }
+            }, (error) => {
+                console.error("Erro ao carregar lista de rankings:", error);
+                showModal("Erro Crítico", "Não foi possível carregar a lista de rankings.");
+            });
+        };
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                try {
+                    await signInAnonymously(auth);
+                } catch (error) {
+                    console.error("Erro na autenticação anônima:", error);
+                    let errorMessage = "Não foi possível conectar ao Firebase. Verifique sua conexão.";
+                    if (error.code === 'auth/configuration-not-found') {
+                        errorMessage = "Erro de Autenticação: O 'Login Anônimo' (Anonymous) não está ATIVADO no seu painel do Firebase.";
+                    }
+                    showModal("Erro de Autenticação", errorMessage);
+                    return;
+                }
+            }
+            if (user && !appState.isAuthReady) {
+                const effectiveUserId = MESTRE_USER_ID; 
+                appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
+                userIdFooter.textContent = effectiveUserId; 
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const telaoChampId = urlParams.get('champId');
+
+                // Carrega os listeners principais
+                listenToChampionships();
+                listenToRankingsList(); // Este listener agora também chama listenToGlobalPlayers
+                
+                if (urlParams.has('telao') && telaoChampId) {
+                    // MODO TELÃO
+                    appState.isTelaoMode = true;
+                    appState.isAdmin = false; 
+                    const telaoStyles = document.createElement('style');
+                    telaoStyles.innerHTML = `
+                        body { background-color: #FFFAF0; } 
+                        #app-container { max-width: 100%; padding: 1rem 2rem; }
+                        header, footer { display: none !important; }
+                    `;
+                    document.head.appendChild(telaoStyles);
+                    navigateTo('telaoView', telaoChampId);
+                } else {
+                    // MODO ADMIN/VISITANTE
+                    appState.isTelaoMode = false;
+                    navigateTo('login');
+                }
+            }
+        });
+    </script>
+    <div class="aviso-rodape text-center text-xs text-gray-500 py-3 bg-gray-100 mt-8">
+        ............................ ............................
+    </div>
+</body>
+</html>
+
+        // === INICIALIZAÇÃO E LISTENERS GLOBAIS
+        // =================================================================
+        const listenToGlobalPlayers = () => {
+            unsubscribeGlobalPlayers(); 
+            if (!appState.currentRankingId) {
+                globalPlayers = [];
+                if(appState.currentView === 'globalRanking') render();
+                return;
+            }
+            // MUDANÇA: O caminho para os players é DENTRO da coleção 'rankings'
+            const playersCollectionRef = collection(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players');
+            const q = query(playersCollectionRef);
+            unsubscribeGlobalPlayers = onSnapshot(q, (querySnapshot) => {
+                globalPlayers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (appState.currentView === 'globalRanking') {
+                    render();
+                }
+                if (appState.currentView === 'championshipView' && activeChampionship?.status === 'registration') {
+                    render();
+                }
+            }, (error) => {
+                console.error(`Erro ao carregar ranking ${appState.currentRankingId}:`, error);
+                showModal("Erro", "Não foi possível carregar o ranking selecionado.");
+                globalPlayers = [];
+                if(appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') render();
+            });
+        };
+        const listenToChampionships = () => {
+            unsubscribeChampionships();
+            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
+            const q = query(champCollectionRef);
+            unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
+                championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (appState.currentView === 'championshipList') {
+                    render();
+                }
+                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
+                    render();
+                }
+            }, (error) => {
+                console.error("Erro ao carregar campeonatos:", error);
+                showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
+            });
+        };
+        const listenToActiveChampionship = (champId) => {
+            unsubscribeActiveChampionship();
+            const champDataRef = doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main');
+            unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    activeChampionship = { id: docSnap.id, ...docSnap.data() };
+                    render(); 
+                } else {
+                    showModal("Erro", "Não foi possível carregar os dados deste campeonato. (O doc 'data/main' não foi encontrado).");
+                    if (!appState.isTelaoMode) navigateTo('championshipList');
+                    else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro: Campeonato não encontrado.</h1>`;
+                }
+            }, (error) => {
+                console.error("Erro ao carregar campeonato ativo:", error);
+                showModal("Erro", "Não foi possível carregar este campeonato. Verifique as regras do Firestore.");
+                if (!appState.isTelaoMode) navigateTo('championshipList');
+                else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro de conexão.</h1>`;
+            });
+        };
+        const listenToRankingsList = () => {
+            unsubscribeRankingsList();
+            // MUDANÇA: O caminho para a lista de rankings é 'app_data/rankings'
+            const rankingsDocRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
+            unsubscribeRankingsList = onSnapshot(rankingsDocRef, async (docSnap) => {
+                let list = [];
+                if (docSnap.exists()) {
+                    list = docSnap.data().list || [];
+                }
+                if (list.length === 0) {
+                    // Se não houver nenhum ranking, cria um "Ranking Geral" padrão
+                    try {
+                        const defaultRanking = { id: "ranking_geral", name: "Ranking Geral" };
+                        await setDoc(rankingsDocRef, { list: [defaultRanking] });
+                        allRankings = [defaultRanking];
+                    } catch (error) {
+                        console.error("Erro ao criar ranking padrão:", error);
+                        showModal("Erro Crítico", "Não foi possível inicializar a lista de rankings.");
+                        return;
+                    }
+                } else {
+                    allRankings = list;
+                }
+                
+                // Define o ranking atual se não estiver definido ou não existir mais
+                const selectedRankingExists = allRankings.some(r => r.id === appState.currentRankingId);
+                if ((!appState.currentRankingId || !selectedRankingExists) && allRankings.length > 0) {
+                    appState.currentRankingId = allRankings[0].id;
+                } else if (allRankings.length === 0) {
+                    appState.currentRankingId = null; 
+                }
+                
+                // (Re)inicia o listener de jogadores para o ranking (novo ou antigo)
+                listenToGlobalPlayers();
+                
+                // Renderiza a view atual (ex: championshipList) que depende da lista de rankings
+                if (!appState.isTelaoMode) {
+                    render();
+                }
+            }, (error) => {
+                console.error("Erro ao carregar lista de rankings:", error);
+                showModal("Erro Crítico", "Não foi possível carregar a lista de rankings.");
+            });
+        };
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                try {
+                    await signInAnonymously(auth);
+                } catch (error) {
+                    console.error("Erro na autenticação anônima:", error);
+                    let errorMessage = "Não foi possível conectar ao Firebase. Verifique sua conexão.";
+                    if (error.code === 'auth/configuration-not-found') {
+                        errorMessage = "Erro de Autenticação: O 'Login Anônimo' (Anonymous) não está ATIVADO no seu painel do Firebase.";
+                    }
+                    showModal("Erro de Autenticação", errorMessage);
+                    return;
+                }
+            }
+            if (user && !appState.isAuthReady) {
+                const effectiveUserId = MESTRE_USER_ID; 
+                appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
+                userIdFooter.textContent = effectiveUserId; 
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const telaoChampId = urlParams.get('champId');
+
+                // Carrega os listeners principais
+                listenToChampionships();
+                listenToRankingsList(); // Este listener agora também chama listenToGlobalPlayers
+                
+                if (urlParams.has('telao') && telaoChampId) {
+                    // MODO TELÃO
+                    appState.isTelaoMode = true;
+                    appState.isAdmin = false; 
+                    const telaoStyles = document.createElement('style');
+                    telaoStyles.innerHTML = `
+                        body { background-color: #FFFAF0; } 
+                        #app-container { max-width: 100%; padding: 1rem 2rem; }
+                        header, footer { display: none !important; }
+                    `;
+                    document.head.appendChild(telaoStyles);
+                    navigateTo('telaoView', telaoChampId);
+                } else {
+                    // MODO ADMIN/VISITANTE
                     appState.isTelaoMode = false;
                     navigateTo('login');
                 }
