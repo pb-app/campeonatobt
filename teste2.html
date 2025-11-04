@@ -658,8 +658,8 @@
             });
         };
 
-        /**
-         * (NOVO) Renderiza o formulário de pontos correto (Mata-Mata ou Sortudo)
+       /**
+         * (NOVO) Renderiza o formulário de pontos (Mata-Mata Híbrido: Ouro/Prata + 1º/2º/3º)
          */
         const renderPointsConfigForm = () => {
             const container = document.getElementById('points-config-container');
@@ -712,50 +712,54 @@
                     </div>
                 `;
             } else {
-                // Modo Mata-Mata (o padrão)
+                // --- MODO MATA-MATA (Híbrido Ouro/Prata + 1º/2º/3º) ---
                 container.innerHTML = `
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Pontuação (Mata-Mata)</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                        <div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Pontuação (Mata-Mata Híbrido)</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-2 gap-3 mb-4">
+                         <div>
                             <label for="points-mm-participation" class="block text-xs font-medium text-gray-500 mb-1">Participação</label>
-                            <input type="number" id="points-mm-participation" min="0" value="${DEFAULT_POINTS_MATA_MATA.participation}"
+                            <input type="number" id="points-mm-participation" min="0" value="10"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
                             <label for="points-mm-group-win" class="block text-xs font-medium text-blue-500 mb-1">Pts. por Vitória (Grupo)</label>
-                            <input type="number" id="points-mm-group-win" min="0" value="${DEFAULT_POINTS_MATA_MATA.groupWin}"
+                            <input type="number" id="points-mm-group-win" min="0" value="5"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <h4 class="text-base font-semibold text-yellow-500 mb-2">Chave Ouro 🥇</h4>
+                    <div class="grid grid-cols-3 gap-3 mb-4">
                         <div>
-                            <label for="points-mm-gold-win" class="block text-xs font-medium text-yellow-500 mb-1">Campeão Ouro 🥇</label>
-                            <input type="number" id="points-mm-gold-win" min="0" value="${DEFAULT_POINTS_MATA_MATA.gold_R4_win}"
+                            <label for="points-mm-gold-1st" class="block text-xs font-medium text-yellow-500 mb-1">Bônus 1º Lugar 🥇</label>
+                            <input type="number" id="points-mm-gold-1st" min="0" value="100"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-mm-gold-run" class="block text-xs font-medium text-gray-500 mb-1">Vice Ouro 🥈</label>
-                            <input type="number" id="points-mm-gold-run" min="0" value="${DEFAULT_POINTS_MATA_MATA.gold_R4_run}"
+                            <label for="points-mm-gold-2nd" class="block text-xs font-medium text-gray-500 mb-1">Bônus 2º Lugar 🥈</label>
+                            <input type="number" id="points-mm-gold-2nd" min="0" value="50"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-mm-gold-semi" class="block text-xs font-medium text-orange-600 mb-1">Semi Ouro (3º/4º) 🥉</glabel>
-                            <input type="number" id="points-mm-gold-semi" min="0" value="${DEFAULT_POINTS_MATA_MATA.gold_R4_lose}"
+                            <label for="points-mm-gold-3rd" class="block text-xs font-medium text-orange-600 mb-1">Bônus 3º/4º Lugar 🥉</label>
+                            <input type="number" id="points-mm-gold-3rd" min="0" value="20"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
-                        <div></div> <div>
-                            <label for="points-mm-silver-win" class="block text-xs font-medium text-gray-700 mb-1">Campeão Prata</label>
-                            <input type="number" id="points-mm-silver-win" min="0" value="${DEFAULT_POINTS_MATA_MATA.silver_R4_win}"
+                    </div>
+                    <h4 class="text-base font-semibold text-gray-600 mb-2">Chave Prata 🥈</h4>
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div>
+                            <label for="points-mm-silver-1st" class="block text-xs font-medium text-gray-700 mb-1">Bônus 1º Lugar</label>
+                            <input type="number" id="points-mm-silver-1st" min="0" value="15"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-mm-silver-run" class="block text-xs font-medium text-gray-500 mb-1">Vice Prata</glabel>
-                            <input type="number" id="points-mm-silver-run" min="0" value="${DEFAULT_POINTS_MATA_MATA.silver_R4_run}"
+                            <label for="points-mm-silver-2nd" class="block text-xs font-medium text-gray-500 mb-1">Bônus 2º Lugar</label>
+                            <input type="number" id="points-mm-silver-2nd" min="0" value="10"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                         <div>
-                            <label for="points-mm-silver-semi" class="block text-xs font-medium text-gray-500 mb-1">Semi Prata</glabel>
-                            <input type="number" id="points-mm-silver-semi" min="0" value="${DEFAULT_POINTS_MATA_MATA.silver_R4_lose}"
+                            <label for="points-mm-silver-3rd" class="block text-xs font-medium text-gray-500 mb-1">Bônus 3º/4º Lugar</label>
+                            <input type="number" id="points-mm-silver-3rd" min="0" value="5"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-center text-gray-800">
                         </div>
                     </div>
@@ -763,9 +767,9 @@
             }
         };
 
- /**
+/**
          * Lida com a criação de um novo campeonato (ambos os tipos)
-         * --- CORREÇÃO DEFINITIVA (Bug dos Pontos NaN) ---
+         * --- CORREÇÃO: Salva a nova pontuação HÍBRIDA do Mata-Mata ---
          */
         const handleAddChampionship = async (e) => {
             e.preventDefault();
@@ -802,37 +806,19 @@
                     bonus_3rd: parseInt(document.getElementById('points-sortudo-3rd').value) || 0,
                 };
             } else {
-                // Mata-Mata
-                // *** CORREÇÃO: Adicionado '|| 0' a TODOS os parseInt ***
-                // Isso previne que um campo vazio (NaN) corrompa o objeto de pontos.
+                // Mata-Mata (HÍBRIDO)
                 pointsConfig = {
-                    type: 'mata_mata',
+                    type: 'mata_mata_hybrid', // Novo tipo para lógica de cálculo
                     participation: parseInt(document.getElementById('points-mm-participation').value) || 0,
                     groupWin: parseInt(document.getElementById('points-mm-group-win').value) || 0,
-                    
-                    gold_R5_win: parseInt(document.getElementById('points-mm-gold-win').value) || 0,
-                    gold_R4_win: parseInt(document.getElementById('points-mm-gold-win').value) || 0,
-                    gold_R3_win: parseInt(document.getElementById('points-mm-gold-win').value) || 0,
-                    
-                    gold_R5_run: parseInt(document.getElementById('points-mm-gold-run').value) || 0,
-                    gold_R4_run: parseInt(document.getElementById('points-mm-gold-run').value) || 0,
-                    gold_R3_run: parseInt(document.getElementById('points-mm-gold-run').value) || 0,
-
-                    gold_R5_lose: parseInt(document.getElementById('points-mm-gold-semi').value) || 0,
-                    gold_R4_lose: parseInt(document.getElementById('points-mm-gold-semi').value) || 0,
-                    gold_R3_lose: parseInt(document.getElementById('points-mm-gold-semi').value) || 0,
-
-                    silver_R5_win: parseInt(document.getElementById('points-mm-silver-win').value) || 0,
-                    silver_R4_win: parseInt(document.getElementById('points-mm-silver-win').value) || 0,
-                    silver_R3_win: parseInt(document.getElementById('points-mm-silver-win').value) || 0,
-
-                    silver_R5_run: parseInt(document.getElementById('points-mm-silver-run').value) || 0,
-                    silver_R4_run: parseInt(document.getElementById('points-mm-silver-run').value) || 0,
-                    silver_R3_run: parseInt(document.getElementById('points-mm-silver-run').value) || 0,
-
-                    silver_R5_lose: parseInt(document.getElementById('points-mm-silver-semi').value) || 0,
-                    silver_R4_lose: parseInt(document.getElementById('points-mm-silver-semi').value) || 0,
-                    silver_R3_lose: parseInt(document.getElementById('points-mm-silver-semi').value) || 0,
+                    // Bônus Chave Ouro
+                    gold_1st: parseInt(document.getElementById('points-mm-gold-1st').value) || 0,
+                    gold_2nd: parseInt(document.getElementById('points-mm-gold-2nd').value) || 0,
+                    gold_3rd: parseInt(document.getElementById('points-mm-gold-3rd').value) || 0,
+                    // Bônus Chave Prata
+                    silver_1st: parseInt(document.getElementById('points-mm-silver-1st').value) || 0,
+                    silver_2nd: parseInt(document.getElementById('points-mm-silver-2nd').value) || 0,
+                    silver_3rd: parseInt(document.getElementById('points-mm-silver-3rd').value) || 0,
                 };
             }
 
@@ -850,7 +836,7 @@
                     winnerSilver: null,
                     pointsConfig: pointsConfig, // Salva a configuração de pontos
                     rankingId: rankingId,
-                    type: champType // Salva o tipo de torneio
+                    type: champType // Salva o tipo de torneio (mata_mata ou sortudo)
                 });
                 
                 // Documento de Dados (Sub-coleção)
@@ -3030,8 +3016,9 @@
             
             // (Não finaliza automaticamente, espera o botão manual)
         };
-      /**
+    /**
          * Finaliza o torneio (Mata-Mata) e lança no Ranking
+         * --- CORREÇÃO: Lógica de finalização HÍBRIDA ---
          */
         const handleManualFinalize_MataMata = async () => {
             if (!confirm("Confirmar Finalização?\nEsta ação irá calcular os pontos, lançar no ranking e marcar o campeonato como 'Finalizado'. Esta ação não pode ser desfeita.")) {
@@ -3047,7 +3034,7 @@
             
             const champInfo = champDoc.data();
             const rankingId = champInfo.rankingId;
-            const pointsConfig = champInfo.pointsConfig || DEFAULT_POINTS_MATA_MATA;
+            const pointsConfig = champInfo.pointsConfig; // Pega a config salva
             
             if (!rankingId) {
                 showModal("Erro Crítico", "Este campeonato não está vinculado a nenhum ranking. Os pontos não podem ser salvos.");
@@ -3057,19 +3044,18 @@
             showModal("Calculando...", "Finalizando torneio e atualizando o ranking global. Aguarde...");
 
             try {
-                // 1. Identificar Posições Finais
-                const placements = new Map(); // Key: playerId, Value: 'gold_R4_win'
+                // 1. Identificar Posições Finais (Ouro e Prata)
+                const placements = new Map(); // Key: playerId, Value: 'gold_1st'
                 
-                // *** CORREÇÃO DO BUG (Lógica de Pontuação): Corrigido o processBracket ***
                 const processBracket = (bracket, prefix) => {
                     if (!bracket || bracket.length === 0) return; 
                     const maxRound = Math.max(...bracket.map(m => m.round));
                     
                     bracket.forEach(match => {
-                        // Se for a FINAL (e.g., R4)
+                        // Se for a FINAL
                         if (match.round === maxRound) {
-                            const winnerKey = `${prefix}_R${maxRound}_win`; // e.g., gold_R4_win
-                            const runnerUpKey = `${prefix}_R${maxRound}_run`; // e.g., gold_R4_run
+                            const winnerKey = `${prefix}_1st`; // e.g., gold_1st
+                            const runnerUpKey = `${prefix}_2nd`; // e.g., gold_2nd
                             
                             if (match.winner) {
                                 match.winner.players.forEach(p => placements.set(p.id, winnerKey));
@@ -3079,19 +3065,17 @@
                                 }
                             }
                         }
-                        // Se for a SEMI-FINAL (e.g., R3)
+                        // Se for a SEMI-FINAL
                         else if (match.round === maxRound - 1) {
-                            const loserKey = `${prefix}_R${maxRound}_lose`; // e.g., gold_R4_lose
+                            const loserKey = `${prefix}_3rd`; // e.g., gold_3rd
                             
                             if (match.winner && match.pairs[0] && match.pairs[1] && match.pairs[0] !== 'BYE' && match.pairs[1] !== 'BYE') {
                                 const loser = (match.winner.id === match.pairs[0].id) ? match.pairs[1] : match.pairs[0];
                                 loser.players.forEach(p => placements.set(p.id, loserKey));
                             }
                         }
-                        // Outras rodadas (quartas, oitavas) são ignoradas
                     });
                 };
-                // *** FIM DA CORREÇÃO ***
                 
                 processBracket(activeChampionship.goldBracket, 'gold');
                 processBracket(activeChampionship.silverBracket, 'silver');
@@ -3236,8 +3220,9 @@
             return Object.values(playerStats).sort((a, b) => a.gamesWon - b.gamesWon);
         };
         
-        /**
+       /**
          * (Transação) Atualiza o Ranking Global (Mata-Mata)
+         * --- CORREÇÃO: Lógica de cálculo HÍBRIDA + Correção Bug groupWin ---
          */
         const updateGlobalRanking_MataMata = async (players, placements, groupPoints, pointsConfig, rankingId) => {
             
@@ -3249,42 +3234,34 @@
                 stats.filter(p => p.gamesWon === minGames).forEach(p => coveiroIds.add(p.id));
             }
 
-            // 2. Prepara o mapa de pontos
+            // 2. Prepara o mapa de pontos (Lógica HÍBRIDA)
             const playerPointsMap = new Map();
             for (const player of players) {
-                const placementKey = placements.get(player.id); // Ex: 'gold_R4_win'
-                
-                // *** CORREÇÃO 1 (Bug do Ranking): Proteção caso a chave de pontos não exista ***
-                // Ex: chave de 4 (R3) pode não estar definida se o usuário só preencheu a de R4
-                const maxRoundGold = activeChampionship.goldBracket?.length > 0 ? Math.max(...activeChampionship.goldBracket.map(m => m.round)) : 0;
-                const maxRoundSilver = activeChampionship.silverBracket?.length > 0 ? Math.max(...activeChampionship.silverBracket.map(m => m.round)) : 0;
-                
-                let pointsKey = placementKey;
-                if (placementKey) {
-                    if (placementKey.startsWith('gold') && !pointsConfig[placementKey]) {
-                        pointsKey = `gold_R${maxRoundGold}_${placementKey.split('_')[2]}`; // ex: gold_R4_win
-                    }
-                    if (placementKey.startsWith('silver') && !pointsConfig[placementKey]) {
-                        pointsKey = `silver_R${maxRoundSilver}_${placementKey.split('_')[2]}`; // ex: silver_R4_run
-                    }
-                }
-                
-                const bonusPoints = pointsConfig[pointsKey] || 0; // Pontos do bônus (ex: 100)
+                // Pontos base
                 const participationPoints = pointsConfig.participation || 0;
+                
+                // *** CORREÇÃO DO BUG (groupWin) ***
+                // groupPoints (o map) já contém o valor total (ex: 3 vitórias * 5 pts = 15)
+                // Não precisamos multiplicar de novo.
                 const grpPoints = groupPoints.get(player.id) || 0;
                 
+                // Bônus (1º Ouro, 2º Prata, etc.)
+                const placementKey = placements.get(player.id); // e.g., 'gold_1st' ou 'silver_2nd'
+                const bonusPoints = pointsConfig[placementKey] || 0; // e.g., pointsConfig['gold_1st'] (100)
+
+                // Soma Total
                 const totalPoints = participationPoints + grpPoints + bonusPoints;
                 
                 playerPointsMap.set(player.id, {
                     name: player.name,
                     pointsToAdd: totalPoints,
-                    goldWins: (pointsKey && pointsKey === `gold_R${maxRoundGold}_win`) ? 1 : 0,
-                    silverWins: (pointsKey && pointsKey === `silver_R${maxRoundSilver}_win`) ? 1 : 0,
+                    goldWins: (placementKey === 'gold_1st') ? 1 : 0,
+                    silverWins: (placementKey === 'silver_1st') ? 1 : 0, // 'Prata' no ranking = Campeão da Chave Prata
                     coveiroWins: coveiroIds.has(player.id) ? 1 : 0
                 });
             }
             
-            // 3. Executa a Transação
+            // 3. Executa a Transação (esta lógica não muda)
             await runTransaction(db, async (transaction) => {
                 // Lê todos os documentos de jogadores necessários DENTRO da transação
                 const playerDocsData = new Map();
@@ -3300,9 +3277,6 @@
                     const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
                     
                     if (!playerDoc.exists()) {
-                        // *** CORREÇÃO 1 (Bug do Ranking) ***
-                        // Este 'if' não deveria mais ser necessário graças à Correção em
-                        // 'handleAddNewPlayerToChampionship', mas o mantemos como segurança.
                         console.warn(`Jogador ${playerId} (${data.name}) não existia no ranking. Criando...`);
                         transaction.set(playerRef, {
                             name: data.name,
