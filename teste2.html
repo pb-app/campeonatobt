@@ -2561,8 +2561,9 @@
         // === AÇÕES E LÓGICA (Mata-Mata)
         // =================================================================
         
-        /**
+    /**
          * Gera os Grupos (Mata-Mata)
+         * --- CORREÇÃO: Modificado para criar jogos INDIVIDUAIS (Round Robin) ---
          */
         const handleGenerateChampionship_MataMata = async () => {
             const playerCount = activeChampionship.players.length;
@@ -2624,7 +2625,7 @@
                     }
                 }
 
-                // Cria os jogos de cada grupo
+                // Cria os jogos de cada grupo (MODO INDIVIDUAL - Round Robin)
                 for (const group of newGroupsList) {
                     const [p1, p2, p3, p4] = group.players; 
                     
@@ -2633,11 +2634,14 @@
                          throw new Error("Erro de lógica ao distribuir jogadores. Grupo ficou incompleto.");
                     }
 
-                    // Jogos (p1/p2 vs p3/p4), (p1/p3 vs p2/p4), (p1/p4 vs p2/p3)
+                    // Jogos (p1v2, p1v3, p1v4, p2v3, p2v4, p3v4)
                     group.matches = [
-                        { id: 1, p: [p1.id, p2.id, p3.id, p4.id], names: [`${p1.name} / ${p2.name}`, `${p3.name} / ${p4.name}`], score: [null, null] },
-                        { id: 2, p: [p1.id, p3.id, p2.id, p4.id], names: [`${p1.name} / ${p3.name}`, `${p2.name} / ${p4.name}`], score: [null, null] },
-                        { id: 3, p: [p1.id, p4.id, p2.id, p3.id], names: [`${p1.name} / ${p4.name}`, `${p2.name} / ${p3.name}`], score: [null, null] },
+                        { id: 1, p: [p1.id, p2.id], names: [p1.name, p2.name], score: [null, null] },
+                        { id: 2, p: [p1.id, p3.id], names: [p1.name, p3.name], score: [null, null] },
+                        { id: 3, p: [p1.id, p4.id], names: [p1.name, p4.name], score: [null, null] },
+                        { id: 4, p: [p2.id, p3.id], names: [p2.name, p3.name], score: [null, null] },
+                        { id: 5, p: [p2.id, p4.id], names: [p2.name, p4.name], score: [null, null] },
+                        { id: 6, p: [p3.id, p4.id], names: [p3.name, p4.name], score: [null, null] },
                     ];
                 }
                 
@@ -2763,48 +2767,62 @@
                 printWindow.print();
             }, 250);
         };
+       /**
+         * Finaliza os grupos e gera as chaves Ouro/Prata (com Byes)
+         * --- CORREÇÃO: Modificado para avançar JOGADORES INDIVIDUAIS ---
+         */
         const handleFinalizeGroups = async () => {
             if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata e bloquear os grupos.")) return;
 
-            let goldSeriesPairs = [];
-            let silverSeriesPairs = [];
-            let allPairs = [];
+            let goldSeriesPlayers = [];
+            let silverSeriesPlayers = [];
 
-            // 1. Coleta e classifica todas as duplas por games vencidos
+            // 1. Coleta e classifica todos os jogadores
             activeChampionship.groups.forEach(group => {
-                const rankings = getRankings(group); 
+                const rankings = getRankings(group); // rankings[0]...rankings[3]
 
-                const goldPair = {
-                    id: `${rankings[0].id}_${rankings[1].id}`,
-                    name: `${rankings[0].name} / ${rankings[1].name}`,
-                    players: [rankings[0], rankings[1]],
-                    gamesWon: rankings[0].gamesWon + rankings[1].gamesWon,
+                // Avança os jogadores individuais para Ouro (Top 2)
+                goldSeriesPlayers.push({
+                    id: rankings[0].id,
+                    name: rankings[0].name,
+                    players: [rankings[0]], // 'players' array agora só tem 1 jogador
+                    gamesWon: rankings[0].gamesWon,
                     type: 'gold' 
-                };
-                goldSeriesPairs.push(goldPair);
-                allPairs.push(goldPair);
+                });
+                goldSeriesPlayers.push({
+                    id: rankings[1].id,
+                    name: rankings[1].name,
+                    players: [rankings[1]],
+                    gamesWon: rankings[1].gamesWon,
+                    type: 'gold' 
+                });
 
-                const silverPair = {
-                    id: `${rankings[2].id}_${rankings[3].id}`,
-                    name: `${rankings[2].name} / ${rankings[3].name}`,
-                    players: [rankings[2], rankings[3]],
-                    gamesWon: rankings[2].gamesWon + rankings[3].gamesWon,
-                    type: 'silver'
-                };
-                silverSeriesPairs.push(silverPair);
-                allPairs.push(silverPair);
+                // Avança os jogadores individuais para Prata (Bottom 2)
+                silverSeriesPlayers.push({
+                    id: rankings[2].id,
+                    name: rankings[2].name,
+                    players: [rankings[2]],
+                    gamesWon: rankings[2].gamesWon,
+                    type: 'silver' 
+                });
+                silverSeriesPlayers.push({
+                    id: rankings[3].id,
+                    name: rankings[3].name,
+                    players: [rankings[3]],
+                    gamesWon: rankings[3].gamesWon,
+                    type: 'silver' 
+                });
             });
 
-            // 2. Classificação global das duplas (para aplicar Byes)
-            // Ordem: Dupla Gold 1, Dupla Gold 2, ..., Dupla Silver 1, Dupla Silver 2, ...
-            const rankedGoldPairs = goldSeriesPairs.sort((a, b) => b.gamesWon - a.gamesWon);
-            const rankedSilverPairs = silverSeriesPairs.sort((a, b) => b.gamesWon - a.gamesWon);
+            // 2. Classificação global dos jogadores (para aplicar Byes)
+            const rankedGoldPlayers = goldSeriesPlayers.sort((a, b) => b.gamesWon - a.gamesWon);
+            const rankedSilverPlayers = silverSeriesPlayers.sort((a, b) => b.gamesWon - a.gamesWon);
 
             try {
                 // 3. Gerar chaves com a lógica de Byes
-                // Adiciona prefixos 'gold_' e 'silver_' para evitar IDs duplicados
-                const goldBracket = createBracketWithByes(rankedGoldPairs, 'gold_');
-                const silverBracket = createBracketWithByes(rankedSilverPairs, 'silver_');
+                // A função createBracketWithByes funciona com esses novos objetos
+                const goldBracket = createBracketWithByes(rankedGoldPlayers, 'gold_');
+                const silverBracket = createBracketWithByes(rankedSilverPlayers, 'silver_');
 
                 const newChampData = {
                     ...activeChampionship,
@@ -3150,8 +3168,9 @@
             return playerPoints;
         };
         
-        /**
+     /**
          * (Auxiliar) Calcula o ranking de um grupo
+         * --- CORREÇÃO: Modificado para calcular placares INDIVIDUAIS ---
          */
         const getRankings = (group) => {
             const playerStats = {};
@@ -3160,16 +3179,15 @@
             });
             
             group.matches.forEach(match => {
-                const [p1, p2, p3, p4] = match.p;
+                // Agora 'p' tem apenas [p1, p2]
+                const [p1, p2] = match.p; 
                 const [s1, s2] = match.score;
                 
                 if (s1 !== null && !isNaN(s1)) {
                     if (playerStats[p1]) playerStats[p1].gamesWon += s1;
-                    if (playerStats[p2]) playerStats[p2].gamesWon += s1;
                 }
                 if (s2 !== null && !isNaN(s2)) {
-                    if (playerStats[p3]) playerStats[p3].gamesWon += s2;
-                    if (playerStats[p4]) playerStats[p4].gamesWon += s2;
+                    if (playerStats[p2]) playerStats[p2].gamesWon += s2;
                 }
             });
             
