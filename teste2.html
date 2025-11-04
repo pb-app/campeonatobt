@@ -3341,9 +3341,33 @@
         };
         
         /**
+    /**
+         * (Auxiliar) Gera uma chave única para um par (ordem não importa)
+         */
+        const getPairKey = (p1, p2) => {
+            return [p1, p2].sort().join('_');
+        };
+        
+        /**
          * (Auxiliar) Atualiza os históricos de pares e oponentes
          */
         const updateHistories = (champData, round) => {
+            
+            // *** CORREÇÃO DO BUG (Array.add is not a function) ***
+            // Garante que o histórico interno está usando Sets, 
+            // mesmo se recebeu Arrays da iteração anterior.
+            for (const key in champData.pairHistory) {
+                if (Array.isArray(champData.pairHistory[key])) {
+                    champData.pairHistory[key] = new Set(champData.pairHistory[key]);
+                }
+            }
+            for (const key in champData.opponentHistory) {
+                if (Array.isArray(champData.opponentHistory[key])) {
+                    champData.opponentHistory[key] = new Set(champData.opponentHistory[key]);
+                }
+            }
+            // *** FIM DA CORREÇÃO ***
+
              // 1. Atualiza Pares (pairHistory)
             round.matches.forEach(match => {
                 const [p1, p2, p3, p4] = match.p;
