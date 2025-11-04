@@ -3025,7 +3025,7 @@
             
             // (Não finaliza automaticamente, espera o botão manual)
         };
-        /**
+      /**
          * Finaliza o torneio (Mata-Mata) e lança no Ranking
          */
         const handleManualFinalize_MataMata = async () => {
@@ -3055,22 +3055,16 @@
                 // 1. Identificar Posições Finais
                 const placements = new Map(); // Key: playerId, Value: 'gold_R4_win'
                 
+                // *** CORREÇÃO DO BUG (Lógica de Pontuação): Corrigido o processBracket ***
                 const processBracket = (bracket, prefix) => {
-                    if (!bracket || bracket.length === 0) return; // Proteção caso a chave esteja vazia
+                    if (!bracket || bracket.length === 0) return; 
                     const maxRound = Math.max(...bracket.map(m => m.round));
+                    
                     bracket.forEach(match => {
-                        // Se não for a final
-                        if (match.round < maxRound) {
-                            const loserKey = `${prefix}_R${maxRound}_lose`; // Ex: gold_R4_lose
-                            if (match.winner && match.pairs[0] && match.pairs[1] && match.pairs[0] !== 'BYE' && match.pairs[1] !== 'BYE') { // Ignora Byes
-                                const loser = (match.winner.id === match.pairs[0].id) ? match.pairs[1] : match.pairs[0];
-                                loser.players.forEach(p => placements.set(p.id, loserKey));
-                            }
-                        } 
-                        // Se for a final
-                        else {
-                            const winnerKey = `${prefix}_R${maxRound}_win`; // Ex: gold_R4_win
-                            const runnerUpKey = `${prefix}_R${maxRound}_run`; // Ex: gold_R4_run
+                        // Se for a FINAL (e.g., R4)
+                        if (match.round === maxRound) {
+                            const winnerKey = `${prefix}_R${maxRound}_win`; // e.g., gold_R4_win
+                            const runnerUpKey = `${prefix}_R${maxRound}_run`; // e.g., gold_R4_run
                             
                             if (match.winner) {
                                 match.winner.players.forEach(p => placements.set(p.id, winnerKey));
@@ -3080,8 +3074,19 @@
                                 }
                             }
                         }
+                        // Se for a SEMI-FINAL (e.g., R3)
+                        else if (match.round === maxRound - 1) {
+                            const loserKey = `${prefix}_R${maxRound}_lose`; // e.g., gold_R4_lose
+                            
+                            if (match.winner && match.pairs[0] && match.pairs[1] && match.pairs[0] !== 'BYE' && match.pairs[1] !== 'BYE') {
+                                const loser = (match.winner.id === match.pairs[0].id) ? match.pairs[1] : match.pairs[0];
+                                loser.players.forEach(p => placements.set(p.id, loserKey));
+                            }
+                        }
+                        // Outras rodadas (quartas, oitavas) são ignoradas
                     });
                 };
+                // *** FIM DA CORREÇÃO ***
                 
                 processBracket(activeChampionship.goldBracket, 'gold');
                 processBracket(activeChampionship.silverBracket, 'silver');
@@ -3114,7 +3119,6 @@
                 showModal("Erro Crítico", "Não foi possível aplicar o ranking. Verifique o console para detalhes: " + error.message);
             }
         };
-
         /**
          * (Auxiliar) Calcula os pontos ganhos na fase de grupos
          */
