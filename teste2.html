@@ -4272,7 +4272,7 @@
             });
         };
 
-        /**
+       /**
          * Ouve os dados de um campeonato específico (data/main)
          */
         const listenToActiveChampionship = (champId) => {
@@ -4283,18 +4283,38 @@
                 if (docSnap.exists()) {
                     activeChampionship = { id: docSnap.id, ...docSnap.data() };
                     
-                    // *** CORREÇÃO 2 (Sorteio): Converte arrays do histórico de volta para Sets ***
+                    // *** CORREÇÃO (Bug de Iteração): Converte histórico salvo (Array ou Objeto) para Sets ***
                     if (activeChampionship.pairHistory) {
                         const pairHistorySets = {};
                         for (const key in activeChampionship.pairHistory) {
-                            pairHistorySets[key] = new Set(activeChampionship.pairHistory[key]);
+                            const value = activeChampionship.pairHistory[key];
+                            if (Array.isArray(value)) {
+                                // Novo formato (correto): é um Array
+                                pairHistorySets[key] = new Set(value);
+                            } else if (typeof value === 'object' && value !== null) {
+                                // Formato antigo (bugado): é um Objeto { p2: true, p3: true }
+                                pairHistorySets[key] = new Set(Object.keys(value));
+                            } else {
+                                // Vazio ou tipo inesperado
+                                pairHistorySets[key] = new Set();
+                            }
                         }
                         activeChampionship.pairHistory = pairHistorySets;
                     }
                     if (activeChampionship.opponentHistory) {
                         const opponentHistorySets = {};
                         for (const key in activeChampionship.opponentHistory) {
-                            opponentHistorySets[key] = new Set(activeChampionship.opponentHistory[key]);
+                            const value = activeChampionship.opponentHistory[key];
+                             if (Array.isArray(value)) {
+                                // Novo formato (correto): é um Array
+                                opponentHistorySets[key] = new Set(value);
+                            } else if (typeof value === 'object' && value !== null) {
+                                // Formato antigo (bugado): é um Objeto { p2: true, p3: true }
+                                opponentHistorySets[key] = new Set(Object.keys(value));
+                            } else {
+                                // Vazio ou tipo inesperado
+                                opponentHistorySets[key] = new Set();
+                            }
                         }
                         activeChampionship.opponentHistory = opponentHistorySets;
                     }
@@ -4312,7 +4332,6 @@
                 else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro de conexão.</h1>`;
             });
         };
-
         /**
          * Ouve a lista de nomes de Rankings (app_data/rankings)
          */
