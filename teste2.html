@@ -763,7 +763,7 @@
             }
         };
 
-        /**
+  /**
          * Lida com a criação de um novo campeonato (ambos os tipos)
          */
         const handleAddChampionship = async (e) => {
@@ -802,36 +802,35 @@
                 };
             } else {
                 // Mata-Mata
+                // *** CORREÇÃO DO BUG (NaN): Adicionado '|| 0' a TODOS os parseInt ***
                 pointsConfig = {
                     type: 'mata_mata',
                     participation: parseInt(document.getElementById('points-mm-participation').value) || 0,
                     groupWin: parseInt(document.getElementById('points-mm-group-win').value) || 0,
                     
-                    // Pontos baseados em chave de 16 (R5), 8 (R4), 4 (R3)
-                    // Usamos um valor único e aplicamos a todas as chaves
-                    gold_R5_win: parseInt(document.getElementById('points-mm-gold-win').value),
-                    gold_R4_win: parseInt(document.getElementById('points-mm-gold-win').value),
-                    gold_R3_win: parseInt(document.getElementById('points-mm-gold-win').value),
+                    gold_R5_win: parseInt(document.getElementById('points-mm-gold-win').value) || 0,
+                    gold_R4_win: parseInt(document.getElementById('points-mm-gold-win').value) || 0,
+                    gold_R3_win: parseInt(document.getElementById('points-mm-gold-win').value) || 0,
                     
-                    gold_R5_run: parseInt(document.getElementById('points-mm-gold-run').value),
-                    gold_R4_run: parseInt(document.getElementById('points-mm-gold-run').value),
-                    gold_R3_run: parseInt(document.getElementById('points-mm-gold-run').value),
+                    gold_R5_run: parseInt(document.getElementById('points-mm-gold-run').value) || 0,
+                    gold_R4_run: parseInt(document.getElementById('points-mm-gold-run').value) || 0,
+                    gold_R3_run: parseInt(document.getElementById('points-mm-gold-run').value) || 0,
 
-                    gold_R5_lose: parseInt(document.getElementById('points-mm-gold-semi').value),
-                    gold_R4_lose: parseInt(document.getElementById('points-mm-gold-semi').value),
-                    gold_R3_lose: parseInt(document.getElementById('points-mm-gold-semi').value),
+                    gold_R5_lose: parseInt(document.getElementById('points-mm-gold-semi').value) || 0,
+                    gold_R4_lose: parseInt(document.getElementById('points-mm-gold-semi').value) || 0,
+                    gold_R3_lose: parseInt(document.getElementById('points-mm-gold-semi').value) || 0,
 
-                    silver_R5_win: parseInt(document.getElementById('points-mm-silver-win').value),
-                    silver_R4_win: parseInt(document.getElementById('points-mm-silver-win').value),
-                    silver_R3_win: parseInt(document.getElementById('points-mm-silver-win').value),
+                    silver_R5_win: parseInt(document.getElementById('points-mm-silver-win').value) || 0,
+                    silver_R4_win: parseInt(document.getElementById('points-mm-silver-win').value) || 0,
+                    silver_R3_win: parseInt(document.getElementById('points-mm-silver-win').value) || 0,
 
-                    silver_R5_run: parseInt(document.getElementById('points-mm-silver-run').value),
-                    silver_R4_run: parseInt(document.getElementById('points-mm-silver-run').value),
-                    silver_R3_run: parseInt(document.getElementById('points-mm-silver-run').value),
+                    silver_R5_run: parseInt(document.getElementById('points-mm-silver-run').value) || 0,
+                    silver_R4_run: parseInt(document.getElementById('points-mm-silver-run').value) || 0,
+                    silver_R3_run: parseInt(document.getElementById('points-mm-silver-run').value) || 0,
 
-                    silver_R5_lose: parseInt(document.getElementById('points-mm-silver-semi').value),
-                    silver_R4_lose: parseInt(document.getElementById('points-mm-silver-semi').value),
-                    silver_R3_lose: parseInt(document.getElementById('points-mm-silver-semi').value),
+                    silver_R5_lose: parseInt(document.getElementById('points-mm-silver-semi').value) || 0,
+                    silver_R4_lose: parseInt(document.getElementById('points-mm-silver-semi').value) || 0,
+                    silver_R3_lose: parseInt(document.getElementById('points-mm-silver-semi').value) || 0,
                 };
             }
 
@@ -863,9 +862,8 @@
                     // Campos específicos do tipo
                     ...(champType === 'sortudo' ? {
                         rounds: [],
-                        // *** CORREÇÃO 2: Adiciona histórico de pares para o Sorteio ***
-                        pairHistory: {}, // Armazena pares (ex: { 'player1_id': Set['player2_id', 'player3_id'] })
-                        opponentHistory: {}, // Armazena oponentes (ex: { 'player1_id': Set['player4_id', 'player5_id'] })
+                        pairHistory: {}, 
+                        opponentHistory: {}, 
                     } : {
                         groups: [],
                         goldBracket: [],
@@ -877,7 +875,6 @@
                 await batch.commit();
                 
                 input.value = '';
-                // *** CORREÇÃO 3: Mensagem de sucesso deve mostrar o tipo correto ***
                 const typeText = (champType === 'sortudo') ? 'Torneio Sortudo' : 'Mata-Mata';
                 showModal("Sucesso!", `Campeonato "${champName}" (${typeText}) criado.`);
             } catch (error) {
