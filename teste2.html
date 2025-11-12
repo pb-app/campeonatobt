@@ -2093,9 +2093,6 @@
             return `<div class="space-y-8 animate-fade-in">${roundsHtml}</div>`;
         };
         
-        // =================================================================
-        // === VIEW: TELÃO (Bifurcação)
-        // =================================================================
 // =================================================================
         // === VIEW: TELÃO (Bifurcação)
         // =================================================================
@@ -2114,83 +2111,12 @@
             const champName = champInfo ? champInfo.name : "Campeonato";
             const champType = champInfo?.type || 'mata_mata';
             
-            // --- NOVA LÓGICA (Featured/Upcoming) ---
-            let featuredMatchHtml = '';
-            let upcomingMatchesHtml = '';
-            let hasFeaturedRow = false;
-
-            // Esta lógica só se aplica ao Mata-Mata em fase de 'knockout'
-            if (champType === 'mata_mata' && activeChampionship.status === 'knockout') {
-                const allMatches = [
-                    ...(activeChampionship.goldBracket || []).map(m => ({ ...m, type: 'Ouro 🥇', bracket: 'gold' })),
-                    ...(activeChampionship.silverBracket || []).map(m => ({ ...m, type: 'Prata 🥈', bracket: 'silver' }))
-                ];
-                
-                // Prioriza Ouro, depois Prata
-                const unplayedMatches = allMatches.filter(m => 
-                    m.score[0] === null && // Jogo não jogado
-                    m.pairs[0] && m.pairs[1] && // Ambas as duplas definidas
-                    m.pairs[0] !== 'BYE' && m.pairs[1] !== 'BYE' // Não é um BYE
-                ).sort((a, b) => {
-                    if (a.bracket !== b.bracket) return a.bracket === 'gold' ? -1 : 1; // Ouro primeiro
-                    return a.round - b.round; // Round mais baixo primeiro
-                });
-
-                if (unplayedMatches.length > 0) {
-                    hasFeaturedRow = true;
-                    const featured = unplayedMatches[0];
-                    
-                    // Pega o bracket correto para achar o maxRound
-                    const relevantBracket = (featured.bracket === 'gold') ? activeChampionship.goldBracket : activeChampionship.silverBracket;
-                    const maxRound = Math.max(...relevantBracket.map(m => m.round));
-                    const roundTitle = getRoundTitle(featured.round, maxRound);
-
-                    // Box "Em Quadra" (conforme rascunho)
-                    featuredMatchHtml = `
-                    <div class="bg-white rounded-2xl shadow-xl p-6 border-2 border-cyan-500 flex-grow" style="min-width: 300px;">
-                        <h3 class="text-xl font-bold text-cyan-600 mb-4 text-center">🔥 EM QUADRA (${featured.type} - ${roundTitle})</h3>
-                        <div class="text-center">
-                            <p class="text-2xl font-bold text-gray-800">${featured.pairs[0].name}</p>
-                            <p class="text-xl font-semibold text-gray-500 my-2">vs</p>
-                            <p class="text-2xl font-bold text-gray-800">${featured.pairs[1].name}</p>
-                            <p class="text-4xl font-bold text-cyan-700 mt-4">- x -</p>
-                        </div>
-                    </div>
-                    `;
-                    
-                    // Boxes "Próximos Jogos" (conforme rascunho)
-                    const upcoming = unplayedMatches.slice(1, 5); // Pega os próximos 4
-                    upcomingMatchesHtml = upcoming.map(match => {
-                         const relBracket = (match.bracket === 'gold') ? activeChampionship.goldBracket : activeChampionship.silverBracket;
-                         const maxR = Math.max(...relBracket.map(m => m.round));
-                         const rTitle = getRoundTitle(match.round, maxR);
-                        return `
-                        <div class="bg-white rounded-lg shadow-md p-4 flex-1" style="min-width: 200px;">
-                            <h4 class="text-sm font-bold text-cyan-600">${match.type} <span class="text-gray-500">(${rTitle})</span></h4>
-                            <p class="text-xs text-gray-700">${match.pairs[0].name}</p>
-                            <p class="text-xs text-gray-500 text-center">vs</p>
-                            <p class="text-xs text-gray-700">${match.pairs[1].name}</p>
-                        </div>
-                        `
-                    }).join('');
-                }
-            }
-            // --- FIM DA NOVA LÓGICA ---
-
+            // --- LÓGICA "EM QUADRA" REMOVIDA (Conforme solicitado) ---
+            
             let html = `<h1 class="text-4xl sm:text-6xl font-bold text-center text-cyan-600 my-8 animate-fade-in">🏖️ ${champName} 🎾</h1>`;
             
-            // --- LINHA DE CIMA (Featured/Upcoming) ---
-            if (hasFeaturedRow) {
-                html += `
-                <div class="flex flex-col md:flex-row justify-center gap-6 mb-6 animate-fade-in">
-                    ${featuredMatchHtml}
-                    <div class="flex flex-row md:flex-col gap-3 justify-between">
-                        ${upcomingMatchesHtml}
-                    </div>
-                </div>
-                `;
-            }
-            
+            // --- LINHA "EM QUADRA" REMOVIDA (Conforme solicitado) ---
+
             // --- LINHA DE BAIXO (Brackets/Coveiro ou Outros Modos) ---
             let bottomRowHtml = '';
             
@@ -2211,24 +2137,35 @@
             else {
                 // Modo Mata-Mata
                 let bracketData = {};
+                let groupHtml = '';
+
                 if (champInfo?.status === 'finished') {
                     bracketData = renderKnockoutView_ReadOnly(true); // Espera um objeto
                 } else if (activeChampionship.status === 'knockout') {
                     bracketData = renderKnockoutView_ReadOnly(false); // Espera um objeto
                 } else if (activeChampionship.status === 'groups') {
                     // Grupos (mantém layout original)
-                    bottomRowHtml = `<div class="flex flex-wrap justify-center gap-6 animate-fade-in">${renderGroupStage_ReadOnly()}</div>`;
+                    // A função renderGroupStage_ReadOnly() será modificada para ter cards mais finos
+                    groupHtml = `<div class="flex flex-wrap justify-center gap-6 animate-fade-in">${renderGroupStage_ReadOnly()}</div>`;
                 }
                 
-                // Se tivermos os dados dos brackets, monta a linha de baixo (Ouro/Coveiro/Prata)
-                if (bracketData.goldHtml) {
+                // Se tivermos os dados dos grupos, renderiza
+                if (groupHtml) {
+                    bottomRowHtml = groupHtml;
+                }
+                // Se tivermos os dados dos brackets, monta a linha de baixo (Ouro/Prata + Coveiro)
+                else if (bracketData.goldHtml) {
+                     // --- NOVO LAYOUT (BASEADO NO MOCKUP) ---
                      bottomRowHtml = `
                      <div class="flex flex-col lg:flex-row justify-center items-start gap-6 animate-fade-in">
                         <div class="flex-1 w-full">${bracketData.goldHtml}</div>
-                        <div class="flex-shrink-0 w-full lg:w-auto">${bracketData.coveiroHtml}</div>
                         <div class="flex-1 w-full">${bracketData.silverHtml}</div>
                      </div>
+                     <div class="flex justify-center gap-6 animate-fade-in mt-6">
+                        ${bracketData.coveiroHtml}
+                     </div>
                      `;
+                     // --- FIM DO NOVO LAYOUT ---
                 }
             }
 
@@ -2266,7 +2203,7 @@
                 </div>
             `;
         };
-        /**
+/**
          * Renderiza Grupos (Read-Only)
          */
         const renderGroupStage_ReadOnly = () => {
@@ -2304,8 +2241,9 @@
                     </tr>
                 `).join('');
 
+                // --- MUDANÇA: sm:max-w-sm para sm:w-80 ---
                 return `
-                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:max-w-sm border border-gray-200">
+                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:w-80 border border-gray-200">
                     <div class="flex justify-between items-center mb-5">
                         <h3 class="text-3xl font-bold text-cyan-600">Grupo ${groupIndex + 1}</h3>
                     </div>
@@ -2333,7 +2271,7 @@
             return groupsHtml; 
         };
         
-     /**
+/**
          * Renderiza Mata-Mata (Read-Only)
          */
         const renderKnockoutView_ReadOnly = (isFinished) => {
@@ -2348,8 +2286,10 @@
                     const minGames = stats[0].gamesWon;
                     const coveiros = stats.filter(p => p.gamesWon === minGames);
                     const coveiroNames = coveiros.map(c => c.name).join(' / ');
+                    
+                    // --- MUDANÇA: Removido lg:mt-8 ---
                     coveiroHtml = `
-                    <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl text-center animate-fade-in w-full sm:max-w-sm border border-gray-200 lg:mt-8">
+                    <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl text-center animate-fade-in w-full sm:max-w-sm border border-gray-200">
                         <h4 class="text-2xl font-black uppercase tracking-wider text-rose-600">👻 Prêmio Coveiro</h4>
                         <p class="text-4xl font-extrabold text-gray-900 mt-2">${coveiroNames}</p>
                         <p class="text-sm text-gray-500">Com apenas ${minGames} games marcados no torneio.</p>
@@ -2360,7 +2300,6 @@
             // (MODIFICADO: Retorna um objeto em vez de HTML concatenado)
             return { goldHtml, silverHtml, coveiroHtml }; 
         };
-        
 /**
          * Renderiza Chave Individual (Read-Only)
          */
