@@ -139,7 +139,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v5.1.2 (final)</p>
+            <p>App de Ranking v5.1.3 (final)</p>
         </footer>
     </div>
 
@@ -2096,6 +2096,9 @@
         // =================================================================
         // === VIEW: TELÃO (Bifurcação)
         // =================================================================
+// =================================================================
+        // === VIEW: TELÃO (Bifurcação)
+        // =================================================================
         const renderTelaoView = () => {
              if (!activeChampionship) {
                 mainContent.innerHTML = `
@@ -2111,50 +2114,131 @@
             const champName = champInfo ? champInfo.name : "Campeonato";
             const champType = champInfo?.type || 'mata_mata';
             
-            let html = `<h1 class="text-4xl sm:text-6xl font-bold text-center text-cyan-600 my-8 animate-fade-in">🏖️ ${champName} 🎾</h1>`;
-            let contentHtml = '';
+            // --- NOVA LÓGICA (Featured/Upcoming) ---
+            let featuredMatchHtml = '';
+            let upcomingMatchesHtml = '';
+            let hasFeaturedRow = false;
 
-            // Bifurcação (Telão)
-            if (champType === 'sortudo') {
-                if (champInfo?.status === 'finished') {
-                    contentHtml = renderLeaderboard_Sortudo_ReadOnly(true);
-                } else if (activeChampionship.status === 'rounds') {
-                    contentHtml = renderLeaderboard_Sortudo_ReadOnly(false);
-                    contentHtml += renderRounds_Sortudo_ReadOnly();
-                } else { 
-                    contentHtml = renderPlayerRegistration_ReadOnly();
-                }
-            } else {
-                // Mata-Mata
-                if (champInfo?.status === 'finished') {
-                    contentHtml = renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(true);
-                } else if (activeChampionship.status === 'knockout') {
-                    contentHtml = renderGroupStage_ReadOnly() + renderKnockoutView_ReadOnly(false);
-                } else if (activeChampionship.status === 'groups') {
-                    contentHtml = renderGroupStage_ReadOnly();
-                } else { 
-                    contentHtml = renderPlayerRegistration_ReadOnly();
+            // Esta lógica só se aplica ao Mata-Mata em fase de 'knockout'
+            if (champType === 'mata_mata' && activeChampionship.status === 'knockout') {
+                const allMatches = [
+                    ...(activeChampionship.goldBracket || []).map(m => ({ ...m, type: 'Ouro 🥇', bracket: 'gold' })),
+                    ...(activeChampionship.silverBracket || []).map(m => ({ ...m, type: 'Prata 🥈', bracket: 'silver' }))
+                ];
+                
+                // Prioriza Ouro, depois Prata
+                const unplayedMatches = allMatches.filter(m => 
+                    m.score[0] === null && // Jogo não jogado
+                    m.pairs[0] && m.pairs[1] && // Ambas as duplas definidas
+                    m.pairs[0] !== 'BYE' && m.pairs[1] !== 'BYE' // Não é um BYE
+                ).sort((a, b) => {
+                    if (a.bracket !== b.bracket) return a.bracket === 'gold' ? -1 : 1; // Ouro primeiro
+                    return a.round - b.round; // Round mais baixo primeiro
+                });
+
+                if (unplayedMatches.length > 0) {
+                    hasFeaturedRow = true;
+                    const featured = unplayedMatches[0];
+                    
+                    // Pega o bracket correto para achar o maxRound
+                    const relevantBracket = (featured.bracket === 'gold') ? activeChampionship.goldBracket : activeChampionship.silverBracket;
+                    const maxRound = Math.max(...relevantBracket.map(m => m.round));
+                    const roundTitle = getRoundTitle(featured.round, maxRound);
+
+                    // Box "Em Quadra" (conforme rascunho)
+                    featuredMatchHtml = `
+                    <div class="bg-white rounded-2xl shadow-xl p-6 border-2 border-cyan-500 flex-grow" style="min-width: 300px;">
+                        <h3 class="text-xl font-bold text-cyan-600 mb-4 text-center">🔥 EM QUADRA (${featured.type} - ${roundTitle})</h3>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-gray-800">${featured.pairs[0].name}</p>
+                            <p class="text-xl font-semibold text-gray-500 my-2">vs</p>
+                            <p class="text-2xl font-bold text-gray-800">${featured.pairs[1].name}</p>
+                            <p class="text-4xl font-bold text-cyan-700 mt-4">- x -</p>
+                        </div>
+                    </div>
+                    `;
+                    
+                    // Boxes "Próximos Jogos" (conforme rascunho)
+                    const upcoming = unplayedMatches.slice(1, 5); // Pega os próximos 4
+                    upcomingMatchesHtml = upcoming.map(match => {
+                         const relBracket = (match.bracket === 'gold') ? activeChampionship.goldBracket : activeChampionship.silverBracket;
+                         const maxR = Math.max(...relBracket.map(m => m.round));
+                         const rTitle = getRoundTitle(match.round, maxR);
+                        return `
+                        <div class="bg-white rounded-lg shadow-md p-4 flex-1" style="min-width: 200px;">
+                            <h4 class="text-sm font-bold text-cyan-600">${match.type} <span class="text-gray-500">(${rTitle})</span></h4>
+                            <p class="text-xs text-gray-700">${match.pairs[0].name}</p>
+                            <p class="text-xs text-gray-500 text-center">vs</p>
+                            <p class="text-xs text-gray-700">${match.pairs[1].name}</p>
+                        </div>
+                        `
+                    }).join('');
                 }
             }
+            // --- FIM DA NOVA LÓGICA ---
 
-            // O Torneio Sortudo e Mata-Mata (Pós-inscrição) usam layout flexível
-            if (activeChampionship.status !== 'registration') {
+            let html = `<h1 class="text-4xl sm:text-6xl font-bold text-center text-cyan-600 my-8 animate-fade-in">🏖️ ${champName} 🎾</h1>`;
+            
+            // --- LINHA DE CIMA (Featured/Upcoming) ---
+            if (hasFeaturedRow) {
                 html += `
-                <div class="flex flex-wrap justify-center gap-6 animate-fade-in">
-                    ${contentHtml}
+                <div class="flex flex-col md:flex-row justify-center gap-6 mb-6 animate-fade-in">
+                    ${featuredMatchHtml}
+                    <div class="flex flex-row md:flex-col gap-3 justify-between">
+                        ${upcomingMatchesHtml}
+                    </div>
                 </div>
                 `;
-            } else {
-                html += contentHtml; // Inscrição (ocupa tela cheia)
             }
             
+            // --- LINHA DE BAIXO (Brackets/Coveiro ou Outros Modos) ---
+            let bottomRowHtml = '';
+            
+            if (activeChampionship.status === 'registration') {
+                bottomRowHtml = renderPlayerRegistration_ReadOnly();
+            }
+            else if (champType === 'sortudo') {
+                // Modo Sortudo (mantém layout original)
+                let sortudoContent = '';
+                if (champInfo?.status === 'finished') {
+                    sortudoContent = renderLeaderboard_Sortudo_ReadOnly(true);
+                } else if (activeChampionship.status === 'rounds') {
+                    sortudoContent = renderLeaderboard_Sortudo_ReadOnly(false);
+                    sortudoContent += renderRounds_Sortudo_ReadOnly();
+                }
+                bottomRowHtml = `<div class="flex flex-wrap justify-center gap-6 animate-fade-in">${sortudoContent}</div>`;
+            } 
+            else {
+                // Modo Mata-Mata
+                let bracketData = {};
+                if (champInfo?.status === 'finished') {
+                    bracketData = renderKnockoutView_ReadOnly(true); // Espera um objeto
+                } else if (activeChampionship.status === 'knockout') {
+                    bracketData = renderKnockoutView_ReadOnly(false); // Espera um objeto
+                } else if (activeChampionship.status === 'groups') {
+                    // Grupos (mantém layout original)
+                    bottomRowHtml = `<div class="flex flex-wrap justify-center gap-6 animate-fade-in">${renderGroupStage_ReadOnly()}</div>`;
+                }
+                
+                // Se tivermos os dados dos brackets, monta a linha de baixo (Ouro/Coveiro/Prata)
+                if (bracketData.goldHtml) {
+                     bottomRowHtml = `
+                     <div class="flex flex-col lg:flex-row justify-center items-start gap-6 animate-fade-in">
+                        <div class="flex-1 w-full">${bracketData.goldHtml}</div>
+                        <div class="flex-shrink-0 w-full lg:w-auto">${bracketData.coveiroHtml}</div>
+                        <div class="flex-1 w-full">${bracketData.silverHtml}</div>
+                     </div>
+                     `;
+                }
+            }
+
+            html += bottomRowHtml;
             mainContent.innerHTML = html;
             
             if (appState.isTelaoMode) {
                  document.body.style.backgroundColor = '#FFFAF0'; 
             }
         };
-
         /**
          * Renderiza Inscrição (Read-Only)
          */
@@ -2249,12 +2333,13 @@
             return groupsHtml; 
         };
         
-        /**
+     /**
          * Renderiza Mata-Mata (Read-Only)
          */
         const renderKnockoutView_ReadOnly = (isFinished) => {
-            const goldHtml = renderBracket_ReadOnly('Série Ouro 🥇', activeChampionship.goldBracket, 'goldBracket', isFinished);
-            const silverHtml = renderBracket_ReadOnly('Série Prata 🥈', activeChampionship.silverBracket, 'silverBracket', isFinished);
+            // (MODIFICADO: Passa 'true' como último parâmetro para isTelao)
+            const goldHtml = renderBracket_ReadOnly('Série Ouro 🥇', activeChampionship.goldBracket, 'goldBracket', isFinished, true);
+            const silverHtml = renderBracket_ReadOnly('Série Prata 🥈', activeChampionship.silverBracket, 'silverBracket', isFinished, true);
             
             let coveiroHtml = '';
             if (activeChampionship.groups && activeChampionship.groups.length > 0) {
@@ -2264,7 +2349,7 @@
                     const coveiros = stats.filter(p => p.gamesWon === minGames);
                     const coveiroNames = coveiros.map(c => c.name).join(' / ');
                     coveiroHtml = `
-                    <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl text-center animate-fade-in w-full sm:max-w-sm border border-gray-200">
+                    <div class="bg-white text-gray-800 p-6 rounded-lg shadow-xl text-center animate-fade-in w-full sm:max-w-sm border border-gray-200 lg:mt-8">
                         <h4 class="text-2xl font-black uppercase tracking-wider text-rose-600">👻 Prêmio Coveiro</h4>
                         <p class="text-4xl font-extrabold text-gray-900 mt-2">${coveiroNames}</p>
                         <p class="text-sm text-gray-500">Com apenas ${minGames} games marcados no torneio.</p>
@@ -2272,13 +2357,15 @@
                     `;
                 }
             }
-            return goldHtml + silverHtml + coveiroHtml; 
+            // (MODIFICADO: Retorna um objeto em vez de HTML concatenado)
+            return { goldHtml, silverHtml, coveiroHtml }; 
         };
         
-        /**
+/**
          * Renderiza Chave Individual (Read-Only)
          */
-        const renderBracket_ReadOnly = (title, bracket, bracketType, isFinished) => {
+        // (MODIFICADO: Adicionado 'isTelao = false' como último parâmetro)
+        const renderBracket_ReadOnly = (title, bracket, bracketType, isFinished, isTelao = false) => {
             const rounds = {};
             if (!bracket || bracket.length === 0) {
                  return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
@@ -2320,6 +2407,7 @@
             const runnerUpStyle = isGold ? 'text-lg font-bold text-white opacity-90' : 'text-lg font-bold text-gray-700';
             const thirdPlaceStyle = isGold ? 'text-base font-medium text-white opacity-80' : 'text-base font-medium text-gray-600';
 
+            // Pódio (usado em ambos os modos)
             const championHtml = champion ? `
             <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in space-y-2">
                 <div>
@@ -2341,7 +2429,86 @@
             </div>
             ` : '';
 
-            // Renderiza as colunas das rodadas (Read-Only)
+            // --- NOVA BIFURCAÇÃO PARA TELÃO ---
+            if (isTelao) {
+                let telaoMatchesHtml = '';
+                
+                if (isFinished) {
+                    // Se finalizado, o pódio (championHtml) é tudo o que mostramos
+                    telaoMatchesHtml = ''; 
+                } else {
+                    // Se NÃO finalizado, encontra a rodada atual para exibir
+                    let currentRoundNum = 1;
+                    for (let r = 1; r <= maxRound; r++) {
+                        const roundMatches = rounds[r] || [];
+                        // Procura por um jogo não jogado (score null) onde as duplas já estão definidas
+                        const hasUnplayed = roundMatches.some(m => m.score[0] === null && m.pairs[0] && m.pairs[1] && m.pairs[0] !== 'BYE' && m.pairs[1] !== 'BYE');
+                        if (hasUnplayed) {
+                            currentRoundNum = r;
+                            break;
+                        }
+                        // Se todos jogaram ou estão aguardando, avança
+                        if (r < maxRound) currentRoundNum = r + 1;
+                    }
+                    
+                    const roundTitle = getRoundTitle(currentRoundNum, maxRound);
+                    const matchesToShow = rounds[currentRoundNum] || [];
+                    
+                    telaoMatchesHtml = matchesToShow.map(match => {
+                        const pair1 = match.pairs[0]; 
+                        const pair2 = match.pairs[1]; 
+                        const score1 = match.score[0];
+                        const score2 = match.score[1];
+                        const isBye = pair2 === 'BYE' || pair1 === 'BYE';
+                        
+                        // Ignora BYEs já processados (que têm um vencedor)
+                        if (isBye && match.winner) return ''; 
+
+                        const pair1Name = pair1 ? (pair1 === 'BYE' ? 'BYE (Folga)' : pair1.name) : 'Aguardando...';
+                        const pair2Name = pair2 ? (pair2 === 'BYE' ? 'BYE (Folga)' : pair2.name) : 'Aguardando...';
+                        
+                        let scoreHtml = '';
+                        if (score1 !== null) {
+                            // Jogo finalizado
+                            scoreHtml = `<span class="font-bold text-xl ${score1 > score2 ? 'text-emerald-600' : 'text-gray-700'}">${score1}</span>
+                            <span class="text-gray-500">x</span>
+                            <span class="font-bold text-xl ${score2 > score1 ? 'text-emerald-600' : 'text-gray-700'}">${score2}</span>`;
+                        } else {
+                            // Jogo pendente
+                            scoreHtml = `<span class="font-bold text-xl text-cyan-600">- x -</span>`;
+                        }
+
+                        return `
+                        <div class="bg-amber-100 rounded-lg shadow-sm border border-amber-200 p-4">
+                            <p class="text-lg font-medium ${score1 !== null && score1 < score2 ? 'text-gray-500 line-through' : 'text-gray-800'}">${pair1Name}</p>
+                            <div class="flex justify-center items-center gap-3 my-2">
+                                ${scoreHtml}
+                            </div>
+                            <p class="text-lg font-medium ${score1 !== null && score2 < score1 ? 'text-gray-500 line-through' : 'text-gray-800'}">${pair2Name}</p>
+                        </div>
+                        `;
+                    }).join('');
+
+                    telaoMatchesHtml = `
+                    <h4 class="text-2xl font-semibold text-gray-800 mb-4">${roundTitle}</h4>
+                    <div class="space-y-4">${telaoMatchesHtml}</div>
+                    `;
+                }
+                
+                // Retorno simplificado para o Telão
+                return `
+                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full border border-gray-200">
+                    <h3 class="text-3xl font-bold mb-6 text-cyan-600">
+                        ${title}
+                    </h3>
+                    ${championHtml}
+                    ${telaoMatchesHtml}
+                </div>
+                `;
+            }
+            // --- FIM DA BIFURCAÇÃO TELÃO ---
+
+            // Renderiza as colunas das rodadas (Lógica Original para o modo 'normal' Read-Only)
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
                 const roundTitle = getRoundTitle(roundNum, maxRound);
                 
@@ -2405,6 +2572,7 @@
                 `;
             }).join('');
             
+            // Retorno Original (modo 'normal' Read-Only)
             return `
             <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 w-full sm:max-w-sm border border-gray-200">
                 <h3 class="text-3xl font-bold mb-6 text-cyan-600">
