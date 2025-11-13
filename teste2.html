@@ -2111,20 +2111,17 @@
             const champName = champInfo ? champInfo.name : "Campeonato";
             const champType = champInfo?.type || 'mata_mata';
             
-            // --- LÓGICA "EM QUADRA" REMOVIDA (Conforme solicitado) ---
+            // Cabeçalho menor para sobrar mais espaço para os grupos
+            let html = `<h1 class="text-3xl sm:text-4xl font-bold text-center text-cyan-600 my-4 animate-fade-in h-[5vh]">🏖️ ${champName} 🎾</h1>`;
             
-            let html = `<h1 class="text-4xl sm:text-6xl font-bold text-center text-cyan-600 my-8 animate-fade-in">🏖️ ${champName} 🎾</h1>`;
-            
-            // --- LINHA "EM QUADRA" REMOVIDA (Conforme solicitado) ---
-
-            // --- LINHA DE BAIXO (Brackets/Coveiro ou Outros Modos) ---
             let bottomRowHtml = '';
+            let containerClasses = ''; // Classes para controlar o layout do container principal
             
             if (activeChampionship.status === 'registration') {
                 bottomRowHtml = renderPlayerRegistration_ReadOnly();
             }
             else if (champType === 'sortudo') {
-                // Modo Sortudo (mantém layout original)
+                // Modo Sortudo
                 let sortudoContent = '';
                 if (champInfo?.status === 'finished') {
                     sortudoContent = renderLeaderboard_Sortudo_ReadOnly(true);
@@ -2137,25 +2134,27 @@
             else {
                 // Modo Mata-Mata
                 let bracketData = {};
-                let groupHtml = '';
 
                 if (champInfo?.status === 'finished') {
-                    bracketData = renderKnockoutView_ReadOnly(true); // Espera um objeto
+                    bracketData = renderKnockoutView_ReadOnly(true);
                 } else if (activeChampionship.status === 'knockout') {
-                    bracketData = renderKnockoutView_ReadOnly(false); // Espera um objeto
+                    bracketData = renderKnockoutView_ReadOnly(false);
                 } else if (activeChampionship.status === 'groups') {
-                    // Grupos (mantém layout original)
-                    // A função renderGroupStage_ReadOnly() será modificada para ter cards mais finos
-                    groupHtml = `<div class="flex flex-wrap justify-center gap-6 animate-fade-in">${renderGroupStage_ReadOnly()}</div>`;
+                    // --- LÓGICA 16:9 FULL SCREEN PARA GRUPOS ---
+                    const numGroups = activeChampionship.groups.length;
+                    
+                    // Cria um GRID onde o número de colunas é igual ao número de grupos
+                    // h-[85vh] garante que ocupe o resto da tela abaixo do título
+                    bottomRowHtml = `
+                    <div class="grid gap-2 w-full h-[88vh] px-2 animate-fade-in" style="grid-template-columns: repeat(${numGroups}, minmax(0, 1fr));">
+                        ${renderGroupStage_ReadOnly()}
+                    </div>
+                    `;
                 }
                 
-                // Se tivermos os dados dos grupos, renderiza
-                if (groupHtml) {
-                    bottomRowHtml = groupHtml;
-                }
-                // Se tivermos os dados dos brackets, monta a linha de baixo (Ouro/Prata + Coveiro)
-                else if (bracketData.goldHtml) {
-                     // --- NOVO LAYOUT (BASEADO NO MOCKUP) ---
+                // Se bottomRowHtml já foi preenchido (grupos), usa ele.
+                // Caso contrário, verifica brackets (Mata-Mata)
+                if (!bottomRowHtml && bracketData.goldHtml) {
                      bottomRowHtml = `
                      <div class="flex flex-col lg:flex-row justify-center items-start gap-6 animate-fade-in">
                         <div class="flex-1 w-full">${bracketData.goldHtml}</div>
@@ -2165,15 +2164,23 @@
                         ${bracketData.coveiroHtml}
                      </div>
                      `;
-                     // --- FIM DO NOVO LAYOUT ---
                 }
             }
 
-            html += bottomRowHtml;
+            // Se for grupos, não usamos flex-wrap para não quebrar a linha
+            if (activeChampionship.status === 'groups' && champType !== 'sortudo') {
+                 html += bottomRowHtml;
+            } else {
+                 html += bottomRowHtml;
+            }
+
             mainContent.innerHTML = html;
             
             if (appState.isTelaoMode) {
+                 // Garante que a tela não tenha rolagem e tenha fundo fixo
                  document.body.style.backgroundColor = '#FFFAF0'; 
+                 document.body.style.overflow = 'hidden'; 
+                 document.body.style.height = '100vh';
             }
         };
         /**
@@ -2204,7 +2211,7 @@
             `;
         };
 /**
-         * Renderiza Grupos (Read-Only)
+         * Renderiza Grupos (Read-Only - Otimizado para 16:9 Full Screen)
          */
         const renderGroupStage_ReadOnly = () => {
             const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
@@ -2213,21 +2220,21 @@
                 const matchesHtml = group.matches.map((match) => {
                     const score1 = match.score[0];
                     const score2 = match.score[1];
+                    
                     return `
-                    <div class="bg-amber-100 p-3 sm:p-4 rounded-lg border border-amber-200">
-                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
-                            <span class="text-base text-gray-700 text-center sm:text-left">${match.names[0]}</span>
-                            <span class="font-bold text-cyan-600">vs</span>
-                            <span class="text-base text-gray-700 text-center sm:text-right">${match.names[1]}</span>
-                        </div>
-                        <div class="flex justify-center items-center gap-3 mt-3">
-                            <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
-                                ${score1 === null ? '-' : score1}
-                            </span>
-                            <span class="text-gray-500 text-xl">-</span>
-                             <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
-                                ${score2 === null ? '-' : score2}
-                            </span>
+                    <div class="bg-amber-100 p-1.5 rounded border border-amber-200 mb-1">
+                        <div class="flex flex-col justify-center items-center leading-tight">
+                            <span class="text-[10px] sm:text-xs text-gray-700 text-center truncate w-full font-semibold">${match.names[0]}</span> 
+                            <div class="flex justify-center items-center gap-1 my-0.5">
+                                <span class="bg-white border border-gray-300 text-gray-800 rounded px-1.5 py-0.5 text-center text-sm font-bold shadow-sm">
+                                    ${score1 === null ? '' : score1}
+                                </span>
+                                <span class="text-gray-400 text-[10px]">x</span>
+                                <span class="bg-white border border-gray-300 text-gray-800 rounded px-1.5 py-0.5 text-center text-sm font-bold shadow-sm">
+                                    ${score2 === null ? '' : score2}
+                                </span>
+                            </div>
+                            <span class="text-[10px] sm:text-xs text-gray-700 text-center truncate w-full font-semibold">${match.names[1]}</span>
                         </div>
                     </div>
                     `;
@@ -2235,35 +2242,38 @@
                 
                 const rankingsHtml = rankings.map((player, rankIndex) => `
                     <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-emerald-600' : 'text-orange-600'}">
-                        <td class="p-3 font-bold text-lg">${rankIndex + 1}º</td>
-                        <td class="p-3 text-lg text-gray-800">${player.name}</td>
-                        <td class="p-3 font-bold text-lg">${player.gamesWon}</td>
+                        <td class="py-1 px-0.5 font-bold text-xs text-center">${rankIndex + 1}º</td>
+                        <td class="py-1 px-0.5 text-xs text-gray-800 truncate max-w-[60px]">${player.name}</td>
+                        <td class="py-1 px-0.5 font-bold text-xs text-center">${player.gamesWon}</td>
                     </tr>
                 `).join('');
 
-                // --- MUDANÇA: sm:max-w-sm para sm:w-80 ---
+                // --- CARD 16:9 FULL HEIGHT ---
+                // h-full: Ocupa toda a altura do grid
+                // w-full: Ocupa toda a largura da coluna do grid
+                // flex flex-col justify-between: Espalha o conteúdo verticalmente
                 return `
-                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:w-80 border border-gray-200">
-                    <div class="flex justify-between items-center mb-5">
-                        <h3 class="text-3xl font-bold text-cyan-600">Grupo ${groupIndex + 1}</h3>
+                <div class="bg-white rounded-lg shadow-md p-2 animate-fade-in h-full w-full border border-gray-200 flex flex-col overflow-hidden">
+                    
+                    <div class="text-center border-b border-gray-100 pb-1 mb-1">
+                        <h3 class="text-lg font-bold text-cyan-600 uppercase tracking-tighter">G${groupIndex + 1}</h3>
                     </div>
-                    <div class="space-y-4 mb-6">${matchesHtml}</div>
-                    <div>
-                        <h4 class="text-xl font-semibold mb-3 text-gray-800">Ranking do Grupo</h4>
-                        <table class="w-full text-left">
+
+                    <div class="flex-grow flex flex-col justify-center overflow-y-auto no-scrollbar">
+                        ${matchesHtml}
+                    </div>
+
+                    <div class="mt-1 pt-1 border-t border-gray-100">
+                        <table class="w-full text-left table-fixed">
                             <thead>
-                                <tr class="bg-amber-100">
-                                    <th class="p-3 rounded-l-lg text-base text-gray-600">Pos.</th>
-                                    <th class="p-3 text-base text-gray-600">Jogador</th>
-                                    <th class="p-3 rounded-r-lg text-base text-gray-600">Games Vencidos</th>
+                                <tr class="bg-amber-50">
+                                    <th class="w-6 py-0.5 text-[10px] text-gray-500 text-center">#</th>
+                                    <th class="py-0.5 text-[10px] text-gray-500">Nome</th>
+                                    <th class="w-6 py-0.5 text-[10px] text-gray-500 text-center">V</th>
                                 </tr>
                             </thead>
                             <tbody>${rankingsHtml}</tbody>
                         </table>
-                        <div class="flex justify-between mt-2 text-base">
-                            <span class="text-emerald-600">▲ Dupla Ouro 🥇</span>
-                            <span class="text-orange-600">▼ Dupla Prata 🥈</span>
-                        </div>
                     </div>
                 </div>
                 `;
