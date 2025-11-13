@@ -3260,10 +3260,12 @@
         
        /**
          * (Transação) Atualiza o Ranking Global (Mata-Mata)
-         * --- CORREÇÃO: Lógica de cálculo HÍBRIDA + Correção Bug groupWin ---
+         * --- CORREÇÃO: Lógica de cálculo HÍBRIDA Robustecida ---
          */
         const updateGlobalRanking_MataMata = async (players, placements, groupPoints, pointsConfig, rankingId) => {
-            
+            console.log("Iniciando atualização de ranking...");
+            console.log("Config de Pontos:", pointsConfig);
+
             // 1. Determina o Coveiro
             const stats = getGlobalTournamentStats_MataMata(activeChampionship);
             const coveiroIds = new Set();
@@ -3272,70 +3274,90 @@
                 stats.filter(p => p.gamesWon === minGames).forEach(p => coveiroIds.add(p.id));
             }
 
-            // 2. Prepara o mapa de pontos (Lógica HÍBRIDA)
+            // 2. Prepara o mapa de pontos
             const playerPointsMap = new Map();
+            
             for (const player of players) {
-                // Pontos base
-                const participationPoints = pointsConfig.participation || 0;
+                // Pontos base de participação
+                const participationPoints = Number(pointsConfig.participation) || 0;
                 
-                // *** CORREÇÃO DO BUG (groupWin) ***
-                // groupPoints (o map) já contém o valor total (ex: 3 vitórias * 5 pts = 15)
-                // Não precisamos multiplicar de novo.
+                // Pontos de Grupo (já calculados anteriormente)
                 const grpPoints = groupPoints.get(player.id) || 0;
                 
-                // Bônus (1º Ouro, 2º Prata, etc.)
-                const placementKey = placements.get(player.id); // e.g., 'gold_1st' ou 'silver_2nd'
-                const bonusPoints = pointsConfig[placementKey] || 0; // e.g., pointsConfig['gold_1st'] (100)
+                // Bônus de Colocação (Mata-Mata)
+                // placementKey será algo como 'gold_1st', 'silver_2nd', etc.
+                const placementKey = placements.get(player.id); 
+                
+                let bonusPoints = 0;
+                if (placementKey) {
+                    // Tenta pegar do config. Se não achar, tenta fallback ou assume 0.
+                    // O código original esperava keys exatas. Vamos garantir que elas batam com o formulário.
+                    // As keys do formulário são: gold_1st, gold_2nd, gold_3rd, silver_1st, etc.
+                    bonusPoints = Number(pointsConfig[placementKey]) || 0;
+                }
 
                 // Soma Total
                 const totalPoints = participationPoints + grpPoints + bonusPoints;
+                
+                console.log(`Jogador: ${player.name} | Part: ${participationPoints} | Grupo: ${grpPoints} | Bonus (${placementKey}): ${bonusPoints} | TOTAL: ${totalPoints}`);
                 
                 playerPointsMap.set(player.id, {
                     name: player.name,
                     pointsToAdd: totalPoints,
                     goldWins: (placementKey === 'gold_1st') ? 1 : 0,
-                    silverWins: (placementKey === 'silver_1st') ? 1 : 0, // 'Prata' no ranking = Campeão da Chave Prata
+                    silverWins: (placementKey === 'silver_1st') ? 1 : 0, 
                     coveiroWins: coveiroIds.has(player.id) ? 1 : 0
                 });
             }
             
-            // 3. Executa a Transação (esta lógica não muda)
-            await runTransaction(db, async (transaction) => {
-                // Lê todos os documentos de jogadores necessários DENTRO da transação
-                const playerDocsData = new Map();
-                for (const playerId of playerPointsMap.keys()) {
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
-                    const playerDoc = await transaction.get(playerRef); 
-                    playerDocsData.set(playerId, playerDoc); 
-                }
-                
-                // Agora, escreve todas as atualizações
-                for (const [playerId, data] of playerPointsMap.entries()) {
-                    const playerDoc = playerDocsData.get(playerId); 
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
-                    
-                    if (!playerDoc.exists()) {
-                        console.warn(`Jogador ${playerId} (${data.name}) não existia no ranking. Criando...`);
-                        transaction.set(playerRef, {
-                            name: data.name,
-                            points: data.pointsToAdd,
-                            goldWins: data.goldWins,
-                            silverWins: data.silverWins,
-                            coveiroWins: data.coveiroWins
-                        });
-                    } else {
-                        // Jogador existe, atualiza os pontos
-                        const oldData = playerDoc.data();
-                        transaction.update(playerRef, {
-                            name: data.name, // Garante que o nome está atualizado
-                            points: (oldData.points || 0) + data.pointsToAdd,
-                            goldWins: (oldData.goldWins || 0) + data.goldWins,
-                            silverWins: (oldData.silverWins || 0) + data.silverWins,
-                            coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWins 
-                        });
+            // 3. Executa a Transação
+            try {
+                await runTransaction(db, async (transaction) => {
+                    // Lê todos os documentos
+                    const playerDocsData = new Map();
+                    for (const playerId of playerPointsMap.keys()) {
+                        const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                        const playerDoc = await transaction.get(playerRef); 
+                        playerDocsData.set(playerId, playerDoc); 
                     }
-                }
-            });
+                    
+                    // Escreve as atualizações
+                    for (const [playerId, data] of playerPointsMap.entries()) {
+                        const playerDoc = playerDocsData.get(playerId); 
+                        const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
+                        
+                        if (!playerDoc.exists()) {
+                            // Cria se não existe
+                            transaction.set(playerRef, {
+                                name: data.name,
+                                points: data.pointsToAdd,
+                                goldWins: data.goldWins,
+                                silverWins: data.silverWins,
+                                coveiroWins: data.coveiroWins
+                            });
+                        } else {
+                            // Atualiza (SOMA aos pontos anteriores)
+                            const oldData = playerDoc.data();
+                            const currentPoints = Number(oldData.points) || 0;
+                            const currentGold = Number(oldData.goldWins) || 0;
+                            const currentSilver = Number(oldData.silverWins) || 0;
+                            const currentCoveiro = Number(oldData.coveiroWins) || 0;
+
+                            transaction.update(playerRef, {
+                                name: data.name, 
+                                points: currentPoints + data.pointsToAdd,
+                                goldWins: currentGold + data.goldWins,
+                                silverWins: currentSilver + data.silverWins,
+                                coveiroWins: currentCoveiro + data.coveiroWins 
+                            });
+                        }
+                    }
+                });
+                console.log("Transação de pontos concluída com sucesso!");
+            } catch (e) {
+                console.error("Erro na transação do ranking:", e);
+                throw e; // Repassa o erro para o modal exibir
+            }
         };
         // =================================================================
         // === AÇÕES E LÓGICA (Sortudo)
