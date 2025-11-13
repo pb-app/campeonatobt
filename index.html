@@ -139,7 +139,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v5.1.6 (final)</p>
+            <p>App de Ranking v5.1.2 (final)</p>
         </footer>
     </div>
 
@@ -928,7 +928,7 @@
             }
         };
 
-        // =================================================================
+       // =================================================================
         // === VIEW: RANKING GERAL
         // =================================================================
         const renderGlobalRanking = () => {
@@ -955,14 +955,22 @@
                 </option>`
             ).join('');
 
-            const manageButtonHtml = appState.isAdmin ? `
+            // Botões de Admin
+            let adminButtonsHtml = '';
+            if (appState.isAdmin) {
+                adminButtonsHtml = `
                 <button id="manage-rankings-btn" class="flex-shrink-0 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold p-3 rounded-lg shadow-sm transition-all" title="Gerenciar Rankings">
                     ${icons.settings}
                 </button>
-            ` : '';
+                
+                <button id="reset-season-btn" class="flex-shrink-0 bg-rose-500 hover:bg-rose-600 text-white font-bold p-3 rounded-lg shadow-sm transition-all" title="Nova Temporada (Zerar Pontos)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+                `;
+            }
             
             const printButtonHtml = `
-                <button id="print-ranking-pdf-btn" class="flex-shrink-0 bg-rose-600 hover:bg-rose-700 text-white font-bold p-3 rounded-lg shadow-sm transition-all" title="Gerar PDF do Ranking">
+                <button id="print-ranking-pdf-btn" class="flex-shrink-0 bg-cyan-600 hover:bg-cyan-700 text-white font-bold p-3 rounded-lg shadow-sm transition-all" title="Gerar PDF do Ranking">
                     ${icons.fileDown}
                 </button>
             `;
@@ -974,7 +982,7 @@
                         <select id="ranking-view-select" class="w-full bg-white border border-gray-300 text-gray-800 rounded-lg p-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
                             ${rankingsOptions.length > 0 ? rankingsOptions : '<option disabled>Nenhum ranking...</option>'}
                         </select>
-                        ${manageButtonHtml}
+                        ${adminButtonsHtml}
                         ${printButtonHtml}
                     </div>
                 </div>
@@ -1015,7 +1023,66 @@
             
             const printRankingBtn = document.getElementById('print-ranking-pdf-btn');
             if (printRankingBtn) printRankingBtn.addEventListener('click', handlePrintRankingPDF);
+
+            // Novo Listener: Botão Resetar Temporada
+            const resetSeasonBtn = document.getElementById('reset-season-btn');
+            if (resetSeasonBtn) resetSeasonBtn.addEventListener('click', handleResetSeason);
         };
+        /**
+         * Zera a pontuação de todos os jogadores para iniciar nova temporada
+         */
+        const handleResetSeason = async () => {
+            if (!appState.isAdmin) return;
+
+            // Confirmação 1
+            if (!confirm("⚠️ ATENÇÃO: Vai iniciar uma NOVA TEMPORADA?\n\nIsso irá ZERAR a pontuação, vitórias e estatísticas de TODOS os jogadores deste ranking.\n\nOs jogadores continuarão na lista, mas com 0 pontos. Essa ação não pode ser desfeita.")) {
+                return;
+            }
+
+            // Confirmação 2 (Segurança extra)
+            const confirmWord = prompt("Para confirmar, digite a palavra ZERAR (em maiúsculo):");
+            if (confirmWord !== "ZERAR") {
+                alert("Ação cancelada. A palavra de confirmação estava incorreta.");
+                return;
+            }
+
+            showModal("Reiniciando Temporada...", "Zerando pontuações de todos os jogadores. Aguarde...");
+
+            try {
+                const batch = writeBatch(db);
+                let count = 0;
+                
+                // Prepara a atualização para cada jogador
+                globalPlayers.forEach(player => {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', player.id);
+                    batch.update(playerRef, {
+                        points: 0,
+                        goldWins: 0,
+                        silverWins: 0,
+                        coveiroWins: 0
+                    });
+                    count++;
+                });
+
+                // O Firebase limita batches a 500 operações. Se tiver mais que isso, precisaria de lógica extra,
+                // mas para Beach Tennis local isso geralmente sobra.
+                if (count > 0) {
+                    await batch.commit();
+                    hideModal();
+                    showModal("Sucesso!", "Nova temporada iniciada! Todos os pontos foram zerados.");
+                } else {
+                    hideModal();
+                    showModal("Aviso", "Não havia jogadores para zerar.");
+                }
+
+            } catch (error) {
+                console.error("Erro ao zerar temporada:", error);
+                hideModal();
+                showModal("Erro", "Falha ao zerar os pontos: " + error.message);
+            }
+        };
+
+        
         /**
          * Renderiza o modal de gerenciamento (excluir) rankings
          */
@@ -3260,10 +3327,12 @@
         
        /**
          * (Transação) Atualiza o Ranking Global (Mata-Mata)
-         * --- CORREÇÃO: Lógica de cálculo HÍBRIDA + Correção Bug groupWin ---
+         * --- CORREÇÃO: Lógica de cálculo HÍBRIDA Robustecida ---
          */
         const updateGlobalRanking_MataMata = async (players, placements, groupPoints, pointsConfig, rankingId) => {
-            
+            console.log("Iniciando atualização de ranking...");
+            console.log("Config de Pontos:", pointsConfig);
+
             // 1. Determina o Coveiro
             const stats = getGlobalTournamentStats_MataMata(activeChampionship);
             const coveiroIds = new Set();
@@ -3272,70 +3341,90 @@
                 stats.filter(p => p.gamesWon === minGames).forEach(p => coveiroIds.add(p.id));
             }
 
-            // 2. Prepara o mapa de pontos (Lógica HÍBRIDA)
+            // 2. Prepara o mapa de pontos
             const playerPointsMap = new Map();
+            
             for (const player of players) {
-                // Pontos base
-                const participationPoints = pointsConfig.participation || 0;
+                // Pontos base de participação
+                const participationPoints = Number(pointsConfig.participation) || 0;
                 
-                // *** CORREÇÃO DO BUG (groupWin) ***
-                // groupPoints (o map) já contém o valor total (ex: 3 vitórias * 5 pts = 15)
-                // Não precisamos multiplicar de novo.
+                // Pontos de Grupo (já calculados anteriormente)
                 const grpPoints = groupPoints.get(player.id) || 0;
                 
-                // Bônus (1º Ouro, 2º Prata, etc.)
-                const placementKey = placements.get(player.id); // e.g., 'gold_1st' ou 'silver_2nd'
-                const bonusPoints = pointsConfig[placementKey] || 0; // e.g., pointsConfig['gold_1st'] (100)
+                // Bônus de Colocação (Mata-Mata)
+                // placementKey será algo como 'gold_1st', 'silver_2nd', etc.
+                const placementKey = placements.get(player.id); 
+                
+                let bonusPoints = 0;
+                if (placementKey) {
+                    // Tenta pegar do config. Se não achar, tenta fallback ou assume 0.
+                    // O código original esperava keys exatas. Vamos garantir que elas batam com o formulário.
+                    // As keys do formulário são: gold_1st, gold_2nd, gold_3rd, silver_1st, etc.
+                    bonusPoints = Number(pointsConfig[placementKey]) || 0;
+                }
 
                 // Soma Total
                 const totalPoints = participationPoints + grpPoints + bonusPoints;
+                
+                console.log(`Jogador: ${player.name} | Part: ${participationPoints} | Grupo: ${grpPoints} | Bonus (${placementKey}): ${bonusPoints} | TOTAL: ${totalPoints}`);
                 
                 playerPointsMap.set(player.id, {
                     name: player.name,
                     pointsToAdd: totalPoints,
                     goldWins: (placementKey === 'gold_1st') ? 1 : 0,
-                    silverWins: (placementKey === 'silver_1st') ? 1 : 0, // 'Prata' no ranking = Campeão da Chave Prata
+                    silverWins: (placementKey === 'silver_1st') ? 1 : 0, 
                     coveiroWins: coveiroIds.has(player.id) ? 1 : 0
                 });
             }
             
-            // 3. Executa a Transação (esta lógica não muda)
-            await runTransaction(db, async (transaction) => {
-                // Lê todos os documentos de jogadores necessários DENTRO da transação
-                const playerDocsData = new Map();
-                for (const playerId of playerPointsMap.keys()) {
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
-                    const playerDoc = await transaction.get(playerRef); 
-                    playerDocsData.set(playerId, playerDoc); 
-                }
-                
-                // Agora, escreve todas as atualizações
-                for (const [playerId, data] of playerPointsMap.entries()) {
-                    const playerDoc = playerDocsData.get(playerId); 
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
-                    
-                    if (!playerDoc.exists()) {
-                        console.warn(`Jogador ${playerId} (${data.name}) não existia no ranking. Criando...`);
-                        transaction.set(playerRef, {
-                            name: data.name,
-                            points: data.pointsToAdd,
-                            goldWins: data.goldWins,
-                            silverWins: data.silverWins,
-                            coveiroWins: data.coveiroWins
-                        });
-                    } else {
-                        // Jogador existe, atualiza os pontos
-                        const oldData = playerDoc.data();
-                        transaction.update(playerRef, {
-                            name: data.name, // Garante que o nome está atualizado
-                            points: (oldData.points || 0) + data.pointsToAdd,
-                            goldWins: (oldData.goldWins || 0) + data.goldWins,
-                            silverWins: (oldData.silverWins || 0) + data.silverWins,
-                            coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWins 
-                        });
+            // 3. Executa a Transação
+            try {
+                await runTransaction(db, async (transaction) => {
+                    // Lê todos os documentos
+                    const playerDocsData = new Map();
+                    for (const playerId of playerPointsMap.keys()) {
+                        const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                        const playerDoc = await transaction.get(playerRef); 
+                        playerDocsData.set(playerId, playerDoc); 
                     }
-                }
-            });
+                    
+                    // Escreve as atualizações
+                    for (const [playerId, data] of playerPointsMap.entries()) {
+                        const playerDoc = playerDocsData.get(playerId); 
+                        const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
+                        
+                        if (!playerDoc.exists()) {
+                            // Cria se não existe
+                            transaction.set(playerRef, {
+                                name: data.name,
+                                points: data.pointsToAdd,
+                                goldWins: data.goldWins,
+                                silverWins: data.silverWins,
+                                coveiroWins: data.coveiroWins
+                            });
+                        } else {
+                            // Atualiza (SOMA aos pontos anteriores)
+                            const oldData = playerDoc.data();
+                            const currentPoints = Number(oldData.points) || 0;
+                            const currentGold = Number(oldData.goldWins) || 0;
+                            const currentSilver = Number(oldData.silverWins) || 0;
+                            const currentCoveiro = Number(oldData.coveiroWins) || 0;
+
+                            transaction.update(playerRef, {
+                                name: data.name, 
+                                points: currentPoints + data.pointsToAdd,
+                                goldWins: currentGold + data.goldWins,
+                                silverWins: currentSilver + data.silverWins,
+                                coveiroWins: currentCoveiro + data.coveiroWins 
+                            });
+                        }
+                    }
+                });
+                console.log("Transação de pontos concluída com sucesso!");
+            } catch (e) {
+                console.error("Erro na transação do ranking:", e);
+                throw e; // Repassa o erro para o modal exibir
+            }
         };
         // =================================================================
         // === AÇÕES E LÓGICA (Sortudo)
