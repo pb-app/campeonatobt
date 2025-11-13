@@ -3715,7 +3715,7 @@
         };
         
         /**
-         * (Auxiliar) Calcula o Leaderboard (Sortudo) com Saldo
+         * (Auxiliar) Calcula o Leaderboard (Sortudo) com Saldo e Vitórias
          */
         const getLeaderboard_Sortudo = () => {
             const playerStats = new Map();
@@ -3724,8 +3724,9 @@
                     id: p.id,
                     name: p.name,
                     totalGames: 0,
-                    gamesLost: 0, // SALDO: Novo campo
-                    saldo: 0       // SALDO: Novo campo
+                    matchesWon: 0, // NOVO: Contagem de vitórias
+                    gamesLost: 0, 
+                    saldo: 0       
                 });
             });
             
@@ -3733,12 +3734,15 @@
             const { luckyGames } = activeChampionship.config;
 
             activeChampionship.rounds.forEach(round => {
-                // 1. Adiciona games dos "Sortudos"
+                // 1. Adiciona games dos "Sortudos" (Conta como vitória? Geralmente sim, ou é neutro. 
+                // Aqui vamos manter apenas os games, pois "Sortudo" é BYE).
                 round.luckyPlayers.forEach(pId => {
                     const stats = playerStats.get(pId);
                     if (stats) {
                         stats.totalGames += (luckyGames || 0);
-                        // SALDO: Lucky games não afetam o saldo (0 perdidos)
+                        // Nota: Geralmente BYE no sortudo não conta como "Vitória de jogo" para pontos, 
+                        // mas se quiser que conte, descomente a linha abaixo:
+                        // stats.matchesWon += 1; 
                     }
                 });
                 
@@ -3749,7 +3753,7 @@
                     
                     if (s1 === null || s2 === null) {
                         allScoresFilled = false;
-                        return; // Pula este jogo se incompleto
+                        return; 
                     }
                     
                     const stats1 = playerStats.get(p1);
@@ -3757,25 +3761,19 @@
                     const stats3 = playerStats.get(p3);
                     const stats4 = playerStats.get(p4);
                     
-                    if (stats1) { 
-                        stats1.totalGames += s1; 
-                        stats1.gamesLost += s2; // SALDO
-                        stats1.saldo += (s1 - s2); // SALDO
-                    }
-                    if (stats2) { 
-                        stats2.totalGames += s1; 
-                        stats2.gamesLost += s2; // SALDO
-                        stats2.saldo += (s1 - s2); // SALDO
-                    }
-                    if (stats3) { 
-                        stats3.totalGames += s2; 
-                        stats3.gamesLost += s1; // SALDO
-                        stats3.saldo += (s2 - s1); // SALDO
-                    }
-                    if (stats4) { 
-                        stats4.totalGames += s2; 
-                        stats4.gamesLost += s1; // SALDO
-                        stats4.saldo += (s2 - s1); // SALDO
+                    // Atualiza Games e Saldo
+                    if (stats1) { stats1.totalGames += s1; stats1.gamesLost += s2; stats1.saldo += (s1 - s2); }
+                    if (stats2) { stats2.totalGames += s1; stats2.gamesLost += s2; stats2.saldo += (s1 - s2); }
+                    if (stats3) { stats3.totalGames += s2; stats3.gamesLost += s1; stats3.saldo += (s2 - s1); }
+                    if (stats4) { stats4.totalGames += s2; stats4.gamesLost += s1; stats4.saldo += (s2 - s1); }
+
+                    // --- NOVA LÓGICA: Contar Vitórias ---
+                    if (s1 > s2) {
+                        if (stats1) stats1.matchesWon++;
+                        if (stats2) stats2.matchesWon++;
+                    } else if (s2 > s1) {
+                        if (stats3) stats3.matchesWon++;
+                        if (stats4) stats4.matchesWon++;
                     }
                 });
             });
@@ -3783,15 +3781,18 @@
             // 3. Ordena o Leaderboard
             const leaderboard = Array.from(playerStats.values());
             leaderboard.sort((a, b) => {
-                // Critério 1: Total de Games (descendente)
-                if (a.totalGames !== b.totalGames) {
-                    return b.totalGames - a.totalGames;
+                // Critério 1: Vitórias (Mais importante agora)
+                if (a.matchesWon !== b.matchesWon) {
+                    return b.matchesWon - a.matchesWon;
                 }
-                // Critério 2: Saldo de Games (descendente)
+                // Critério 2: Saldo de Games
                 if (a.saldo !== b.saldo) {
                     return b.saldo - a.saldo;
                 }
-                // Critério 3: Nome (alfabético)
+                // Critério 3: Total de Games
+                if (a.totalGames !== b.totalGames) {
+                    return b.totalGames - a.totalGames;
+                }
                 return a.name.localeCompare(b.name);
             });
             
@@ -3866,69 +3867,77 @@
             }
         };
         
-        /**
+/**
          * (Transação) Atualiza o Ranking Global (Sortudo)
          */
         const updateGlobalRanking_Sortudo = async (leaderboard, bonusMap, coveiroIds, pointsConfig, rankingId) => {
             
             // 1. Prepara o mapa de pontos
             const playerPointsMap = new Map();
+            
             for (const player of leaderboard) {
-                const participationPoints = pointsConfig.participation || 0;
-                const gamePoints = (player.totalGames * (pointsConfig.perGame || 0));
-                const bonusPoints = bonusMap.get(player.id) || 0;
+                const participationPoints = Number(pointsConfig.participation) || 0;
                 
-                const totalPoints = participationPoints + gamePoints + bonusPoints;
+                // --- CORREÇÃO AQUI: Usar Vitórias em vez de Games ---
+                // Antes: player.totalGames * perGame
+                // Agora: player.matchesWon * perGame
+                const pointsPerWin = Number(pointsConfig.perGame) || 0; // O campo "Pts por Game" agora age como "Pts por Vitória"
+                const winPoints = (player.matchesWon || 0) * pointsPerWin;
                 
+                const bonusPoints = Number(bonusMap.get(player.id)) || 0;
+                
+                const totalPoints = participationPoints + winPoints + bonusPoints;
+                
+                console.log(`Sortudo - ${player.name}: Part(${participationPoints}) + Vitórias(${player.matchesWon}x${pointsPerWin}=${winPoints}) + Bonus(${bonusPoints}) = ${totalPoints}`);
+
                 playerPointsMap.set(player.id, {
                     name: player.name,
                     pointsToAdd: totalPoints,
-                    goldWins: (bonusMap.get(player.id) === pointsConfig.bonus_1st) ? 1 : 0, // Conta 1º lugar como "goldWin"
-                    silverWins: 0, // Sortudo não tem "silverWin"
+                    goldWins: (bonusMap.get(player.id) === pointsConfig.bonus_1st) ? 1 : 0,
+                    silverWins: 0,
                     coveiroWins: coveiroIds.has(player.id) ? 1 : 0
                 });
             }
             
             // 2. Executa a Transação
-            await runTransaction(db, async (transaction) => {
-                // Lê todos os documentos de jogadores necessários DENTRO da transação
-                const playerDocsData = new Map();
-                for (const playerId of playerPointsMap.keys()) {
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
-                    const playerDoc = await transaction.get(playerRef); 
-                    playerDocsData.set(playerId, playerDoc); 
-                }
-                
-                // Agora, escreve todas as atualizações
-                for (const [playerId, data] of playerPointsMap.entries()) {
-                    const playerDoc = playerDocsData.get(playerId); 
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
-                    
-                    if (!playerDoc.exists()) {
-                        // *** CORREÇÃO 1 (Bug do Ranking) ***
-                        // Este 'if' não deveria mais ser necessário graças à Correção em
-                        // 'handleAddNewPlayerToChampionship', mas o mantemos como segurança.
-                        console.warn(`Jogador ${playerId} (${data.name}) não existia no ranking. Criando...`);
-                        transaction.set(playerRef, {
-                            name: data.name,
-                            points: data.pointsToAdd,
-                            goldWins: data.goldWins,
-                            silverWins: data.silverWins,
-                            coveiroWins: data.coveiroWins
-                        });
-                    } else {
-                        // Jogador existe, atualiza os pontos
-                        const oldData = playerDoc.data();
-                        transaction.update(playerRef, {
-                            name: data.name, 
-                            points: (oldData.points || 0) + data.pointsToAdd,
-                            goldWins: (oldData.goldWins || 0) + data.goldWins,
-                            silverWins: (oldData.silverWins || 0) + data.silverWins,
-                            coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWins 
-                        });
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const playerDocsData = new Map();
+                    for (const playerId of playerPointsMap.keys()) {
+                        const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId);
+                        const playerDoc = await transaction.get(playerRef); 
+                        playerDocsData.set(playerId, playerDoc); 
                     }
-                }
-            });
+                    
+                    for (const [playerId, data] of playerPointsMap.entries()) {
+                        const playerDoc = playerDocsData.get(playerId); 
+                        const playerRef = doc(db, 'users', appState.userId, 'rankings', rankingId, 'players', playerId); 
+                        
+                        if (!playerDoc.exists()) {
+                            transaction.set(playerRef, {
+                                name: data.name,
+                                points: data.pointsToAdd,
+                                goldWins: data.goldWins,
+                                silverWins: data.silverWins,
+                                coveiroWins: data.coveiroWins
+                            });
+                        } else {
+                            const oldData = playerDoc.data();
+                            transaction.update(playerRef, {
+                                name: data.name, 
+                                points: (oldData.points || 0) + data.pointsToAdd,
+                                goldWins: (oldData.goldWins || 0) + data.goldWins,
+                                silverWins: (oldData.silverWins || 0) + data.silverWins,
+                                coveiroWins: (oldData.coveiroWins || 0) + data.coveiroWins 
+                            });
+                        }
+                    }
+                });
+                console.log("Ranking Sortudo atualizado com sucesso.");
+            } catch (error) {
+                console.error("Erro ao atualizar ranking sortudo:", error);
+                throw error;
+            }
         };
         
         // =================================================================
