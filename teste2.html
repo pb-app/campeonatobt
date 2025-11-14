@@ -2899,6 +2899,25 @@
                 allPairs.push(silverPair);
             });
 
+            /**
+         * (NOVO HELPER) Retorna o mapa de "seeding" para um tamanho de chave.
+         * Garante que Seed 1 e Seed 2 fiquem em pontas opostas.
+         */
+        const getSeedingMap = (size) => {
+            if (size === 2) return [0, 1];
+            // Seed 1 vs Seed 4, Seed 2 vs Seed 3
+            if (size === 4) return [0, 3, 2, 1]; 
+            // Seed 1 vs 8, Seed 4 vs 5, Seed 3 vs 6, Seed 2 vs 7
+            if (size === 8) return [0, 7, 5, 3, 4, 2, 6, 1];
+            // Padrão 16
+            if (size === 16) return [0, 15, 8, 7, 4, 11, 12, 3, 2, 13, 10, 5, 6, 9, 14, 1];
+            
+            // Fallback (lógica simples se não for 2, 4, 8 ou 16)
+            const map = [];
+            for(let i=0; i < size; i++) map.push(i);
+            return map; 
+        };
+
             // 2. Classificação global das duplas (para aplicar Byes)
             // Ordem: Dupla Gold 1, Dupla Gold 2, ..., Dupla Silver 1, Dupla Silver 2, ...
             const rankedGoldPairs = goldSeriesPairs.sort((a, b) => b.gamesWon - a.gamesWon);
@@ -2941,70 +2960,76 @@
         };
 
         /**
-         * (Auxiliar) Cria a chave (bracket) com lógica de Byes
+         * (Auxiliar) Cria a chave (bracket) com lógica de Seeding (BYEs opostos)
+         * --- VERSÃO ATUALIZADA ---
          */
         const createBracketWithByes = (rankedPairs, idPrefix) => {
             const numPairs = rankedPairs.length;
             
-            // Se não houver duplas (ex: grupo de 4 com 0 duplas prata), retorna chave vazia
             if (numPairs === 0) return [];
             
             const targetSize = getNextPowerOfTwo(numPairs);
             const numByes = targetSize - numPairs;
-            
-            let pairsForBracket = [...rankedPairs];
-            let byesForBracket = [];
-
-            // 1. Determina quem recebe Bye (as melhores classificadas)
-            if (numByes > 0) {
-                byesForBracket = pairsForBracket.slice(0, numByes);
-                pairsForBracket = pairsForBracket.slice(numByes);
-            }
-
-            // 2. Embaralha as duplas que VÃO JOGAR a primeira rodada
-            pairsForBracket.sort(() => 0.5 - Math.random());
-            
-            const bracket = [];
             const numRounds = Math.log2(targetSize);
             
-            // 3. Prepara a Rodada 1
-            const matchesInRound1 = targetSize / 2;
-            let byeCursor = 0;
-            let pairCursor = 0;
+            // 1. Criar os slots da Rodada 1
+            const round1Slots = new Array(targetSize).fill(null);
+            
+            // 2. Pegar o mapa de seeding
+            // O mapa nos diz onde colocar cada dupla (Seed 1, Seed 2, etc.)
+            const seedingMap = getSeedingMap(targetSize);
 
-            for (let m = 0; m < matchesInRound1; m++) {
+            // 3. Colocar as duplas ranqueadas nos slots corretos
+            // Ex: targetSize = 8, numPairs = 6.
+            // Os 6 'rankedPairs' serão colocados nos slots ditados pelo mapa.
+            // Os 2 slots restantes (para Seed 7 e 8) ficarão 'null'.
+            for (let i = 0; i < numPairs; i++) {
+                const pair = rankedPairs[i]; // Pega a dupla (ex: Seed 1, Seed 2...)
+                const slotIndex = seedingMap[i]; // Pega a posição dela na chave (ex: 0, 7...)
+                round1Slots[slotIndex] = pair;
+            }
+            // round1Slots agora pode se parecer com: [Pair1, Pair8, Pair6, Pair4, Pair3, Pair5, Pair7, Pair2]
+            // Ou, se tiver 6 duplas: [Pair1, null, Pair5, Pair3, Pair4, Pair6, null, Pair2]
+            // Os 'null' são os BYEs!
+
+            // 4. Criar a estrutura do bracket (todas as rodadas)
+            const bracket = [];
+            let pairCursor = 0; // Cursor para ler os round1Slots
+
+            // Cria a Rodada 1
+            for (let m = 0; m < targetSize / 2; m++) {
                 const matchId = `${idPrefix}R1_M${m + 1}`;
                 const nextRoundMatchIndex = Math.floor(m / 2);
                 const nextMatchId = `${idPrefix}R2_M${nextRoundMatchIndex + 1}`;
                 
-                let match = {
+                const pair1 = round1Slots[pairCursor++];
+                const pair2 = round1Slots[pairCursor++];
+
+                const match = {
                     id: matchId,
                     round: 1, 
-                    pairs: [null, null], 
+                    pairs: [pair1, pair2], 
                     score: [null, null],
                     winner: null,
                     nextMatchId: nextMatchId,
-                    nextMatchSlot: m % 2, // 0 (cima) ou 1 (baixo)
+                    nextMatchSlot: m % 2,
                 };
-
-                // Se ainda houver Byes para distribuir
-                if (byeCursor < numByes) {
-                    match.pairs[0] = byesForBracket[byeCursor];
-                    match.pairs[1] = 'BYE'; 
-                    match.score = [1, 0]; 
-                    match.winner = byesForBracket[byeCursor]; 
-                    byeCursor++;
-                } else {
-                    // Distribui as duplas que vão jogar
-                    match.pairs[0] = pairsForBracket[pairCursor] || null;
-                    match.pairs[1] = pairsForBracket[pairCursor + 1] || null;
-                    pairCursor += 2;
+                
+                // 5. Lógica de BYE: Se um slot for 'null', o outro vence
+                if (pair1 === null && pair2 !== null) {
+                    match.winner = pair2;
+                    match.score = [0, 1]; // Placar simbólico
+                    match.pairs[0] = 'BYE'; // Marca como BYE
+                } else if (pair2 === null && pair1 !== null) {
+                    match.winner = pair1;
+                    match.score = [1, 0]; // Placar simbólico
+                    match.pairs[1] = 'BYE'; // Marca como BYE
                 }
                 
                 bracket.push(match);
             }
             
-            // 4. Preenche as demais Rodadas (R2 em diante)
+            // 6. Preenche as demais Rodadas (R2 em diante)
             for (let r = 2; r <= numRounds; r++) { 
                 const matchesInRound = targetSize / Math.pow(2, r);
                 for (let m = 0; m < matchesInRound; m++) { 
@@ -3018,7 +3043,7 @@
                         nextMatchSlot = m % 2; 
                     }
 
-                    const match = {
+                    bracket.push({
                         id: matchId,
                         round: r, 
                         pairs: [null, null], 
@@ -3026,20 +3051,18 @@
                         winner: null,
                         nextMatchId: nextMatchId,
                         nextMatchSlot: nextMatchSlot,
-                    };
-                    bracket.push(match);
+                    });
                 }
             }
             
-            // 5. Conecta os vencedores dos Byes (R1) à R2
-            bracket.filter(m => m.round === 1 && m.pairs.includes('BYE')).forEach(match => {
+            // 7. Conecta os vencedores dos Byes (R1) à R2
+            bracket.filter(m => m.round === 1 && m.winner !== null).forEach(match => {
                 const nextMatch = bracket.find(m => m.id === match.nextMatchId);
                 if (nextMatch) nextMatch.pairs[match.nextMatchSlot] = match.winner;
             });
             
             return bracket;
         };
-
         /**
          * Confirma o placar de um jogo do Mata-Mata (com lógica de reversão)
          */
