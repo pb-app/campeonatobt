@@ -2252,7 +2252,6 @@
                 ? `<p class="text-gray-500 text-center py-4 text-2xl col-span-full">Aguardando inscrição dos jogadores...</p>`
                 : activeChampionship.players.map(player => `
                     <div class="bg-white p-2 rounded-lg animate-fade-in-sm border border-gray-200 shadow-sm">
-                        {/* Fonte diminuída de 2xl para lg (text-lg) */}
                         <span class="text-gray-800 font-medium text-lg">${player.name}</span>
                     </div>
                 `).join('');
