@@ -2260,16 +2260,13 @@
             return `
                 <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 animate-fade-in w-full border border-gray-200 h-[92vh] flex flex-col">
                     
-                    {/* Título */}
                     <h3 class="text-3xl sm:text-4xl font-semibold mb-4 text-cyan-600 flex items-center gap-3 shrink-0">
                         ${icons.users}
                         Jogadores Inscritos (${playerCount})
                     </h3>
                     
-                    {/* Container da lista com scroll vertical (se ainda for necessário) */}
                     <div class="flex-grow overflow-y-auto pr-2 no-scrollbar"> 
                         
-                        {/* GRID RESPONSIVO: de 2 até 6 colunas */}
                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                             ${playersListHtml}
                         </div>
