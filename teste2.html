@@ -2960,6 +2960,25 @@
         };
 
         /**
+         * (NOVO HELPER) Retorna o mapa de "seeding" para um tamanho de chave.
+         * Garante que Seed 1 e Seed 2 fiquem em pontas opostas.
+         */
+        const getSeedingMap = (size) => {
+            if (size === 2) return [0, 1];
+            // Seed 1 vs Seed 4, Seed 2 vs Seed 3
+            if (size === 4) return [0, 3, 2, 1]; 
+            // Seed 1 vs 8, Seed 4 vs 5, Seed 3 vs 6, Seed 2 vs 7
+            if (size === 8) return [0, 7, 5, 3, 4, 2, 6, 1];
+            // Padrão 16
+            if (size === 16) return [0, 15, 8, 7, 4, 11, 12, 3, 2, 13, 10, 5, 6, 9, 14, 1];
+            
+            // Fallback (lógica simples se não for 2, 4, 8 ou 16)
+            const map = [];
+            for(let i=0; i < size; i++) map.push(i);
+            return map; 
+        };
+
+        /**
          * (Auxiliar) Cria a chave (bracket) com lógica de Seeding (BYEs opostos)
          * --- VERSÃO ATUALIZADA ---
          */
