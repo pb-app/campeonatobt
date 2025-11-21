@@ -139,7 +139,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v5.2.9 (final)</p>
+            <p>App de Ranking v5.3.9 (final)</p>
         </footer>
     </div>
 
@@ -2678,101 +2678,68 @@
         // === AÇÕES E LÓGICA (Mata-Mata)
         // =================================================================
         
-  /**
-         * Gera os Grupos (Mata-Mata)
-         * --- VERSÃO CORRETA (DUPLAS) ---
+/**
+         * Gera as Rodadas (Sortudo) - COM ANIMAÇÃO
          */
-        const handleGenerateChampionship_MataMata = async () => {
-            const playerCount = activeChampionship.players.length;
-            const isMultypleOfFour = playerCount % 4 === 0;
+        const handleGenerateChampionship_Sortudo = async () => {
+            const { numRounds } = activeChampionship.config;
+            const players = [...activeChampionship.players];
+            
+            if (players.length < 4) {
+                 showModal("Erro", "Mínimo de 4 jogadores necessários.");
+                 return;
+            }
+            
+            if (!confirm(`Gerar ${numRounds} rodadas?`)) return;
 
-            if (playerCount < 4 || !isMultypleOfFour) {
-                showModal("Número de Jogadores Inválido", `O campeonato requer um número de jogadores múltiplo de 4 para grupos de 4 (ex: 4, 8, 12...). Você tem ${playerCount}.`);
-                return;
-            }
-            
-            const numGroups = playerCount / 4;
-            
-            if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Os ${numGroups} melhores do ranking serão os "Cabeças de Chave" e o restante será sorteado.`)) {
-                return;
-            }
+            // --- CHAMA A ANIMAÇÃO AQUI ---
+            await playShuffleAnimation(players);
 
             try {
-                // Mapeia pontos do ranking global
-                const globalPlayersMap = new Map(globalPlayers.map(p => [p.id, p.points || 0]));
+                const newRounds = [];
+                const playerIds = players.map(p => p.id);
+                
+                let tempPairHistory = activeChampionship.pairHistory || {};
+                let tempOpponentHistory = activeChampionship.opponentHistory || {};
 
-                // Adiciona pontos aos jogadores do torneio
-                const tournamentPlayersWithPoints = activeChampionship.players.map(p => ({
-                    ...p, 
-                    points: globalPlayersMap.get(p.id) || 0 
-                }));
-
-                // Ordena e separa cabeças de chave
-                const sortedTournamentPlayers = tournamentPlayersWithPoints.sort((a, b) => b.points - a.points);
-                const seededPlayers = sortedTournamentPlayers.slice(0, numGroups);
-                const unseededPlayers = sortedTournamentPlayers.slice(numGroups);
-
-                // Embaralha os não-cabeças
-                const shuffledUnseeded = unseededPlayers.sort(() => 0.5 - Math.random());
-
-                // Cria os grupos
-                const newGroupsList = []; 
-                for (let i = 0; i < numGroups; i++) {
-                    newGroupsList.push({
-                        id: `group_${i + 1}`,
-                        players: [], 
-                        matches: [] 
-                    });
-                }
-
-                // Distribui cabeças de chave (1 por grupo)
-                for (let i = 0; i < seededPlayers.length; i++) {
-                    newGroupsList[i].players.push(seededPlayers[i]);
-                }
-
-                // Distribui os demais (estilo "cobra")
-                let unseededCursor = 0;
-                const playersPerGroup = 4;
-                for (let p_slot = 1; p_slot < playersPerGroup; p_slot++) { 
-                    for (let g_index = 0; g_index < numGroups; g_index++) { 
-                        if (unseededCursor < shuffledUnseeded.length) {
-                            newGroupsList[g_index].players.push(shuffledUnseeded[unseededCursor]);
-                            unseededCursor++;
-                        }
-                    }
-                }
-
-                // Cria os jogos de cada grupo (MODO DUPLAS)
-                for (const group of newGroupsList) {
-                    const [p1, p2, p3, p4] = group.players; 
+                for (let i = 0; i < numRounds; i++) {
+                    const numLucky = players.length % 4;
                     
-                    if (!p1 || !p2 || !p3 || !p4) {
-                         console.error("Erro na distribuição de grupos. Grupo incompleto:", group.players);
-                         throw new Error("Erro de lógica ao distribuir jogadores. Grupo ficou incompleto.");
-                    }
-
-                    // Jogos (p1/p2 vs p3/p4), (p1/p3 vs p2/p4), (p1/p4 vs p2/p3)
-                    group.matches = [
-                        { id: 1, p: [p1.id, p2.id, p3.id, p4.id], names: [`${p1.name} / ${p2.name}`, `${p3.name} / ${p4.name}`], score: [null, null] },
-                        { id: 2, p: [p1.id, p3.id, p2.id, p4.id], names: [`${p1.name} / ${p3.name}`, `${p2.name} / ${p4.name}`], score: [null, null] },
-                        { id: 3, p: [p1.id, p4.id, p2.id, p3.id], names: [`${p1.name} / ${p4.name}`, `${p2.name} / ${p3.name}`], score: [null, null] },
-                    ];
+                    const newRound = generateOptimizedRound(
+                        playerIds, 
+                        numLucky, 
+                        tempPairHistory, 
+                        tempOpponentHistory
+                    );
+                    
+                    if (!newRound) throw new Error("Falha ao gerar rodada otimizada.");
+                    
+                    newRounds.push(newRound);
+                    
+                    const { pairHistory: updatedPair, opponentHistory: updatedOpponent } = updateHistories(
+                        { pairHistory: tempPairHistory, opponentHistory: tempOpponentHistory }, 
+                        newRound
+                    );
+                    tempPairHistory = updatedPair;
+                    tempOpponentHistory = updatedOpponent;
                 }
                 
                 const newChampData = {
                     ...activeChampionship,
-                    status: 'groups',
-                    groups: newGroupsList 
+                    status: 'rounds',
+                    rounds: newRounds,
+                    pairHistory: tempPairHistory,
+                    opponentHistory: tempOpponentHistory
                 };
+                
                 await saveActiveChampionship(newChampData);
                 
-                // Atualiza o status no documento principal (para o listener da lista)
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
-                await setDoc(champRef, { status: 'groups' }, { merge: true });
+                await setDoc(champRef, { status: 'rounds' }, { merge: true });
 
             } catch (error) {
-                console.error("Erro ao gerar campeonato (cabeça de chave):", error);
-                showModal("Erro", "Não foi possível gerar os grupos. " + error.message);
+                console.error("Erro ao gerar rodadas (Sortudo):", error);
+                showModal("Erro", "Não foi possível gerar as rodadas.");
             }
         };
         /**
@@ -3688,35 +3655,31 @@
         };
 
         /**
-         * Gera as Rodadas (Sortudo)
-         * ---
-         * *** CORREÇÃO 2 (Sorteio Aleatório) ***
-         * Esta função foi reescrita para usar a 'generateOptimizedRound'
-         * que tenta evitar parceiros e oponentes repetidos.
-         * ---
+         * Gera as Rodadas (Sortudo) - COM ANIMAÇÃO
          */
         const handleGenerateChampionship_Sortudo = async () => {
-            const { numRounds, luckyGames } = activeChampionship.config;
+            const { numRounds } = activeChampionship.config;
             const players = [...activeChampionship.players];
-            const playerCount = players.length;
             
-            if (playerCount < 4) {
+            if (players.length < 4) {
                  showModal("Erro", "Mínimo de 4 jogadores necessários.");
                  return;
             }
             
-            if (!confirm(`Gerar ${numRounds} rodadas para ${playerCount} jogadores? O sistema tentará não repetir duplas.`)) return;
+            if (!confirm(`Gerar ${numRounds} rodadas?`)) return;
+
+            // --- CHAMA A ANIMAÇÃO AQUI ---
+            await playShuffleAnimation(players);
 
             try {
                 const newRounds = [];
                 const playerIds = players.map(p => p.id);
                 
-                // Carrega o histórico salvo (se houver)
                 let tempPairHistory = activeChampionship.pairHistory || {};
                 let tempOpponentHistory = activeChampionship.opponentHistory || {};
 
                 for (let i = 0; i < numRounds; i++) {
-                    const numLucky = playerCount % 4; // Ex: 22 % 4 = 2 sortudos
+                    const numLucky = players.length % 4;
                     
                     const newRound = generateOptimizedRound(
                         playerIds, 
@@ -3725,18 +3688,12 @@
                         tempOpponentHistory
                     );
                     
-                    if (!newRound) {
-                        throw new Error("Falha ao gerar rodada otimizada.");
-                    }
+                    if (!newRound) throw new Error("Falha ao gerar rodada otimizada.");
                     
                     newRounds.push(newRound);
                     
-                    // Atualiza o histórico com os dados da rodada que ACABOU de ser gerada
                     const { pairHistory: updatedPair, opponentHistory: updatedOpponent } = updateHistories(
-                        { 
-                            pairHistory: tempPairHistory, 
-                            opponentHistory: tempOpponentHistory 
-                        }, 
+                        { pairHistory: tempPairHistory, opponentHistory: tempOpponentHistory }, 
                         newRound
                     );
                     tempPairHistory = updatedPair;
@@ -3747,19 +3704,18 @@
                     ...activeChampionship,
                     status: 'rounds',
                     rounds: newRounds,
-                    pairHistory: tempPairHistory, // Salva o histórico final
-                    opponentHistory: tempOpponentHistory // Salva o histórico final
+                    pairHistory: tempPairHistory,
+                    opponentHistory: tempOpponentHistory
                 };
                 
                 await saveActiveChampionship(newChampData);
                 
-                // Atualiza o status no documento principal
                 const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
                 await setDoc(champRef, { status: 'rounds' }, { merge: true });
 
             } catch (error) {
                 console.error("Erro ao gerar rodadas (Sortudo):", error);
-                showModal("Erro", "Não foi possível gerar as rodadas. " + error.message);
+                showModal("Erro", "Não foi possível gerar as rodadas.");
             }
         };
         
@@ -4619,6 +4575,16 @@
     
     <div class="aviso-rodape text-center text-xs text-gray-500 py-3 bg-gray-100 mt-8">
         ........................... by Ageu Salto ...........................
+        <div id="shuffle-overlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-95 z-[100] flex flex-col items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+        <div class="text-center animate-bounce mb-8">
+            <span class="text-6xl">🎲</span>
+        </div>
+        <h2 class="text-white text-3xl sm:text-4xl font-bold mb-4 animate-pulse tracking-widest uppercase">Sorteando...</h2>
+        <div class="h-24 flex items-center justify-center overflow-hidden w-full">
+            <div id="shuffle-text" class="text-5xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 text-center px-4 truncate transition-all duration-75 transform scale-110">
+                </div>
+        </div>
+    </div>
     </div>
 </body>
 </html>
