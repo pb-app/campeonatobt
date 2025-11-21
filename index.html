@@ -139,7 +139,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v5.2.9 (final)</p>
+            <p>App de Ranking v5.3.9 (final)</p>
         </footer>
     </div>
 
@@ -4013,7 +4013,7 @@
         };
 
         /**
-         * Gera PDF (Sortudo)
+         * Gera PDF (Sortudo) - Sem Emojis
          */
         const handlePrintPDF_Sortudo = () => {
             const { jsPDF } = window.jspdf;
@@ -4039,14 +4039,15 @@
                 
                 const { leaderboard } = getLeaderboard_Sortudo();
                 
-                // SALDO: Adiciona Saldo e Games Perdidos ao PDF
+                // Sem Emojis no PDF
                 const head = [['Pos.', 'Jogador', 'Games Ganhos', 'Saldo', 'Games Perdidos']];
                 const body = leaderboard.map((p, index) => {
+                    // Lógica simplificada sem medalhas no PDF
                     let rank = `${index + 1}º`;
-                    if (index === 0) rank = '🥇 1º';
-                    if (index === 1) rank = '🥈 2º';
-                    if (index === 2) rank = '🥉 3º';
-                    if (index === leaderboard.length - 1 && leaderboard.length > 3) rank = '👻';
+                    if (index === 0) rank = '1º';
+                    if (index === 1) rank = '2º';
+                    if (index === 2) rank = '3º';
+                    if (index === leaderboard.length - 1 && leaderboard.length > 3) rank = 'Coveiro';
                     
                     return [
                         rank,
@@ -4061,7 +4062,7 @@
                     startY: yPos,
                     head: head,
                     body: body,
-                    headStyles: { fillColor: [126, 34, 206] }, // Roxo (Sortudo)
+                    headStyles: { fillColor: [126, 34, 206] }, 
                     styles: { halign: 'center', textColor: [31, 41, 55] },
                     columnStyles: {
                         1: { halign: 'left' } 
@@ -4089,9 +4090,9 @@
                     const luckyPlayers = round.luckyPlayers.map(pId => playerNameMap.get(pId) || '?').join(' / ');
                     if (luckyPlayers) {
                         doc.setFontSize(10);
-                        doc.setTextColor(0, 100, 0); // Verde
+                        doc.setTextColor(0, 100, 0); 
                         doc.text(`Sortudos (BYE): ${luckyPlayers} (+${activeChampionship.config.luckyGames} games)`, 14, yPos);
-                        doc.setTextColor(0, 0, 0); // Reseta cor
+                        doc.setTextColor(0, 0, 0); 
                         yPos += 6;
                     }
                     
@@ -4126,7 +4127,7 @@
         };
         
         /**
-         * Gera PDF (Mata-Mata)
+         * Gera PDF (Mata-Mata) - Sem Emojis
          */
         const handlePrintPDF_MataMata = () => {
             const { jsPDF } = window.jspdf;
@@ -4154,13 +4155,13 @@
                 const finalResults = [];
                 const { goldWinner, silverWinner } = getKnockoutWinners(activeChampionship);
 
-                // Ouro
+                // Ouro (Removido emojis das strings)
                 if (goldWinner) {
-                    finalResults.push(['🥇 Campeões Ouro', goldWinner.name]);
+                    finalResults.push(['Campeões Ouro', goldWinner.name]);
                     const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
                     const goldFinal = activeChampionship.goldBracket.find(m => m.round === maxRoundGold);
                     const goldRunnerUp = goldFinal.pairs.find(p => p && p.id !== goldWinner.id);
-                    if (goldRunnerUp) finalResults.push(['🥈 2º Lugar Ouro', goldRunnerUp.name]);
+                    if (goldRunnerUp) finalResults.push(['2º Lugar Ouro', goldRunnerUp.name]);
 
                     const goldSemiFinals = activeChampionship.goldBracket.filter(m => m.round === maxRoundGold - 1);
                     if (goldSemiFinals.length === 2) {
@@ -4168,15 +4169,15 @@
                             sf.pairs.some(p => p && p.id === goldWinner.id)
                         );
                         if(championSemi) {
-                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
-                            if (thirdPlace) finalResults.push(['🥉 3º Lugar Ouro', thirdPlace.name]);
+                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== goldWinner.id);
+                            if (thirdPlace) finalResults.push(['3º Lugar Ouro', thirdPlace.name]);
                         }
                     }
                 }
                 
-                // Prata
+                // Prata (Removido emojis das strings)
                 if (silverWinner) {
-                    finalResults.push(['🥈 Campeões Prata', silverWinner.name]);
+                    finalResults.push(['Campeões Prata', silverWinner.name]);
                     const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
                     const silverFinal = activeChampionship.silverBracket.find(m => m.round === maxRoundSilver);
                     const silverRunnerUp = silverFinal.pairs.find(p => p && p.id !== silverWinner.id);
@@ -4194,12 +4195,12 @@
                     }
                 }
 
-                // Coveiro
+                // Coveiro (Removido emojis das strings)
                 const stats = getGlobalTournamentStats_MataMata(activeChampionship);
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
                     const coveiros = stats.filter(p => p.gamesWon === minGames);
-                    finalResults.push(['👻 Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
+                    finalResults.push(['Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
                 }
                 
                 doc.autoTable({
@@ -4270,10 +4271,10 @@
                 doc.text("Resultados do Mata-Mata", 105, yPos, { align: 'center' });
                 yPos += 10;
                 
-                // PDF - Chave Ouro
+                // PDF - Chave Ouro (Sem emojis)
                 if (activeChampionship.goldBracket.length > 0) {
                     doc.setFontSize(16);
-                    doc.text("Série Ouro 🥇", 14, yPos);
+                    doc.text("Série Ouro", 14, yPos);
                     yPos += 7;
                     const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
                     const goldBody = activeChampionship.goldBracket.map(m => {
@@ -4301,10 +4302,10 @@
                     yPos = doc.autoTable.previous.finalY + 10;
                 }
                 
-                // PDF - Chave Prata
+                // PDF - Chave Prata (Sem emojis)
                 if (activeChampionship.silverBracket.length > 0) {
                     doc.setFontSize(16);
-                    doc.text("Série Prata 🥈", 14, yPos);
+                    doc.text("Série Prata", 14, yPos);
                     yPos += 7;
                     const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
                     const silverBody = activeChampionship.silverBracket.map(m => {
@@ -4340,7 +4341,7 @@
         };
         
         /**
-         * Gera PDF (Ranking Global)
+         * Gera PDF (Ranking Global) - Sem Emojis
          */
         const handlePrintRankingPDF = () => {
             const { jsPDF } = window.jspdf;
@@ -4358,9 +4359,10 @@
                 doc.text(title, 105, 22, { align: 'center' }); 
                 
                 const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
-                const head = [['Pos.', 'Jogador', 'Pontos', '🥇 Ouro', '🥈 Prata', '👻 Coveiro']];
+                // Cabeçalho sem emojis
+                const head = [['Pos.', 'Jogador', 'Pontos', 'Ouro', 'Prata', 'Coveiro']];
                 const body = sortedPlayers.map((p, index) => [
-                    `${index + 1}º`,
+                    `${index + 1}º`, // Removido emojis de 1º, 2º, 3º
                     p.name,
                     p.points || 0,
                     p.goldWins || 0,
