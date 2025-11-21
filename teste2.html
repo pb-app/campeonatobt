@@ -220,6 +220,17 @@
             currentRankingId: null, 
         };
 
+        <div id="shuffle-overlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-95 z-[100] flex flex-col items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+        <div class="text-center animate-bounce mb-8">
+            <span class="text-6xl">🎲</span>
+        </div>
+        <h2 class="text-white text-3xl sm:text-4xl font-bold mb-4 animate-pulse tracking-widest uppercase">Sorteando...</h2>
+        <div class="h-24 flex items-center justify-center overflow-hidden w-full">
+            <div id="shuffle-text" class="text-5xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 text-center px-4 truncate transition-all duration-75 transform scale-110">
+                </div>
+        </div>
+    </div>
+
         // Caches de dados globais (ouvintes do Firestore)
         let allRankings = []; 
         let championships = []; 
@@ -4575,16 +4586,7 @@
     
     <div class="aviso-rodape text-center text-xs text-gray-500 py-3 bg-gray-100 mt-8">
         ........................... by Ageu Salto ...........................
-        <div id="shuffle-overlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-95 z-[100] flex flex-col items-center justify-center backdrop-blur-sm transition-opacity duration-300">
-        <div class="text-center animate-bounce mb-8">
-            <span class="text-6xl">🎲</span>
-        </div>
-        <h2 class="text-white text-3xl sm:text-4xl font-bold mb-4 animate-pulse tracking-widest uppercase">Sorteando...</h2>
-        <div class="h-24 flex items-center justify-center overflow-hidden w-full">
-            <div id="shuffle-text" class="text-5xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 text-center px-4 truncate transition-all duration-75 transform scale-110">
-                </div>
-        </div>
-    </div>
+        
     </div>
 </body>
 </html>
