@@ -4168,7 +4168,8 @@
                             sf.pairs.some(p => p && p.id === goldWinner.id)
                         );
                         if(championSemi) {
-                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
+                            // *** CORREÇÃO AQUI: Usar goldWinner em vez de champion ***
+                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== goldWinner.id);
                             if (thirdPlace) finalResults.push(['🥉 3º Lugar Ouro', thirdPlace.name]);
                         }
                     }
@@ -4188,6 +4189,7 @@
                             sf.pairs.some(p => p && p.id === silverWinner.id)
                         );
                         if(championSemi) {
+                            // *** CORREÇÃO AQUI: Usar silverWinner em vez de champion ***
                             const thirdPlace = championSemi.pairs.find(p => p && p.id !== silverWinner.id);
                             if (thirdPlace) finalResults.push(['3º Lugar Prata', thirdPlace.name]);
                         }
