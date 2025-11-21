@@ -2795,11 +2795,14 @@
             saveActiveChampionship(newChampData); 
         };
 
-        /**
+/**
          * Gera um PDF para impressão da Súmula do Grupo
          */
         const handlePrintGroup = (groupIndex) => {
-            const group = activeChampionship.groups[groupIndex];
+            // *** CORREÇÃO: Converte o texto para número inteiro ***
+            const index = parseInt(groupIndex);
+            
+            const group = activeChampionship.groups[index];
             const champ = championships.find(c => c.id === appState.currentChampionshipId);
             const champName = champ ? champ.name : "Torneio";
             
@@ -2857,12 +2860,12 @@
             printWindow.document.write(`
                 <html>
                     <head>
-                        <title>Imprimir - ${champName} - Grupo ${groupIndex + 1}</title>
+                        <title>Imprimir - ${champName} - Grupo ${index + 1}</title>
                         ${printStyles}
                     </head>
                     <body>
                         <h1>${champName}</h1>
-                        <h2>Grupo ${groupIndex + 1}</h2>
+                        <h2>Grupo ${index + 1}</h2>
                         <div class="players">
                             <h3>Jogadores do Grupo:</h3>
                             <ul>${playersHtml}</ul>
