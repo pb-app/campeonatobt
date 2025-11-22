@@ -1352,6 +1352,16 @@
         const addChampionshipViewListeners = (champInfo, champType) => {
             // Listeners de Admin
             if (appState.isAdmin) {
+                
+                // --- NOVO: Listener para o Botão de Corrigir Nomes ---
+                // Isso faz o botão "EDITAR" que você adicionou funcionar
+                document.querySelectorAll('.edit-name-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        handleEditPlayerName(btn.dataset.id, btn.dataset.name);
+                    });
+                });
+                // -----------------------------------------------------
+
                 // Inscrição (comum a ambos)
                 if (activeChampionship.status === 'registration') {
                     const addExistingForm = document.getElementById('add-existing-player-form');
