@@ -139,7 +139,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v5.2.9 (final)</p>
+            <p>App de Ranking v5.5.9 (final)</p>
         </footer>
     </div>
 
@@ -1160,6 +1160,122 @@
             listenToGlobalPlayers(); // Busca os novos jogadores
         };
 
+/**
+         * (ADMIN) Função para renomear um jogador em todo o torneio
+         */
+        const handleEditPlayerName = async (playerId, currentName) => {
+            const newName = prompt(`Digite o novo nome para: ${currentName}`, currentName);
+            
+            if (!newName || newName.trim() === "" || newName === currentName) return;
+
+            if (!confirm(`Confirmar alteração de "${currentName}" para "${newName}" em TODO o torneio?`)) return;
+
+            const newChampData = JSON.parse(JSON.stringify(activeChampionship)); // Clona o objeto
+
+            // 1. Atualiza na lista principal de inscritos
+            const playerIndex = newChampData.players.findIndex(p => p.id === playerId);
+            if (playerIndex !== -1) newChampData.players[playerIndex].name = newName;
+
+            // 2. Atualiza nos Grupos (se existirem)
+            if (newChampData.groups) {
+                newChampData.groups.forEach(group => {
+                    // Atualiza lista de players do grupo
+                    const gpIndex = group.players.findIndex(p => p.id === playerId);
+                    if (gpIndex !== -1) group.players[gpIndex].name = newName;
+
+                    // Atualiza nomes nos jogos (matches)
+                    group.matches.forEach(match => {
+                        const pIndex = match.p.indexOf(playerId);
+                        if (pIndex !== -1) {
+                            // pIndex 0 e 1 são a dupla 1 (names[0])
+                            // pIndex 2 e 3 são a dupla 2 (names[1])
+                            const nameIndex = (pIndex <= 1) ? 0 : 1;
+                            
+                            // Reconstrói o nome da dupla. Ex: "João / Maria"
+                            // Precisamos achar o parceiro para não perder o nome dele
+                            const partnerId = (pIndex % 2 === 0) ? match.p[pIndex + 1] : match.p[pIndex - 1];
+                            const partnerName = newChampData.players.find(p => p.id === partnerId)?.name || "Parceiro";
+                            
+                            // Define a ordem correta (mantendo a lógica original de quem é p1/p2)
+                            const isFirstInPair = (pIndex % 2 === 0);
+                            const newPairName = isFirstInPair ? `${newName} / ${partnerName}` : `${partnerName} / ${newName}`;
+                            
+                            match.names[nameIndex] = newPairName;
+                        }
+                    });
+                });
+            }
+
+            // 3. Atualiza no Mata-Mata (Ouro e Prata)
+            const updateBracketNames = (bracket) => {
+                if (!bracket) return;
+                bracket.forEach(match => {
+                    if (match.pairs) {
+                        match.pairs.forEach(pair => {
+                            if (pair && pair !== 'BYE' && pair.players) {
+                                const playerInPair = pair.players.find(p => p.id === playerId);
+                                if (playerInPair) {
+                                    // Atualiza o nome individual dentro do objeto da dupla
+                                    playerInPair.name = newName;
+                                    
+                                    // Atualiza o nome de exibição da dupla (ex: "João / Maria")
+                                    const p1 = pair.players[0].name;
+                                    const p2 = pair.players[1].name;
+                                    pair.name = `${p1} / ${p2}`;
+                                }
+                            }
+                        });
+                        // Se o vencedor já foi definido e é essa dupla, atualiza o vencedor também
+                        if (match.winner && match.winner.players) {
+                             const playerInWinner = match.winner.players.find(p => p.id === playerId);
+                             if (playerInWinner) {
+                                 playerInWinner.name = newName;
+                                 match.winner.name = `${match.winner.players[0].name} / ${match.winner.players[1].name}`;
+                             }
+                        }
+                    }
+                });
+            };
+
+            updateBracketNames(newChampData.goldBracket);
+            updateBracketNames(newChampData.silverBracket);
+
+            // Salva tudo
+            await saveActiveChampionship(newChampData);
+        };
+
+        /**
+         * Renderiza a seção de administração de nomes (apenas Admin)
+         */
+        const renderNameCorrectionSection = () => {
+            if (!appState.isAdmin) return '';
+
+            // Cria os itens da lista (hidden por padrão, aparece ao clicar no botão)
+            const playerItems = activeChampionship.players.map(p => `
+                <div class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200 text-sm mb-2">
+                    <span>${p.name}</span>
+                    <button class="edit-name-btn text-blue-600 hover:text-blue-800 font-bold px-2" data-id="${p.id}" data-name="${p.name}">
+                        EDITAR
+                    </button>
+                </div>
+            `).join('');
+
+            return `
+                <div class="mt-12 border-t-2 border-gray-200 pt-6">
+                    <details class="bg-white rounded-lg shadow p-4">
+                        <summary class="cursor-pointer font-bold text-gray-600 flex items-center gap-2 select-none">
+                            ✏️ Ferramenta de Correção de Nomes (Admin)
+                        </summary>
+                        <div class="mt-4 p-2 bg-gray-100 rounded max-h-60 overflow-y-auto">
+                            <p class="text-xs text-gray-500 mb-3">Clique em editar para renomear um jogador. A alteração reflete nos grupos e chaves automaticamente.</p>
+                            ${playerItems}
+                        </div>
+                    </details>
+                </div>
+            `;
+        };
+
+        
         // =================================================================
         // === VIEW: CAMPEONATO (Bifurcação)
         // =================================================================
@@ -1236,6 +1352,16 @@
         const addChampionshipViewListeners = (champInfo, champType) => {
             // Listeners de Admin
             if (appState.isAdmin) {
+                
+                // --- NOVO: Listener para o Botão de Corrigir Nomes ---
+                // Isso faz o botão "EDITAR" que você adicionou funcionar
+                document.querySelectorAll('.edit-name-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        handleEditPlayerName(btn.dataset.id, btn.dataset.name);
+                    });
+                });
+                // -----------------------------------------------------
+
                 // Inscrição (comum a ambos)
                 if (activeChampionship.status === 'registration') {
                     const addExistingForm = document.getElementById('add-existing-player-form');
@@ -1614,6 +1740,12 @@
             else { 
                 html = renderPlayerRegistration('mata_mata');
             }
+
+            // --- ADICIONADO: Seção de Correção de Nomes no final ---
+            if (activeChampionship.status !== 'registration') {
+                html += renderNameCorrectionSection();
+            }
+
             return html;
         };
         /**
@@ -2276,7 +2408,7 @@
             `;
         };
 /**
-         * Renderiza Grupos (Read-Only - Otimizado para 16:9 Full Screen com Nomes Empilhados)
+         * Renderiza Grupos (Read-Only - Otimizado para 16:9 com Fontes Maiores)
          */
         const renderGroupStage_ReadOnly = () => {
             const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
@@ -2286,7 +2418,7 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     
-                    // Helper para quebrar o nome da dupla em duas linhas
+                    // Helper para quebrar o nome da dupla
                     const formatPairName = (nameStr) => {
                         if (!nameStr) return '-';
                         const parts = nameStr.split('/');
@@ -2300,24 +2432,24 @@
                     };
 
                     return `
-                    <div class="bg-amber-100 p-1 rounded border border-amber-200 mb-1 flex-grow flex flex-col justify-center min-h-[50px]">
+                    <div class="bg-amber-100 p-1.5 rounded border border-amber-200 mb-1 flex-grow flex flex-col justify-center min-h-[60px]">
                         <div class="flex flex-col justify-between items-center h-full w-full">
                             
-                            <div class="text-[9px] text-gray-800 text-center w-full font-semibold leading-tight mb-0.5">
+                            <div class="text-xs sm:text-sm text-gray-900 text-center w-full font-bold leading-tight mb-0.5">
                                 ${formatPairName(match.names[0])}
                             </div>
 
-                            <div class="flex justify-center items-center gap-1 my-0.5 shrink-0">
-                                <span class="bg-white border border-gray-300 text-gray-800 rounded px-1.5 py-0.5 text-center text-xs font-bold shadow-sm min-w-[20px]">
+                            <div class="flex justify-center items-center gap-2 my-1 shrink-0">
+                                <span class="bg-white border border-gray-300 text-gray-900 rounded px-2 py-0.5 text-center text-sm sm:text-base font-black shadow-sm min-w-[24px]">
                                     ${score1 === null ? '' : score1}
                                 </span>
-                                <span class="text-gray-400 text-[8px]">x</span>
-                                <span class="bg-white border border-gray-300 text-gray-800 rounded px-1.5 py-0.5 text-center text-xs font-bold shadow-sm min-w-[20px]">
+                                <span class="text-gray-500 text-[10px]">x</span>
+                                <span class="bg-white border border-gray-300 text-gray-900 rounded px-2 py-0.5 text-center text-sm sm:text-base font-black shadow-sm min-w-[24px]">
                                     ${score2 === null ? '' : score2}
                                 </span>
                             </div>
 
-                            <div class="text-[9px] text-gray-800 text-center w-full font-semibold leading-tight mt-0.5">
+                            <div class="text-xs sm:text-sm text-gray-900 text-center w-full font-bold leading-tight mt-0.5">
                                 ${formatPairName(match.names[1])}
                             </div>
 
@@ -2327,31 +2459,31 @@
                 }).join('');
                 
                 const rankingsHtml = rankings.map((player, rankIndex) => `
-                    <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-emerald-600' : 'text-orange-600'}">
-                        <td class="py-0.5 px-0.5 font-bold text-[10px] text-center">${rankIndex + 1}º</td>
-                        <td class="py-0.5 px-0.5 text-[10px] text-gray-800 truncate max-w-[60px]">${player.name}</td>
-                        <td class="py-0.5 px-0.5 font-bold text-[10px] text-center">${player.gamesWon}</td>
+                    <tr class="border-b border-gray-200 ${rankIndex < 2 ? 'text-emerald-700 font-semibold' : 'text-orange-700'}">
+                        <td class="py-1 px-1 font-bold text-xs sm:text-sm text-center">${rankIndex + 1}º</td>
+                        <td class="py-1 px-1 text-xs sm:text-sm text-gray-900 truncate max-w-[80px]">${player.name}</td>
+                        <td class="py-1 px-1 font-bold text-xs sm:text-sm text-center">${player.gamesWon}</td>
                     </tr>
                 `).join('');
 
                 return `
-                <div class="bg-white rounded-lg shadow-md p-1.5 animate-fade-in h-full w-full border border-gray-200 flex flex-col overflow-hidden">
+                <div class="bg-white rounded-xl shadow-lg p-2 animate-fade-in h-full w-full border border-gray-200 flex flex-col overflow-hidden">
                     
-                    <div class="text-center border-b border-gray-100 pb-0.5 mb-0.5 shrink-0">
-                        <h3 class="text-sm font-bold text-cyan-600 uppercase tracking-tighter">G${groupIndex + 1}</h3>
+                    <div class="text-center border-b border-gray-100 pb-1 mb-1 shrink-0">
+                        <h3 class="text-base sm:text-lg font-black text-cyan-700 uppercase tracking-tighter">G${groupIndex + 1}</h3>
                     </div>
 
-                    <div class="flex-grow flex flex-col justify-around overflow-hidden">
+                    <div class="flex-grow flex flex-col justify-around overflow-hidden py-1">
                         ${matchesHtml}
                     </div>
 
-                    <div class="mt-0.5 pt-0.5 border-t border-gray-100 shrink-0">
+                    <div class="mt-1 pt-1 border-t border-gray-100 shrink-0">
                         <table class="w-full text-left table-fixed">
                             <thead>
                                 <tr class="bg-amber-50">
-                                    <th class="w-4 py-0.5 text-[9px] text-gray-500 text-center">#</th>
-                                    <th class="py-0.5 text-[9px] text-gray-500">Nome</th>
-                                    <th class="w-4 py-0.5 text-[9px] text-gray-500 text-center">V</th>
+                                    <th class="w-6 py-1 text-[10px] sm:text-xs font-bold text-gray-600 text-center">#</th>
+                                    <th class="py-1 text-[10px] sm:text-xs font-bold text-gray-600">Nome</th>
+                                    <th class="w-6 py-1 text-[10px] sm:text-xs font-bold text-gray-600 text-center">V</th>
                                 </tr>
                             </thead>
                             <tbody>${rankingsHtml}</tbody>
@@ -4013,7 +4145,7 @@
         };
 
         /**
-         * Gera PDF (Sortudo)
+         * Gera PDF (Sortudo) - Sem Emojis
          */
         const handlePrintPDF_Sortudo = () => {
             const { jsPDF } = window.jspdf;
@@ -4039,14 +4171,15 @@
                 
                 const { leaderboard } = getLeaderboard_Sortudo();
                 
-                // SALDO: Adiciona Saldo e Games Perdidos ao PDF
+                // Sem Emojis no PDF
                 const head = [['Pos.', 'Jogador', 'Games Ganhos', 'Saldo', 'Games Perdidos']];
                 const body = leaderboard.map((p, index) => {
+                    // Lógica simplificada sem medalhas no PDF
                     let rank = `${index + 1}º`;
-                    if (index === 0) rank = '🥇 1º';
-                    if (index === 1) rank = '🥈 2º';
-                    if (index === 2) rank = '🥉 3º';
-                    if (index === leaderboard.length - 1 && leaderboard.length > 3) rank = '👻';
+                    if (index === 0) rank = '1º';
+                    if (index === 1) rank = '2º';
+                    if (index === 2) rank = '3º';
+                    if (index === leaderboard.length - 1 && leaderboard.length > 3) rank = 'Coveiro';
                     
                     return [
                         rank,
@@ -4061,7 +4194,7 @@
                     startY: yPos,
                     head: head,
                     body: body,
-                    headStyles: { fillColor: [126, 34, 206] }, // Roxo (Sortudo)
+                    headStyles: { fillColor: [126, 34, 206] }, 
                     styles: { halign: 'center', textColor: [31, 41, 55] },
                     columnStyles: {
                         1: { halign: 'left' } 
@@ -4089,9 +4222,9 @@
                     const luckyPlayers = round.luckyPlayers.map(pId => playerNameMap.get(pId) || '?').join(' / ');
                     if (luckyPlayers) {
                         doc.setFontSize(10);
-                        doc.setTextColor(0, 100, 0); // Verde
+                        doc.setTextColor(0, 100, 0); 
                         doc.text(`Sortudos (BYE): ${luckyPlayers} (+${activeChampionship.config.luckyGames} games)`, 14, yPos);
-                        doc.setTextColor(0, 0, 0); // Reseta cor
+                        doc.setTextColor(0, 0, 0); 
                         yPos += 6;
                     }
                     
@@ -4126,7 +4259,7 @@
         };
         
         /**
-         * Gera PDF (Mata-Mata)
+         * Gera PDF (Mata-Mata) - Sem Emojis
          */
         const handlePrintPDF_MataMata = () => {
             const { jsPDF } = window.jspdf;
@@ -4154,13 +4287,13 @@
                 const finalResults = [];
                 const { goldWinner, silverWinner } = getKnockoutWinners(activeChampionship);
 
-                // Ouro
+                // Ouro (Removido emojis das strings)
                 if (goldWinner) {
-                    finalResults.push(['🥇 Campeões Ouro', goldWinner.name]);
+                    finalResults.push(['Campeões Ouro', goldWinner.name]);
                     const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
                     const goldFinal = activeChampionship.goldBracket.find(m => m.round === maxRoundGold);
                     const goldRunnerUp = goldFinal.pairs.find(p => p && p.id !== goldWinner.id);
-                    if (goldRunnerUp) finalResults.push(['🥈 2º Lugar Ouro', goldRunnerUp.name]);
+                    if (goldRunnerUp) finalResults.push(['2º Lugar Ouro', goldRunnerUp.name]);
 
                     const goldSemiFinals = activeChampionship.goldBracket.filter(m => m.round === maxRoundGold - 1);
                     if (goldSemiFinals.length === 2) {
@@ -4168,15 +4301,15 @@
                             sf.pairs.some(p => p && p.id === goldWinner.id)
                         );
                         if(championSemi) {
-                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
-                            if (thirdPlace) finalResults.push(['🥉 3º Lugar Ouro', thirdPlace.name]);
+                            const thirdPlace = championSemi.pairs.find(p => p && p.id !== goldWinner.id);
+                            if (thirdPlace) finalResults.push(['3º Lugar Ouro', thirdPlace.name]);
                         }
                     }
                 }
                 
-                // Prata
+                // Prata (Removido emojis das strings)
                 if (silverWinner) {
-                    finalResults.push(['🥈 Campeões Prata', silverWinner.name]);
+                    finalResults.push(['Campeões Prata', silverWinner.name]);
                     const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
                     const silverFinal = activeChampionship.silverBracket.find(m => m.round === maxRoundSilver);
                     const silverRunnerUp = silverFinal.pairs.find(p => p && p.id !== silverWinner.id);
@@ -4194,12 +4327,12 @@
                     }
                 }
 
-                // Coveiro
+                // Coveiro (Removido emojis das strings)
                 const stats = getGlobalTournamentStats_MataMata(activeChampionship);
                 if (stats.length > 0) {
                     const minGames = stats[0].gamesWon;
                     const coveiros = stats.filter(p => p.gamesWon === minGames);
-                    finalResults.push(['👻 Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
+                    finalResults.push(['Coveiro(s)', coveiros.map(c => c.name).join(' / ')]);
                 }
                 
                 doc.autoTable({
@@ -4270,10 +4403,10 @@
                 doc.text("Resultados do Mata-Mata", 105, yPos, { align: 'center' });
                 yPos += 10;
                 
-                // PDF - Chave Ouro
+                // PDF - Chave Ouro (Sem emojis)
                 if (activeChampionship.goldBracket.length > 0) {
                     doc.setFontSize(16);
-                    doc.text("Série Ouro 🥇", 14, yPos);
+                    doc.text("Série Ouro", 14, yPos);
                     yPos += 7;
                     const maxRoundGold = Math.max(...activeChampionship.goldBracket.map(m => m.round));
                     const goldBody = activeChampionship.goldBracket.map(m => {
@@ -4301,10 +4434,10 @@
                     yPos = doc.autoTable.previous.finalY + 10;
                 }
                 
-                // PDF - Chave Prata
+                // PDF - Chave Prata (Sem emojis)
                 if (activeChampionship.silverBracket.length > 0) {
                     doc.setFontSize(16);
-                    doc.text("Série Prata 🥈", 14, yPos);
+                    doc.text("Série Prata", 14, yPos);
                     yPos += 7;
                     const maxRoundSilver = Math.max(...activeChampionship.silverBracket.map(m => m.round));
                     const silverBody = activeChampionship.silverBracket.map(m => {
@@ -4340,7 +4473,7 @@
         };
         
         /**
-         * Gera PDF (Ranking Global)
+         * Gera PDF (Ranking Global) - Sem Emojis
          */
         const handlePrintRankingPDF = () => {
             const { jsPDF } = window.jspdf;
@@ -4358,9 +4491,10 @@
                 doc.text(title, 105, 22, { align: 'center' }); 
                 
                 const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
-                const head = [['Pos.', 'Jogador', 'Pontos', '🥇 Ouro', '🥈 Prata', '👻 Coveiro']];
+                // Cabeçalho sem emojis
+                const head = [['Pos.', 'Jogador', 'Pontos', 'Ouro', 'Prata', 'Coveiro']];
                 const body = sortedPlayers.map((p, index) => [
-                    `${index + 1}º`,
+                    `${index + 1}º`, // Removido emojis de 1º, 2º, 3º
                     p.name,
                     p.points || 0,
                     p.goldWins || 0,
