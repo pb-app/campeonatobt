@@ -1347,82 +1347,80 @@
         };
 
         /**
-         * Adiciona os Listeners da View do Campeonato (para ambos os tipos)
+         * Adiciona os Listeners da View do Campeonato
          */
         const addChampionshipViewListeners = (champInfo, champType) => {
-            // Listeners de Admin
             if (appState.isAdmin) {
                 
-                // --- NOVO: Listener para o Botão de Corrigir Nomes ---
-                // Isso faz o botão "EDITAR" que você adicionou funcionar
+                // --- Listener do Botão Editar Nome ---
                 document.querySelectorAll('.edit-name-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         handleEditPlayerName(btn.dataset.id, btn.dataset.name);
                     });
                 });
-                // -----------------------------------------------------
 
-                // Inscrição (comum a ambos)
+                // --- NOVO: Listener para salvar a Quadra (ao mudar o valor) ---
+                document.querySelectorAll('.court-input').forEach(input => {
+                    input.addEventListener('change', async (e) => {
+                        const val = e.target.value;
+                        const type = e.target.dataset.type;
+                        const newChampData = JSON.parse(JSON.stringify(activeChampionship));
+
+                        if (type === 'group') {
+                            const gIndex = e.target.dataset.groupIndex;
+                            const mIndex = e.target.dataset.matchIndex;
+                            newChampData.groups[gIndex].matches[mIndex].court = val;
+                        } else if (type === 'bracket') {
+                            const bType = e.target.dataset.bracketType;
+                            const mId = e.target.dataset.matchId;
+                            const match = newChampData[bType].find(m => m.id === mId);
+                            if (match) match.court = val;
+                        }
+                        await saveActiveChampionship(newChampData);
+                    });
+                });
+                // -------------------------------------------------------------
+
                 if (activeChampionship.status === 'registration') {
                     const addExistingForm = document.getElementById('add-existing-player-form');
                     if (addExistingForm) addExistingForm.addEventListener('submit', handleAddExistingPlayerToChampionship);
-                    
                     const addNewForm = document.getElementById('add-new-player-form');
                     if (addNewForm) addNewForm.addEventListener('submit', handleAddNewPlayerToChampionship);
-                    
                     document.querySelectorAll('.delete-player-btn').forEach(btn => {
                         btn.addEventListener('click', () => handleDeletePlayerFromChampionship(btn.dataset.id));
                     });
                 }
-                
-                // Botões do Telão/PDF (comum a ambos)
                 const launchTelaoBtn = document.getElementById('launch-telao-btn');
                 if (launchTelaoBtn) launchTelaoBtn.addEventListener('click', handleLaunchTelao);
-                
                 if (champInfo?.status === 'finished') {
                     const printChampBtn = document.getElementById('print-champ-pdf-btn');
                     if (printChampBtn) printChampBtn.addEventListener('click', () => handlePrintChampionshipPDF(champType));
                 }
 
-                // Listeners Específicos do Tipo
                 if (champType === 'sortudo') {
-                    // Botão de Gerar Rodadas
                     const generateBtn = document.getElementById('generate-champ-btn-sortudo');
                     if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship_Sortudo);
-                    
-                    // Botões de Confirmar Placar das Rodadas
                     document.querySelectorAll('.confirm-sortudo-score-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             const { roundIndex, matchIndex } = e.currentTarget.dataset;
                             handleConfirmSortudoScore(roundIndex, matchIndex);
                         });
                     });
-                    
-                    // Botão de Finalizar Manualmente (Sortudo)
                     const finalizeBtn = document.getElementById('finalize-champ-btn-sortudo');
                     if (finalizeBtn) finalizeBtn.addEventListener('click', handleManualFinalize_Sortudo);
-
                 } else {
-                    // Tipo Mata-Mata
-                    // Botão de Gerar Grupos
                     const generateBtn = document.getElementById('generate-champ-btn-mm');
                     if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship_MataMata);
-                    
-                    // Botões de Confirmar Placar (Grupos)
                     document.querySelectorAll('.confirm-group-score-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             const { groupIndex, matchIndex } = e.currentTarget.dataset;
                             handleConfirmGroupScore(groupIndex, matchIndex);
                         });
                     });
-                    
-                    // Botão de Finalizar Grupos
                     if (activeChampionship.status === 'groups') {
                         const finalizeBtn = document.getElementById('finalize-groups-btn');
                         if (finalizeBtn) finalizeBtn.addEventListener('click', handleFinalizeGroups);
                     }
-                    
-                    // Botões de Confirmar Placar (Mata-Mata)
                     if (activeChampionship.status === 'knockout' || champInfo?.status === 'finished') {
                          document.querySelectorAll('.confirm-knockout-score-btn').forEach(btn => {
                             btn.addEventListener('click', (e) => {
@@ -1431,14 +1429,10 @@
                             });
                         });
                     }
-                    
-                    // Botão de Finalizar Manualmente (Mata-Mata)
                     const finalizeBtn = document.getElementById('finalize-champ-btn-mm');
                     if (finalizeBtn) finalizeBtn.addEventListener('click', handleManualFinalize_MataMata);
                 }
             }
-            
-            // Listeners de Visitante
             if (champType === 'mata_mata' && (activeChampionship.status === 'groups' || activeChampionship.status === 'knockout' || champInfo?.status === 'finished')) {
                 document.querySelectorAll('.print-group-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
@@ -1749,12 +1743,11 @@
             return html;
         };
         /**
-         * Renderiza a Fase de Grupos (Mata-Mata)
+         * Renderiza a Fase de Grupos (Mata-Mata) - Com campo de Quadra
          */
         const renderGroupStage = () => {
             let allScoresFilled = true;
             const isDisabled = !appState.isAdmin ? 'disabled' : '';
-            // Trava os inputs se os grupos já foram finalizados
             const isLocked = (activeChampionship.status === 'knockout' || activeChampionship.status === 'finished');
 
             const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
@@ -1764,31 +1757,39 @@
                     const score1 = match.score[0];
                     const score2 = match.score[1];
                     if (score1 === null || score2 === null) allScoresFilled = false;
-                    
-                    // Oculta o botão de confirmar se estiver travado (isLocked) ou se for visitante
                     const confirmButtonDisplay = (isLocked || !appState.isAdmin) ? 'hidden' : '';
 
                     return `
                     <div class="bg-amber-50 p-3 sm:p-4 rounded-lg border border-amber-200">
                         <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
-                            <span class="text-sm text-gray-700 text-center sm:text-left">${match.names[0]}</span>
-                            <span class="font-bold text-cyan-600">vs</span>
-                            <span class="text-sm text-gray-700 text-center sm:text-right">${match.names[1]}</span>
+                            <span class="text-sm text-gray-700 text-center sm:text-left w-full sm:w-auto">${match.names[0]}</span>
+                            
+                            <div class="flex flex-col items-center">
+                                <span class="font-bold text-cyan-600 text-xs">vs</span>
+                                <input 
+                                    type="number" 
+                                    placeholder="Q." 
+                                    value="${match.court || ''}" 
+                                    class="court-input w-12 text-center text-xs border border-gray-300 rounded mt-1 bg-white focus:ring-2 focus:ring-cyan-500"
+                                    data-type="group"
+                                    data-group-index="${groupIndex}"
+                                    data-match-index="${matchIndex}"
+                                    ${isDisabled}
+                                >
+                            </div>
+
+                            <span class="text-sm text-gray-700 text-center sm:text-right w-full sm:w-auto">${match.names[1]}</span>
                         </div>
                         <div class="flex justify-center items-center gap-3 mt-3">
                             <input
-                                type="number"
-                                min="0"
-                                value="${score1 === null ? '' : score1}"
+                                type="number" min="0" value="${score1 === null ? '' : score1}"
                                 id="g-${groupIndex}-m-${matchIndex}-s0" 
                                 class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isLocked ? 'opacity-70' : ''}"
                                 ${isLocked ? 'disabled' : isDisabled}
                             />
                             <span class="text-gray-500">-</span>
                             <input
-                                type="number"
-                                min="0"
-                                value="${score2 === null ? '' : score2}"
+                                type="number" min="0" value="${score2 === null ? '' : score2}"
                                 id="g-${groupIndex}-m-${matchIndex}-s1"
                                 class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isLocked ? 'opacity-70' : ''}"
                                 ${isLocked ? 'disabled' : isDisabled}
@@ -1847,7 +1848,6 @@
                 `;
             }).join('');
             
-            // Botão de Finalizar Grupos
             const finalizeButtonHtml = (appState.isAdmin && activeChampionship.status === 'groups') ? `
             <div class="mt-8 text-center">
                 <button
@@ -1861,12 +1861,7 @@
             </div>
             ` : '';
             
-            return `
-                <div class="space-y-8 animate-fade-in">
-                    ${groupsHtml}
-                    ${finalizeButtonHtml}
-                </div>
-            `;
+            return `<div class="space-y-8 animate-fade-in">${groupsHtml}${finalizeButtonHtml}</div>`;
         };
         
         /**
@@ -1921,15 +1916,13 @@
         };
 
         /**
-         * Renderiza uma chave (bracket) individual
+         * Renderiza uma chave (bracket) individual - Com Campo de Quadra
          */
         const renderBracket = (title, bracket, bracketType, isFinished) => {
             const rounds = {};
             if (!bracket || bracket.length === 0) {
                  return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
-                     <h3 class="text-3xl font-bold mb-6 text-cyan-600 flex items-center gap-3">
-                         ${title}
-                     </h3>
+                     <h3 class="text-3xl font-bold mb-6 text-cyan-600 flex items-center gap-3">${title}</h3>
                      <p class="text-gray-500">Chave ainda não gerada.</p>
                   </div>`;
             }
@@ -1942,55 +1935,29 @@
             const maxRound = Math.max(...bracket.map(m => m.round));
             const final = bracket.find(m => m.round === maxRound);
             const semiFinals = bracket.filter(m => m.round === maxRound - 1);
-            
             const champion = final?.winner; 
             const runnerUp = final?.pairs.find(p => p && p.id !== champion?.id);
-
-            // Lógica para encontrar o 3º Lugar (Perdedor da semi do campeão)
             let thirdPlace = null;
             if (champion && semiFinals.length === 2) {
-                const championSemi = semiFinals.find(sf => 
-                    sf.pairs.some(p => p && p.id === champion.id)
-                );
-                if(championSemi) {
-                    thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
-                }
+                const championSemi = semiFinals.find(sf => sf.pairs.some(p => p && p.id === champion.id));
+                if(championSemi) thirdPlace = championSemi.pairs.find(p => p && p.id !== champion.id);
             }
 
             const isGold = bracketType === 'goldBracket';
-            const cardStyle = isGold 
-                ? 'bg-gradient-to-r from-yellow-300 via-orange-400 to-orange-500 text-white' 
-                : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900';
-            
+            const cardStyle = isGold ? 'bg-gradient-to-r from-yellow-300 via-orange-400 to-orange-500 text-white' : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 text-gray-900';
             const championNameStyle = isGold ? 'text-4xl font-extrabold text-white' : 'text-4xl font-extrabold text-gray-800';
             const runnerUpStyle = isGold ? 'text-lg font-bold text-white opacity-90' : 'text-lg font-bold text-gray-700';
             const thirdPlaceStyle = isGold ? 'text-base font-medium text-white opacity-80' : 'text-base font-medium text-gray-600';
 
             const championHtml = champion ? `
             <div class="${cardStyle} p-6 rounded-lg shadow-2xl mb-8 text-center animate-fade-in space-y-2">
-                <div>
-                    <h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">🥇 1º Lugar</h4>
-                    <p class="${championNameStyle}">${champion.name}</p>
-                </div>
-                ${runnerUp ? `
-                <div>
-                    <h5 class="text-lg font-bold uppercase tracking-wider ${runnerUpStyle}">🥈 2º Lugar</h5>
-                    <p class="${runnerUpStyle}">${runnerUp.name}</p>
-                </div>
-                ` : ''}
-                ${thirdPlace ? `
-                <div>
-                    <h6 class="text-base font-medium uppercase tracking-wider ${thirdPlaceStyle}">🥉 3º Lugar</h6>
-                    <p class="${thirdPlaceStyle}">${thirdPlace.name}</p>
-                </div>
-                ` : ''}
-            </div>
-            ` : '';
+                <div><h4 class="text-xl font-black uppercase tracking-wider ${isGold ? 'text-white' : 'text-gray-800'}">🥇 1º Lugar</h4><p class="${championNameStyle}">${champion.name}</p></div>
+                ${runnerUp ? `<div><h5 class="text-lg font-bold uppercase tracking-wider ${runnerUpStyle}">🥈 2º Lugar</h5><p class="${runnerUpStyle}">${runnerUp.name}</p></div>` : ''}
+                ${thirdPlace ? `<div><h6 class="text-base font-medium uppercase tracking-wider ${thirdPlaceStyle}">🥉 3º Lugar</h6><p class="${thirdPlaceStyle}">${thirdPlace.name}</p></div>` : ''}
+            </div>` : '';
 
-            // Renderiza as colunas das rodadas
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
                 const roundTitle = getRoundTitle(roundNum, maxRound);
-                
                 const matchesHtml = rounds[roundNum].map(match => {
                     const pair1 = match.pairs[0]; 
                     const pair2 = match.pairs[1]; 
@@ -2000,93 +1967,52 @@
                     const score2 = match.score[1];
                     const isBye = pair2 === 'BYE' || pair1 === 'BYE';
                     
-                    // Jogo de BYE (Folga)
                     if (isBye) {
                         const byePair = pair1 === 'BYE' ? pair2 : pair1;
-                        const winnerClass = 'text-emerald-600 font-bold';
-                        return `
-                        <div class="bg-emerald-50 rounded-lg shadow-sm border border-emerald-200 p-4 opacity-80">
+                        return `<div class="bg-emerald-50 rounded-lg shadow-sm border border-emerald-200 p-4 opacity-80">
                             <p class="text-xs text-emerald-700 font-semibold mb-2">BYE (Folga)</p>
-                            <div class="flex justify-between items-center">
-                                <span class="font-medium text-sm ${winnerClass}">
-                                    ${byePair ? byePair.name : 'Erro'}
-                                </span>
-                                <span class="text-sm font-bold text-emerald-800">AVANÇA</span>
-                            </div>
-                        </div>
-                        `;
+                            <div class="flex justify-between items-center"><span class="font-medium text-sm text-emerald-600 font-bold">${byePair ? byePair.name : 'Erro'}</span><span class="text-sm font-bold text-emerald-800">AVANÇA</span></div>
+                        </div>`;
                     }
 
-                    // Jogo Normal
-                    // Permite admin editar mesmo finalizado, botão fica sempre visível se for admin
                     const showConfirmButton = appState.isAdmin && pair1 && pair2 && pair1 !== 'BYE' && pair2 !== 'BYE';
                     const inputDisabled = !appState.isAdmin || (!pair1 || !pair2) || pair1 === 'BYE' || pair2 === 'BYE';
 
                     return `
                     <div class="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="font-medium text-sm ${isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
-                                ${pair1 ? pair1.name : 'Aguardando...'}
-                            </span>
-                            <input
-                                type="number"
-                                min="0"
-                                value="${score1 === null ? '' : score1}"
-                                id="k-${match.id}-s0"
-                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabled ? 'opacity-70' : ''}"
-                                ${inputDisabled ? 'disabled' : ''}
-                            />
+                            <span class="font-medium text-sm ${isPair1Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">${pair1 ? pair1.name : 'Aguardando...'}</span>
+                            <input type="number" min="0" value="${score1 === null ? '' : score1}" id="k-${match.id}-s0" class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabled ? 'opacity-70' : ''}" ${inputDisabled ? 'disabled' : ''} />
                         </div>
                         
-                        <div class="flex items-center my-2">
-                            <div class="flex-grow border-t border-gray-300"></div>
-                            <span class="mx-2 text-xs text-gray-500">vs</span>
-                            <div class="flex-grow border-t border-gray-300"></div>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="font-medium text-sm ${isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">
-                                ${pair2 ? pair2.name : 'Aguardando...'}
-                            </span>
-                            <input
-                                type="number"
-                                min="0"
-                                value="${score2 === null ? '' : score2}"
-                                id="k-${match.id}-s1"
-                                class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabled ? 'opacity-70' : ''}"
-                                ${inputDisabled ? 'disabled' : ''}
-                            />
-                        </div>
-                        <div class="text-center mt-3 ${!showConfirmButton ? 'hidden' : ''}">
-                            <button 
-                                class="confirm-knockout-score-btn p-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all"
+                        <div class="flex items-center my-2 justify-center relative">
+                            <div class="flex-grow border-t border-gray-300 absolute w-full z-0"></div>
+                            <input 
+                                type="number" 
+                                placeholder="Q." 
+                                value="${match.court || ''}" 
+                                class="court-input w-10 text-center text-xs border border-gray-300 rounded bg-white focus:ring-2 focus:ring-cyan-500 relative z-10 mx-2"
+                                data-type="bracket"
                                 data-bracket-type="${bracketType}"
                                 data-match-id="${match.id}"
-                                title="Confirmar Placar">
-                                ${icons.check}
-                            </button>
+                                ${!appState.isAdmin ? 'disabled' : ''}
+                            >
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-sm ${isPair2Winner ? 'text-emerald-600 font-bold' : 'text-gray-800'}">${pair2 ? pair2.name : 'Aguardando...'}</span>
+                            <input type="number" min="0" value="${score2 === null ? '' : score2}" id="k-${match.id}-s1" class="w-16 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 ${inputDisabled ? 'opacity-70' : ''}" ${inputDisabled ? 'disabled' : ''} />
+                        </div>
+                        <div class="text-center mt-3 ${!showConfirmButton ? 'hidden' : ''}">
+                            <button class="confirm-knockout-score-btn p-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md transition-all" data-bracket-type="${bracketType}" data-match-id="${match.id}" title="Confirmar Placar">${icons.check}</button>
                         </div>
                     </div>
                     `;
                 }).join('');
-                return `
-                <div class="flex flex-col space-y-6 flex-shrink-0 w-72 sm:w-80">
-                    <h4 class="text-xl font-semibold text-gray-800">${roundTitle}</h4>
-                    <div class="space-y-4">${matchesHtml}</div>
-                </div>
-                `;
+                return `<div class="flex flex-col space-y-6 flex-shrink-0 w-72 sm:w-80"><h4 class="text-xl font-semibold text-gray-800">${roundTitle}</h4><div class="space-y-4">${matchesHtml}</div></div>`;
             }).join('');
             
-            return `
-            <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200">
-                <h3 class="text-3xl font-bold mb-6 text-cyan-600">
-                    ${title}
-                </h3>
-                ${championHtml}
-                <div class="flex gap-4 sm:gap-6 pb-4 overflow-x-auto">
-                    ${roundsHtml}
-                </div>
-            </div>
-            `;
+            return `<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 border border-gray-200"><h3 class="text-3xl font-bold mb-6 text-cyan-600">${title}</h3>${championHtml}<div class="flex gap-4 sm:gap-6 pb-4 overflow-x-auto">${roundsHtml}</div></div>`;
         };
         /**
          * Retorna o nome da rodada (ex: Final, Semi-Final)
@@ -2407,8 +2333,8 @@
                 </div>
             `;
         };
-/**
-         * Renderiza Grupos (Read-Only - Otimizado para 16:9 com Fontes Maiores)
+    /**
+         * Renderiza Grupos (Read-Only - Otimizado para 16:9 com Fontes Maiores e Quadra)
          */
         const renderGroupStage_ReadOnly = () => {
             const groupsHtml = activeChampionship.groups.map((group, groupIndex) => {
@@ -2417,42 +2343,29 @@
                 const matchesHtml = group.matches.map((match) => {
                     const score1 = match.score[0];
                     const score2 = match.score[1];
-                    
-                    // Helper para quebrar o nome da dupla
                     const formatPairName = (nameStr) => {
                         if (!nameStr) return '-';
                         const parts = nameStr.split('/');
                         if (parts.length > 1) {
-                            return `
-                                <span class="block truncate w-full">${parts[0].trim()}</span>
-                                <span class="block truncate w-full">${parts[1].trim()}</span>
-                            `;
+                            return `<span class="block truncate w-full">${parts[0].trim()}</span><span class="block truncate w-full">${parts[1].trim()}</span>`;
                         }
                         return `<span class="block truncate w-full">${nameStr}</span>`;
                     };
 
+                    // NOVO: Badge da Quadra
+                    const courtBadge = match.court ? `<span class="absolute top-0 right-0 bg-purple-600 text-white text-[8px] sm:text-[10px] font-bold px-1 rounded-bl">Q${match.court}</span>` : '';
+
                     return `
-                    <div class="bg-amber-100 p-1.5 rounded border border-amber-200 mb-1 flex-grow flex flex-col justify-center min-h-[60px]">
+                    <div class="bg-amber-100 p-1.5 rounded border border-amber-200 mb-1 flex-grow flex flex-col justify-center min-h-[60px] relative">
+                        ${courtBadge}
                         <div class="flex flex-col justify-between items-center h-full w-full">
-                            
-                            <div class="text-xs sm:text-sm text-gray-900 text-center w-full font-bold leading-tight mb-0.5">
-                                ${formatPairName(match.names[0])}
-                            </div>
-
+                            <div class="text-xs sm:text-sm text-gray-900 text-center w-full font-bold leading-tight mb-0.5">${formatPairName(match.names[0])}</div>
                             <div class="flex justify-center items-center gap-2 my-1 shrink-0">
-                                <span class="bg-white border border-gray-300 text-gray-900 rounded px-2 py-0.5 text-center text-sm sm:text-base font-black shadow-sm min-w-[24px]">
-                                    ${score1 === null ? '' : score1}
-                                </span>
+                                <span class="bg-white border border-gray-300 text-gray-900 rounded px-2 py-0.5 text-center text-sm sm:text-base font-black shadow-sm min-w-[24px]">${score1 === null ? '' : score1}</span>
                                 <span class="text-gray-500 text-[10px]">x</span>
-                                <span class="bg-white border border-gray-300 text-gray-900 rounded px-2 py-0.5 text-center text-sm sm:text-base font-black shadow-sm min-w-[24px]">
-                                    ${score2 === null ? '' : score2}
-                                </span>
+                                <span class="bg-white border border-gray-300 text-gray-900 rounded px-2 py-0.5 text-center text-sm sm:text-base font-black shadow-sm min-w-[24px]">${score2 === null ? '' : score2}</span>
                             </div>
-
-                            <div class="text-xs sm:text-sm text-gray-900 text-center w-full font-bold leading-tight mt-0.5">
-                                ${formatPairName(match.names[1])}
-                            </div>
-
+                            <div class="text-xs sm:text-sm text-gray-900 text-center w-full font-bold leading-tight mt-0.5">${formatPairName(match.names[1])}</div>
                         </div>
                     </div>
                     `;
@@ -2468,24 +2381,13 @@
 
                 return `
                 <div class="bg-white rounded-xl shadow-lg p-2 animate-fade-in h-full w-full border border-gray-200 flex flex-col overflow-hidden">
-                    
                     <div class="text-center border-b border-gray-100 pb-1 mb-1 shrink-0">
                         <h3 class="text-base sm:text-lg font-black text-cyan-700 uppercase tracking-tighter">G${groupIndex + 1}</h3>
                     </div>
-
-                    <div class="flex-grow flex flex-col justify-around overflow-hidden py-1">
-                        ${matchesHtml}
-                    </div>
-
+                    <div class="flex-grow flex flex-col justify-around overflow-hidden py-1">${matchesHtml}</div>
                     <div class="mt-1 pt-1 border-t border-gray-100 shrink-0">
                         <table class="w-full text-left table-fixed">
-                            <thead>
-                                <tr class="bg-amber-50">
-                                    <th class="w-6 py-1 text-[10px] sm:text-xs font-bold text-gray-600 text-center">#</th>
-                                    <th class="py-1 text-[10px] sm:text-xs font-bold text-gray-600">Nome</th>
-                                    <th class="w-6 py-1 text-[10px] sm:text-xs font-bold text-gray-600 text-center">V</th>
-                                </tr>
-                            </thead>
+                            <thead><tr class="bg-amber-50"><th class="w-6 py-1 text-[10px] sm:text-xs font-bold text-gray-600 text-center">#</th><th class="py-1 text-[10px] sm:text-xs font-bold text-gray-600">Nome</th><th class="w-6 py-1 text-[10px] sm:text-xs font-bold text-gray-600 text-center">V</th></tr></thead>
                             <tbody>${rankingsHtml}</tbody>
                         </table>
                     </div>
@@ -2525,7 +2427,7 @@
             return { goldHtml, silverHtml, coveiroHtml }; 
         };
 /**
-         * Renderiza Chave Individual (Read-Only - Otimizado 16:9 com Nomes em 2 Linhas)
+         * Renderiza Chave Individual (Read-Only - Otimizado 16:9 com Nomes em 2 Linhas e Quadra)
          */
         const renderBracket_ReadOnly = (title, bracket, bracketType, isFinished, isTelao = false) => {
             const rounds = {};
@@ -2541,7 +2443,6 @@
             const maxRound = Math.max(...bracket.map(m => m.round));
             const final = bracket.find(m => m.round === maxRound);
             const semiFinals = bracket.filter(m => m.round === maxRound - 1);
-
             const champion = final?.winner; 
             const runnerUp = final?.pairs.find(p => p && p.id !== champion?.id);
             let thirdPlace = null;
@@ -2553,26 +2454,18 @@
             const isGold = bracketType === 'goldBracket';
             const containerBg = isGold ? 'bg-orange-50' : 'bg-slate-50';
             const titleColor = isGold ? 'text-orange-600' : 'text-slate-600';
-            const podioBg = isGold 
-                ? 'bg-gradient-to-r from-orange-400 to-yellow-500' 
-                : 'bg-gradient-to-r from-slate-400 to-slate-500';
+            const podioBg = isGold ? 'bg-gradient-to-r from-orange-400 to-yellow-500' : 'bg-gradient-to-r from-slate-400 to-slate-500';
 
-            // --- PÓDIO (Sem alterações) ---
             const championHtml = champion ? `
             <div class="${podioBg} text-white rounded-lg shadow-md p-2 mb-2 flex flex-row items-center justify-between gap-2 shrink-0">
-                <div class="flex-1 text-center border-r border-white/30 pr-2">
-                    <div class="text-xs font-bold opacity-90 uppercase tracking-wider">🥇 Campeão</div>
-                    <div class="text-xl sm:text-2xl font-black leading-tight truncate">${champion.name}</div>
-                </div>
+                <div class="flex-1 text-center border-r border-white/30 pr-2"><div class="text-xs font-bold opacity-90 uppercase tracking-wider">🥇 Campeão</div><div class="text-xl sm:text-2xl font-black leading-tight truncate">${champion.name}</div></div>
                 <div class="flex flex-col justify-center text-right pl-1 text-xs sm:text-sm">
                     ${runnerUp ? `<div class="opacity-90"><span class="font-bold">🥈 2º:</span> ${runnerUp.name}</div>` : ''}
                     ${thirdPlace ? `<div class="opacity-75 mt-0.5"><span class="font-bold">🥉 3º:</span> ${thirdPlace.name}</div>` : ''}
                 </div>
-            </div>
-            ` : '';
+            </div>` : '';
 
             if (isTelao) {
-                // --- RENDERIZAÇÃO DAS COLUNAS DE JOGOS ---
                 const allRoundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
                     const roundTitle = getRoundTitle(roundNum, maxRound);
                     const matchesToShow = rounds[roundNum] || [];
@@ -2586,24 +2479,12 @@
                         
                         if (isBye && match.winner) return ''; 
 
-                        // --- NOVA LÓGICA: QUEBRAR NOMES EM 2 LINHAS ---
                         const formatName = (pairObj, align) => {
                             if (!pairObj) return `<span class="text-gray-300 text-xs">...</span>`;
                             if (pairObj === 'BYE') return `<span class="text-gray-400 text-xs italic">BYE</span>`;
-                            
                             const nameStr = pairObj.name;
-                            // Separa por "/" e remove espaços extras
                             const parts = nameStr.split('/').map(s => s.trim());
-                            
-                            // Se tiver 2 nomes, coloca um em cima do outro
-                            if (parts.length > 1) {
-                                return `
-                                <div class="flex flex-col ${align === 'right' ? 'items-end' : 'items-start'} leading-tight w-full">
-                                    <span class="truncate w-full">${parts[0]}</span>
-                                    <span class="truncate w-full">${parts[1]}</span>
-                                </div>`;
-                            }
-                            // Se for nome único, retorna normal
+                            if (parts.length > 1) return `<div class="flex flex-col ${align === 'right' ? 'items-end' : 'items-start'} leading-tight w-full"><span class="truncate w-full">${parts[0]}</span><span class="truncate w-full">${parts[1]}</span></div>`;
                             return `<span class="truncate w-full">${nameStr}</span>`;
                         };
 
@@ -2612,30 +2493,21 @@
                         
                         let scoreDisplay = '';
                         if (score1 !== null) {
-                            scoreDisplay = `<div class="bg-gray-800 text-white px-1.5 py-0.5 rounded text-sm font-bold flex flex-col justify-center h-full">${score1}</div>
-                                            <div class="text-[10px] text-gray-400 px-0.5">x</div>
-                                            <div class="bg-gray-800 text-white px-1.5 py-0.5 rounded text-sm font-bold flex flex-col justify-center h-full">${score2}</div>`;
+                            scoreDisplay = `<div class="bg-gray-800 text-white px-1.5 py-0.5 rounded text-sm font-bold flex flex-col justify-center h-full">${score1}</div><div class="text-[10px] text-gray-400 px-0.5">x</div><div class="bg-gray-800 text-white px-1.5 py-0.5 rounded text-sm font-bold flex flex-col justify-center h-full">${score2}</div>`;
                         } else {
                             scoreDisplay = `<div class="text-[10px] font-bold text-cyan-600 bg-cyan-50 px-1.5 py-0.5 rounded">vs</div>`;
                         }
 
-                        // Card com layout ajustado para nomes duplos
-                        return `
-                        <div class="bg-white rounded border border-gray-200 p-1 shadow-sm flex flex-col items-center justify-center w-full min-h-[50px]">
-                            <div class="w-full flex justify-between items-center text-xs sm:text-sm font-medium text-gray-800 gap-1">
-                                
-                                <div class="w-[40%] text-right flex justify-end ${score1 > score2 ? 'font-bold text-black' : ''}">
-                                    ${p1Html}
-                                </div>
-                                
-                                <div class="flex items-center justify-center shrink-0 min-w-[40px]">
-                                    ${scoreDisplay}
-                                </div>
-                                
-                                <div class="w-[40%] text-left flex justify-start ${score2 > score1 ? 'font-bold text-black' : ''}">
-                                    ${p2Html}
-                                </div>
+                        // NOVO: Badge da Quadra
+                        const courtBadge = match.court ? `<span class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-purple-600 text-white text-[9px] font-bold px-1.5 rounded-full z-10 shadow-sm">Q${match.court}</span>` : '';
 
+                        return `
+                        <div class="bg-white rounded border border-gray-200 p-1 shadow-sm flex flex-col items-center justify-center w-full min-h-[50px] relative">
+                            ${courtBadge}
+                            <div class="w-full flex justify-between items-center text-xs sm:text-sm font-medium text-gray-800 gap-1">
+                                <div class="w-[40%] text-right flex justify-end ${score1 > score2 ? 'font-bold text-black' : ''}">${p1Html}</div>
+                                <div class="flex items-center justify-center shrink-0 min-w-[40px] pt-1">${scoreDisplay}</div>
+                                <div class="w-[40%] text-left flex justify-start ${score2 > score1 ? 'font-bold text-black' : ''}">${p2Html}</div>
                             </div>
                         </div>
                         `;
@@ -2643,39 +2515,13 @@
 
                     if (matchesHtmlList.trim() === '') return '';
 
-                    return `
-                    <div class="flex-1 flex flex-col h-full min-w-0">
-                        <h4 class="text-[10px] sm:text-xs font-bold text-gray-500 uppercase text-center mb-1 shrink-0">${roundTitle}</h4>
-                        <div class="flex-grow flex flex-col justify-around gap-1">
-                            ${matchesHtmlList}
-                        </div>
-                    </div>
-                    `;
+                    return `<div class="flex-1 flex flex-col h-full min-w-0"><h4 class="text-[10px] sm:text-xs font-bold text-gray-500 uppercase text-center mb-1 shrink-0">${roundTitle}</h4><div class="flex-grow flex flex-col justify-around gap-1">${matchesHtmlList}</div></div>`;
                 }).join('');
 
-                return `
-                <div class="${containerBg} rounded-xl shadow-inner p-2 h-full w-full border border-gray-200 flex flex-col overflow-hidden">
-                    <div class="flex justify-between items-center mb-1 shrink-0">
-                        <h3 class="text-lg sm:text-xl font-bold ${titleColor}">${title}</h3>
-                    </div>
-                    ${championHtml}
-                    <div class="flex-grow flex flex-row gap-2 w-full overflow-hidden">
-                        ${allRoundsHtml}
-                    </div>
-                </div>
-                `;
+                return `<div class="${containerBg} rounded-xl shadow-inner p-2 h-full w-full border border-gray-200 flex flex-col overflow-hidden"><div class="flex justify-between items-center mb-1 shrink-0"><h3 class="text-lg sm:text-xl font-bold ${titleColor}">${title}</h3></div>${championHtml}<div class="flex-grow flex flex-row gap-2 w-full overflow-hidden">${allRoundsHtml}</div></div>`;
             }
 
-            // Retorno Padrão (Não-Telão)
-             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => {
-                 // (Código legado simplificado para não duplicar visualmente aqui no chat, 
-                 // mas na prática mantém a visualização normal do admin)
-                 return `<div class="p-2">Visualização Admin</div>`;
-            }).join('');
-            
-            // Nota: Se quiser manter o modo Admin funcionando visualmente bonito,
-            // mantenha o código antigo aqui no return final.
-            // Como o foco é o telão, o bloco 'if (isTelao)' acima resolve o problema.
+            const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => `<div class="p-2">Visualização Admin</div>`).join('');
             return `<div class="bg-white p-4 text-center text-gray-500">Visualização disponível no Modo Telão.</div>`;
         };
         /**
