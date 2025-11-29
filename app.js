@@ -1,51 +1,48 @@
-
-        // =================================================================
-        // === IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
-        // =================================================================
-        import { 
+// =================================================================
+// === IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
+// =================================================================
+import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { 
     getAuth, 
-    createUserWithEmailAndPassword, // NOVO: Criar conta
-    signInWithEmailAndPassword,     // NOVO: Logar
-    signOut,                        // NOVO: Sair
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut, 
     onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            setDoc, 
-            onSnapshot, 
-            collection, 
-            query,
-            Timestamp,
-            getDoc,
-            writeBatch,
-            runTransaction,
-            deleteDoc,
-            addDoc // *** CORREÇÃO 1: Importar addDoc ***
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { 
+    getFirestore, 
+    doc, 
+    setDoc, 
+    onSnapshot, 
+    collection, 
+    query,
+    Timestamp,
+    getDoc,
+    writeBatch,
+    runTransaction,
+    deleteDoc,
+    addDoc
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configuração do Firebase (Substitua pelos seus dados)
-        const firebaseConfig = {
-          apiKey: "AIzaSyDeS-rk8OJKhghv1djVucmR3-erOa-ppMY",
-          authDomain: "campeonato-sortudo.firebaseapp.com",
-          projectId: "campeonato-sortudo",
-          storageBucket: "campeonato-sortudo.firebasestorage.app",
-          messagingSenderId: "706083235199",
-          appId: "1:706083235199:web:5eca6041bb817401ee264a"
-        };
+// Configuração do Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyDeS-rk8OJKhghv1djVucmR3-erOa-ppMY",
+  authDomain: "campeonato-sortudo.firebaseapp.com",
+  projectId: "campeonato-sortudo",
+  storageBucket: "campeonato-sortudo.firebasestorage.app",
+  messagingSenderId: "706083235199",
+  appId: "1:706083235199:web:5eca6041bb817401ee264a"
+};
 
-        // Inicialização dos serviços do Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        setLogLevel('debug'); // Ativa logs detalhados do Firestore no console
+// Inicialização dos serviços
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-        // =================================================================
-        // === CONSTANTES E ESTADO GLOBAL
-        // =================================================================
-        
+// =================================================================
+// === ESTADO GLOBAL
+// =================================================================
 
-        // Estado global reativo do aplicativo
 let appState = {
     userId: null,        // Agora será o UID único do usuário logado
     userEmail: null,     // Email do usuário
