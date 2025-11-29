@@ -2,12 +2,13 @@
         // =================================================================
         // === IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
         // =================================================================
-        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
-            getAuth, 
-            signInAnonymously, 
-            onAuthStateChanged 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    getAuth, 
+    createUserWithEmailAndPassword, // NOVO: Criar conta
+    signInWithEmailAndPassword,     // NOVO: Logar
+    signOut,                        // NOVO: Sair
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, 
             doc, 
@@ -43,20 +44,18 @@
         // === CONSTANTES E ESTADO GLOBAL
         // =================================================================
         
-        // ID Mestre (Admin)
-        const MESTRE_USER_ID = "campeonato-sortudo-admin";
-        const ADMIN_PASSWORD = "adm2025"; 
 
         // Estado global reativo do aplicativo
-        let appState = {
-            userId: null,
-            isAuthReady: false,
-            isAdmin: false, 
-            isTelaoMode: false,
-            currentView: 'loading', 
-            currentChampionshipId: null,
-            currentRankingId: null, 
-        };
+let appState = {
+    userId: null,        // Agora será o UID único do usuário logado
+    userEmail: null,     // Email do usuário
+    isAuthReady: false,
+    isAdmin: false,      
+    isTelaoMode: false,
+    currentView: 'loading', 
+    currentChampionshipId: null,
+    currentRankingId: null, 
+};
 
         // Caches de dados globais (ouvintes do Firestore)
         let allRankings = []; 
@@ -243,110 +242,167 @@
         };
 
         /**
-         * Renderiza os botões de "Ranking" / "Voltar" / "Login/Sair" no cabeçalho
+         * Renderiza os botões do cabeçalho (Agora com Logout real)
          */
         const renderHeaderButtons = () => {
             let navHtml = ''; 
             let authHtml = ''; 
 
-            // Botão de Navegação (Ranking Geral / Voltar)
+            // Botão de Navegação
             if (appState.currentView === 'championshipList') {
-                navHtml = `
-                <button
-                    id="nav-to-ranking"
-                    class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                    🏆 ${icons.award}
-                    Ranking Geral
-                </button>
-                `;
+                navHtml = `<button id="nav-to-ranking" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">🏆 ${icons.award} Ranking Geral</button>`;
             } else if (appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') {
-                navHtml = `
-                <button
-                    id="nav-to-list"
-                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                    ${icons.arrowLeft}
-                    Voltar
-                </button>
-                `;
+                navHtml = `<button id="nav-to-list" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">${icons.arrowLeft} Voltar</button>`;
             }
 
-            // Botão de Autenticação (Login / Sair)
+            // Botão Sair (Só aparece se não estiver na tela de login)
             if (appState.currentView !== 'login') {
-                if (appState.isAdmin) {
-                    authHtml = `
-                    <button
-                        id="nav-to-login"
-                        class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                        ${icons.logOut}
-                        Sair (Admin)
+                authHtml = `
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-gray-500 hidden sm:inline">${appState.userEmail || ''}</span>
+                    <button id="nav-to-logout" class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+                        ${icons.logOut} Sair
                     </button>
-                    `;
-                } else {
-                    authHtml = `
-                    <button
-                        id="nav-to-login"
-                        class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                        ${icons.logIn}
-                        Login (Admin)
-                    </button>
-                    `;
-                }
+                </div>
+                `;
             }
             
             headerButtons.innerHTML = navHtml + authHtml; 
 
-            // Adiciona listeners aos botões renderizados
             const rankingBtn = document.getElementById('nav-to-ranking');
             if (rankingBtn) rankingBtn.addEventListener('click', () => navigateTo('globalRanking'));
             
             const listBtn = document.getElementById('nav-to-list');
             if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
             
-            const loginBtn = document.getElementById('nav-to-login');
-            if (loginBtn) loginBtn.addEventListener('click', () => navigateTo('login'));
+            const logoutBtn = document.getElementById('nav-to-logout');
+            if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
         };
 
         // =================================================================
-        // === VIEW: LOGIN
-        // =================================================================
-        const renderLogin = () => {
-            mainContent.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
-                    <h2 class="text-3xl font-bold text-center text-cyan-600 mb-8">Bem-vindo(a) 🎾</h2>
-                    
-                    <div class="space-y-4">
-                        <button
-                            id="visitor-login-btn"
-                            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 px-6 rounded-lg shadow-sm transition-all flex items-center justify-center gap-3 text-lg">
-                            ${icons.eye}
-                            Modo Visitante
-                        </button>
-                        
-                        <button
-                            id="admin-login-btn"
-                            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
-                            ${icons.logIn}
-                            Modo Administrador
-                        </button>
-                    </div>
+// === AUTENTICAÇÃO E LOGIN (NOVO SISTEMA)
+// =================================================================
+
+// Função de Login
+const handleLogin = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const pass = document.getElementById('login-password').value;
+    
+    try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        // O onAuthStateChanged no final do arquivo vai detectar que logou
+    } catch (error) {
+        console.error("Erro no login:", error);
+        let msg = "Email ou senha inválidos.";
+        if (error.code === 'auth/invalid-credential') msg = "Dados incorretos.";
+        showModal("Erro ao Entrar", msg);
+    }
+};
+
+// Função de Cadastro
+const handleRegister = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('register-email').value;
+    const pass = document.getElementById('register-password').value;
+    const confirmPass = document.getElementById('register-confirm-password').value;
+
+    if (pass !== confirmPass) {
+        showModal("Erro", "As senhas não conferem.");
+        return;
+    }
+    if (pass.length < 6) {
+        showModal("Erro", "A senha deve ter pelo menos 6 caracteres.");
+        return;
+    }
+
+    try {
+        await createUserWithEmailAndPassword(auth, email, pass);
+        showModal("Bem-vindo!", "Conta criada com sucesso! Você já está logado.");
+    } catch (error) {
+        console.error("Erro no cadastro:", error);
+        let msg = "Não foi possível criar a conta.";
+        if (error.code === 'auth/email-already-in-use') msg = "Este email já está cadastrado.";
+        if (error.code === 'auth/weak-password') msg = "Senha muito fraca.";
+        showModal("Erro ao Cadastrar", msg);
+    }
+};
+
+// Função de Logout
+const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        // O onAuthStateChanged vai detectar e mandar pro login
+    } catch (error) {
+        console.error("Erro ao sair:", error);
+    }
+};
+
+// Nova View de Login
+const renderLogin = () => {
+    mainContent.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
+            <h2 class="text-3xl font-bold text-center text-cyan-600 mb-2">Sortudo Beach Tennis 🎾</h2>
+            <p class="text-center text-gray-500 mb-8">Gerencie seus torneios profissionalmente.</p>
+            
+            <div class="flex mb-6 border-b">
+                <button id="tab-login" class="flex-1 py-2 text-cyan-600 font-bold border-b-2 border-cyan-600">Entrar</button>
+                <button id="tab-register" class="flex-1 py-2 text-gray-400 hover:text-gray-600">Criar Conta</button>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="login-email" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
                 </div>
-            `;
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Senha</label>
+                    <input type="password" id="login-password" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-lg transition-all">Entrar</button>
+            </form>
 
-            // Listeners da tela de Login
-            document.getElementById('visitor-login-btn').addEventListener('click', () => {
-                appState.isAdmin = false;
-                navigateTo('championshipList');
-            });
-            document.getElementById('admin-login-btn').addEventListener('click', () => {
-                const password = prompt("Digite a senha de administrador:");
-                if (password === ADMIN_PASSWORD) {
-                    appState.isAdmin = true;
-                    navigateTo('championshipList');
-                } else if (password !== null) { 
-                    showModal("Acesso Negado", "Senha incorreta.");
-                }
-            });
-        };
+            <form id="register-form" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="register-email" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Senha</label>
+                    <input type="password" id="register-password" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Confirmar Senha</label>
+                    <input type="password" id="register-confirm-password" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition-all">Criar Conta</button>
+            </form>
+        </div>
+    `;
+
+    // Lógica para trocar de aba
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const formLogin = document.getElementById('login-form');
+    const formRegister = document.getElementById('register-form');
+
+    tabLogin.addEventListener('click', () => {
+        tabLogin.className = "flex-1 py-2 text-cyan-600 font-bold border-b-2 border-cyan-600";
+        tabRegister.className = "flex-1 py-2 text-gray-400 hover:text-gray-600";
+        formLogin.classList.remove('hidden');
+        formRegister.classList.add('hidden');
+    });
+
+    tabRegister.addEventListener('click', () => {
+        tabRegister.className = "flex-1 py-2 text-cyan-600 font-bold border-b-2 border-cyan-600";
+        tabLogin.className = "flex-1 py-2 text-gray-400 hover:text-gray-600";
+        formRegister.classList.remove('hidden');
+        formLogin.classList.add('hidden');
+    });
+
+    document.getElementById('login-form').addEventListener('submit', handleLogin);
+    document.getElementById('register-form').addEventListener('submit', handleRegister);
+};
 
         // =================================================================
         // === VIEW: LISTA DE CAMPEONATOS
@@ -4377,58 +4433,49 @@
         };
         
         // =================================================================
-        // === INICIALIZAÇÃO DO APP
+        // === INICIALIZAÇÃO (Controle de Acesso)
         // =================================================================
         onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                try {
-                    await signInAnonymously(auth);
-                } catch (error) {
-                    console.error("Erro na autenticação anônima:", error);
-                    let errorMessage = "Não foi possível conectar ao Firebase. Verifique sua conexão.";
-                    if (error.code === 'auth/configuration-not-found') {
-                        errorMessage = "Erro de Autenticação: O 'Login Anônimo' (Anonymous) não está ATIVADO no seu painel do Firebase.";
-                    }
-                    showModal("Erro de Autenticação", errorMessage);
-                    return;
-                }
-            }
-            
-            // Usuário está logado (anônimo ou não)
-            if (user && !appState.isAuthReady) {
-                // Força o uso do ID Mestre
-                const effectiveUserId = MESTRE_USER_ID; 
-                appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
-                userIdFooter.textContent = effectiveUserId; 
+            if (user) {
+                // USUÁRIO LOGOU COM SUCESSO
+                console.log("Usuário conectado:", user.email);
                 
-                // Verifica se está entrando em Modo Telão
+                appState.userId = user.uid; // <--- AQUI ESTÁ O SEGREDO (Cada um tem seu ID)
+                appState.userEmail = user.email;
+                appState.isAuthReady = true;
+                appState.isAdmin = true; // Todo usuário logado é dono dos seus dados
+                
+                userIdFooter.textContent = user.email; // Mostra email no rodapé
+
+                // Lógica do Telão
                 const urlParams = new URLSearchParams(window.location.search);
                 const telaoChampId = urlParams.get('champId');
                 
-                // Inicia os listeners principais
+                // Inicia os ouvintes (agora apontando para a pasta do usuário específico)
                 listenToChampionships();
-                listenToRankingsList(); // Isso também vai iniciar o listenToGlobalPlayers()
+                listenToRankingsList(); 
                 
                 if (urlParams.has('telao') && telaoChampId) {
-                    // MODO TELÃO
                     appState.isTelaoMode = true;
-                    appState.isAdmin = false; 
-                    
-                    // Aplica estilos CSS para o Telão (remove header/footer, muda fundo)
+                    // Aplica estilo do telão
                     const telaoStyles = document.createElement('style');
-                    telaoStyles.innerHTML = `
-                        body { background-color: #FFFAF0; } 
-                        #app-container { max-width: 100%; padding: 1rem 2rem; }
-                        header, footer { display: none !important; }
-                    `;
+                    telaoStyles.innerHTML = `body { background-color: #FFFAF0; overflow: hidden; height: 100vh; } #app-container { max-width: 100%; padding: 1rem 2rem; } header, footer { display: none !important; }`;
                     document.head.appendChild(telaoStyles);
                     
                     navigateTo('telaoView', telaoChampId);
                 } else {
-                    // MODO NORMAL (Admin/Visitante)
                     appState.isTelaoMode = false;
-                    navigateTo('login');
+                    if (appState.currentView === 'loading' || appState.currentView === 'login') {
+                        navigateTo('championshipList');
+                    }
                 }
+            } else {
+                // USUÁRIO SAIU OU NÃO ESTÁ LOGADO
+                console.log("Nenhum usuário conectado.");
+                appState.userId = null;
+                appState.userEmail = null;
+                appState.isAdmin = false;
+                navigateTo('login');
             }
         });
 
