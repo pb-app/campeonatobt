@@ -1,7 +1,7 @@
 // =================================================================
 // === VIEW.JS - Renderização e Layouts
 // =================================================================
-import { appState, dataCache, icons } from './state.js';
+import { appState, dataCache, icons } from './icons.js';
 
 // --- Telão Principal (Com as correções de layout) ---
 export const renderTelaoView = () => {
