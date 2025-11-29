@@ -1,0 +1,75 @@
+/* =========================================
+   STYLE.CSS - Visual do App
+   ========================================= */
+
+#installBanner {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #0891B2; 
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+#installBanner button {
+    background-color: white;
+    color: #0891B2; 
+    border: none;
+    padding: 6px 12px;
+    margin-left: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+#installBanner button:hover {
+    background-color: #e5e7eb;
+}
+.header-nav { 
+     background-color: #1a1a1a;
+}
+body {
+    font-family: 'Inter', sans-serif;
+    color: #1F2937;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+.animate-fade-in-sm {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+.hidden {
+    display: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #FEF3C7; /* bg-amber-50 */
+}
+::-webkit-scrollbar-thumb {
+    background: #9CA3AF; /* text-gray-400 */
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #6B7280; /* text-gray-500 */
+}
+
+/* Esconder barra de rolagem mas permitir scroll */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
