@@ -4,9 +4,9 @@
 import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { 
     getAuth, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
-    signOut, 
+    createUserWithEmailAndPassword, // NOVO: Para criar conta
+    signInWithEmailAndPassword,     // NOVO: Para logar
+    signOut,                        // NOVO: Para sair
     onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
@@ -34,26 +34,155 @@ const firebaseConfig = {
   appId: "1:706083235199:web:5eca6041bb817401ee264a"
 };
 
-// Inicialização dos serviços
+// Inicialização
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 // =================================================================
-// === ESTADO GLOBAL
+// === CONSTANTES E ESTADO GLOBAL
 // =================================================================
 
+// ID do "Dono" dos dados públicos (O Mestre)
+const MASTER_ID = "campeonato-sortudo-admin"; 
+
+// Estado global reativo do aplicativo
 let appState = {
     userId: null,        // Agora será o UID único do usuário logado
     userEmail: null,     // Email do usuário
     isAuthReady: false,
     isAdmin: false,      
+    canEdit: false,      // NOVO: Controla se o usuário pode editar o campeonato atual
     isTelaoMode: false,
     currentView: 'loading', 
     currentChampionshipId: null,
     currentRankingId: null, 
 };
 
+// =================================================================
+// === AUTENTICAÇÃO E LOGIN (NOVO SISTEMA)
+// =================================================================
+
+// Função de Login
+const handleLogin = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const pass = document.getElementById('login-password').value;
+    
+    try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        // O onAuthStateChanged no final do arquivo vai detectar que logou
+    } catch (error) {
+        console.error("Erro no login:", error);
+        let msg = "Email ou senha inválidos.";
+        if (error.code === 'auth/invalid-credential') msg = "Dados incorretos.";
+        showModal("Erro ao Entrar", msg);
+    }
+};
+
+// Função de Cadastro
+const handleRegister = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('register-email').value;
+    const pass = document.getElementById('register-password').value;
+    const confirmPass = document.getElementById('register-confirm-password').value;
+
+    if (pass !== confirmPass) {
+        showModal("Erro", "As senhas não conferem.");
+        return;
+    }
+    if (pass.length < 6) {
+        showModal("Erro", "A senha deve ter pelo menos 6 caracteres.");
+        return;
+    }
+
+    try {
+        await createUserWithEmailAndPassword(auth, email, pass);
+        showModal("Bem-vindo!", "Conta criada com sucesso! Você já está logado.");
+    } catch (error) {
+        console.error("Erro no cadastro:", error);
+        let msg = "Não foi possível criar a conta.";
+        if (error.code === 'auth/email-already-in-use') msg = "Este email já está cadastrado.";
+        if (error.code === 'auth/weak-password') msg = "Senha muito fraca.";
+        showModal("Erro ao Cadastrar", msg);
+    }
+};
+
+// Função de Logout
+const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        // O onAuthStateChanged vai detectar e mandar pro login
+    } catch (error) {
+        console.error("Erro ao sair:", error);
+    }
+};
+
+// Nova View de Login
+const renderLogin = () => {
+    mainContent.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
+            <h2 class="text-3xl font-bold text-center text-cyan-600 mb-2">Sortudo Beach Tennis 🎾</h2>
+            <p class="text-center text-gray-500 mb-8">Gerencie seus torneios profissionalmente.</p>
+            
+            <div class="flex mb-6 border-b">
+                <button id="tab-login" class="flex-1 py-2 text-cyan-600 font-bold border-b-2 border-cyan-600">Entrar</button>
+                <button id="tab-register" class="flex-1 py-2 text-gray-400 hover:text-gray-600">Criar Conta</button>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="login-email" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Senha</label>
+                    <input type="password" id="login-password" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-lg transition-all">Entrar</button>
+            </form>
+
+            <form id="register-form" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="register-email" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Senha</label>
+                    <input type="password" id="register-password" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Confirmar Senha</label>
+                    <input type="password" id="register-confirm-password" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition-all">Criar Conta</button>
+            </form>
+        </div>
+    `;
+
+    // Lógica para trocar de aba
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const formLogin = document.getElementById('login-form');
+    const formRegister = document.getElementById('register-form');
+
+    tabLogin.addEventListener('click', () => {
+        tabLogin.className = "flex-1 py-2 text-cyan-600 font-bold border-b-2 border-cyan-600";
+        tabRegister.className = "flex-1 py-2 text-gray-400 hover:text-gray-600";
+        formLogin.classList.remove('hidden');
+        formRegister.classList.add('hidden');
+    });
+
+    tabRegister.addEventListener('click', () => {
+        tabRegister.className = "flex-1 py-2 text-cyan-600 font-bold border-b-2 border-cyan-600";
+        tabLogin.className = "flex-1 py-2 text-gray-400 hover:text-gray-600";
+        formRegister.classList.remove('hidden');
+        formLogin.classList.add('hidden');
+    });
+
+    document.getElementById('login-form').addEventListener('submit', handleLogin);
+    document.getElementById('register-form').addEventListener('submit', handleRegister);
+};
         // Caches de dados globais (ouvintes do Firestore)
         let allRankings = []; 
         let championships = []; 
@@ -237,44 +366,66 @@ let appState = {
                 render();
             }
         };
+ // =================================================================
+// === RENDERIZAÇÃO DO CABEÇALHO (Atualizado)
+// =================================================================
 
-        /**
-         * Renderiza os botões do cabeçalho (Agora com Logout real)
-         */
-        const renderHeaderButtons = () => {
-            let navHtml = ''; 
-            let authHtml = ''; 
+/**
+ * Renderiza os botões de "Ranking" / "Voltar" / "Login/Sair" no cabeçalho
+ */
+const renderHeaderButtons = () => {
+    let navHtml = ''; 
+    let authHtml = ''; 
 
-            // Botão de Navegação
-            if (appState.currentView === 'championshipList') {
-                navHtml = `<button id="nav-to-ranking" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">🏆 ${icons.award} Ranking Geral</button>`;
-            } else if (appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') {
-                navHtml = `<button id="nav-to-list" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">${icons.arrowLeft} Voltar</button>`;
-            }
+    // Botão de Navegação (Ranking Geral / Voltar)
+    if (appState.currentView === 'championshipList') {
+        navHtml = `
+        <button
+            id="nav-to-ranking"
+            class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+            🏆 ${icons.award}
+            Ranking Geral
+        </button>
+        `;
+    } else if (appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') {
+        navHtml = `
+        <button
+            id="nav-to-list"
+            class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+            ${icons.arrowLeft}
+            Voltar
+        </button>
+        `;
+    }
 
-            // Botão Sair (Só aparece se não estiver na tela de login)
-            if (appState.currentView !== 'login') {
-                authHtml = `
-                <div class="flex items-center gap-3">
-                    <span class="text-xs text-gray-500 hidden sm:inline">${appState.userEmail || ''}</span>
-                    <button id="nav-to-logout" class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                        ${icons.logOut} Sair
-                    </button>
-                </div>
-                `;
-            }
-            
-            headerButtons.innerHTML = navHtml + authHtml; 
+    // Botão de Autenticação (Mostra Email e Botão Sair)
+    if (appState.currentView !== 'login') {
+        authHtml = `
+        <div class="flex items-center gap-3">
+            <span class="text-xs text-gray-500 hidden sm:inline font-medium">${appState.userEmail || ''}</span>
+            <button
+                id="nav-to-logout"
+                class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+                ${icons.logOut}
+                Sair
+            </button>
+        </div>
+        `;
+    }
+    
+    headerButtons.innerHTML = navHtml + authHtml; 
 
-            const rankingBtn = document.getElementById('nav-to-ranking');
-            if (rankingBtn) rankingBtn.addEventListener('click', () => navigateTo('globalRanking'));
-            
-            const listBtn = document.getElementById('nav-to-list');
-            if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
-            
-            const logoutBtn = document.getElementById('nav-to-logout');
-            if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
-        };
+    // Adiciona listeners aos botões renderizados
+    const rankingBtn = document.getElementById('nav-to-ranking');
+    if (rankingBtn) rankingBtn.addEventListener('click', () => navigateTo('globalRanking'));
+    
+    const listBtn = document.getElementById('nav-to-list');
+    if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
+    
+    // Novo listener de Logout
+    const logoutBtn = document.getElementById('nav-to-logout');
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+};
 
         // =================================================================
 // === AUTENTICAÇÃO E LOGIN (NOVO SISTEMA)
@@ -333,72 +484,6 @@ const handleLogout = async () => {
     } catch (error) {
         console.error("Erro ao sair:", error);
     }
-};
-
-// Nova View de Login
-const renderLogin = () => {
-    mainContent.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
-            <h2 class="text-3xl font-bold text-center text-cyan-600 mb-2">Sortudo Beach Tennis 🎾</h2>
-            <p class="text-center text-gray-500 mb-8">Gerencie seus torneios profissionalmente.</p>
-            
-            <div class="flex mb-6 border-b">
-                <button id="tab-login" class="flex-1 py-2 text-cyan-600 font-bold border-b-2 border-cyan-600">Entrar</button>
-                <button id="tab-register" class="flex-1 py-2 text-gray-400 hover:text-gray-600">Criar Conta</button>
-            </div>
-
-            <form id="login-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="login-email" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Senha</label>
-                    <input type="password" id="login-password" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
-                </div>
-                <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-lg transition-all">Entrar</button>
-            </form>
-
-            <form id="register-form" class="space-y-4 hidden">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="register-email" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Senha</label>
-                    <input type="password" id="register-password" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Confirmar Senha</label>
-                    <input type="password" id="register-confirm-password" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-cyan-500" required>
-                </div>
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition-all">Criar Conta</button>
-            </form>
-        </div>
-    `;
-
-    // Lógica para trocar de aba
-    const tabLogin = document.getElementById('tab-login');
-    const tabRegister = document.getElementById('tab-register');
-    const formLogin = document.getElementById('login-form');
-    const formRegister = document.getElementById('register-form');
-
-    tabLogin.addEventListener('click', () => {
-        tabLogin.className = "flex-1 py-2 text-cyan-600 font-bold border-b-2 border-cyan-600";
-        tabRegister.className = "flex-1 py-2 text-gray-400 hover:text-gray-600";
-        formLogin.classList.remove('hidden');
-        formRegister.classList.add('hidden');
-    });
-
-    tabRegister.addEventListener('click', () => {
-        tabRegister.className = "flex-1 py-2 text-cyan-600 font-bold border-b-2 border-cyan-600";
-        tabLogin.className = "flex-1 py-2 text-gray-400 hover:text-gray-600";
-        formRegister.classList.remove('hidden');
-        formLogin.classList.add('hidden');
-    });
-
-    document.getElementById('login-form').addEventListener('submit', handleLogin);
-    document.getElementById('register-form').addEventListener('submit', handleRegister);
 };
 
         // =================================================================
@@ -4296,183 +4381,237 @@ const renderLogin = () => {
             });
         };
 
-        /**
-         * Ouve a lista de campeonatos
-         */
-        const listenToChampionships = () => {
-            unsubscribeChampionships();
-            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
-            const q = query(champCollectionRef);
-            
-            unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
-                championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // =================================================================
+// === LISTENERS HÍBRIDOS (MURAL PÚBLICO + PRIVADO)
+// =================================================================
+
+// Variáveis para armazenar dados misturados
+let publicChamps = [];
+let myChamps = [];
+let publicRankings = [];
+let myRankings = [];
+
+/**
+ * Ouve a lista de campeonatos (Do Usuário + Do Mestre)
+ */
+const listenToChampionships = () => {
+    unsubscribeChampionships(); 
+
+    // Função interna para misturar e atualizar a tela
+    const updateCombinedList = () => {
+        const combined = [...publicChamps, ...myChamps];
+        // Remove duplicatas por ID (caso o usuário seja o próprio Mestre)
+        const uniqueMap = new Map(combined.map(c => [c.id, c]));
+        championships = Array.from(uniqueMap.values());
+        
+        if (appState.currentView === 'championshipList') renderChampionshipList();
+    };
+
+    // 1. Ouve os campeonatos PESSOAIS (Meus)
+    const myCollection = collection(db, 'users', appState.userId, 'championships');
+    const unsub1 = onSnapshot(query(myCollection), (snap) => {
+        myChamps = snap.docs.map(doc => ({ 
+            id: doc.id, 
+            ...doc.data(), 
+            ownerId: appState.userId, 
+            isMine: true 
+        }));
+        updateCombinedList();
+    });
+
+    // 2. Ouve os campeonatos PÚBLICOS (Do Mestre)
+    let unsub2 = () => {};
+    // Só busca se eu NÃO for o Mestre (para não duplicar)
+    if (appState.userId !== MASTER_ID) {
+        const publicCollection = collection(db, 'users', MASTER_ID, 'championships');
+        unsub2 = onSnapshot(query(publicCollection), (snap) => {
+            publicChamps = snap.docs.map(doc => ({ 
+                id: doc.id, 
+                ...doc.data(), 
+                ownerId: MASTER_ID, 
+                isMine: false 
+            }));
+            updateCombinedList();
+        });
+    } else {
+        publicChamps = [];
+    }
+
+    // Atualiza a função global de cancelar
+    unsubscribeChampionships = () => { unsub1(); unsub2(); };
+};
+
+/**
+ * Ouve a lista de Rankings (Do Usuário + Do Mestre)
+ */
+const listenToRankingsList = () => {
+    unsubscribeRankingsList();
+
+    const updateCombinedRankings = () => {
+        const combined = [...publicRankings, ...myRankings];
+        const uniqueMap = new Map(combined.map(r => [r.id, r]));
+        allRankings = Array.from(uniqueMap.values());
+        
+        // Se não tem ranking selecionado, pega o primeiro da lista
+        if ((!appState.currentRankingId || !allRankings.find(r=>r.id===appState.currentRankingId)) && allRankings.length > 0) {
+            appState.currentRankingId = allRankings[0].id;
+        }
+        
+        listenToGlobalPlayers(); // Recarrega jogadores do ranking selecionado
+        if (!appState.isTelaoMode) render();
+    };
+
+    // 1. Rankings PESSOAIS
+    const myRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
+    const unsub1 = onSnapshot(myRef, (docSnap) => {
+        myRankings = docSnap.exists() ? (docSnap.data().list || []).map(r => ({...r, ownerId: appState.userId})) : [];
+        updateCombinedRankings();
+    });
+
+    // 2. Rankings PÚBLICOS
+    let unsub2 = () => {};
+    if (appState.userId !== MASTER_ID) {
+        const publicRef = doc(db, 'users', MASTER_ID, 'app_data', 'rankings');
+        unsub2 = onSnapshot(publicRef, (docSnap) => {
+            publicRankings = docSnap.exists() ? (docSnap.data().list || []).map(r => ({...r, ownerId: MASTER_ID})) : [];
+            updateCombinedRankings();
+        });
+    }
+
+    unsubscribeRankingsList = () => { unsub1(); unsub2(); };
+};
+
+/**
+ * Ouve os jogadores (Precisa saber quem é o DONO do ranking atual)
+ */
+const listenToGlobalPlayers = () => {
+    unsubscribeGlobalPlayers();
+    
+    if (!appState.currentRankingId) return;
+
+    // Descobre quem é o dono deste ranking específico na lista carregada
+    const currentRankingObj = allRankings.find(r => r.id === appState.currentRankingId);
+    // Se não achar (raro), assume que é do usuário logado
+    const ownerId = currentRankingObj ? currentRankingObj.ownerId : appState.userId;
+
+    const playersCollectionRef = collection(db, 'users', ownerId, 'rankings', appState.currentRankingId, 'players');
+    
+    unsubscribeGlobalPlayers = onSnapshot(query(playersCollectionRef), (querySnapshot) => {
+        globalPlayers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (appState.currentView === 'globalRanking') renderGlobalRanking();
+    });
+};
+
+/**
+ * Ouve o campeonato ativo (Identifica se é Público ou Privado)
+ */
+const listenToActiveChampionship = (champId) => {
+    unsubscribeActiveChampionship();
+    
+    // Tenta achar o campeonato na lista já carregada para saber o dono
+    const champObj = championships.find(c => c.id === champId);
+    let ownerId = champObj ? champObj.ownerId : appState.userId;
+
+    // Helper para configurar o listener
+    const setupListener = (targetOwnerId) => {
+        const champDataRef = doc(db, 'users', targetOwnerId, 'championships', champId, 'data', 'main');
+        
+        unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
+            if (docSnap.exists()) {
+                // Carregou com sucesso!
+                activeChampionship = { id: docSnap.id, ...docSnap.data(), ownerId: targetOwnerId };
                 
-                if (appState.currentView === 'championshipList') {
-                    render();
-                }
-                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
-                    // Atualiza o telão se o status do campeonato mudar (ex: 'finished')
-                    render();
-                }
-            }, (error) => {
-                console.error("Erro ao carregar campeonatos:", error);
-                showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
-            });
-        };
-
-     /**
-         * Ouve os dados de um campeonato específico (data/main)
-         */
-        const listenToActiveChampionship = (champId) => {
-            unsubscribeActiveChampionship();
-            const champDataRef = doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main');
-            
-            unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    activeChampionship = { id: docSnap.id, ...docSnap.data() };
-                    
-                    // *** CORREÇÃO (Bug de Iteração v2): Adiciona checagem extra para 'null' e 'typeof object' ***
-                    // Garante que o histórico é um objeto (e não null) antes de tentar iterar
-                    if (activeChampionship.pairHistory && typeof activeChampionship.pairHistory === 'object') {
-                        const pairHistorySets = {};
-                        for (const key in activeChampionship.pairHistory) { 
-                            const value = activeChampionship.pairHistory[key];
-                            if (Array.isArray(value)) {
-                                pairHistorySets[key] = new Set(value);
-                            } else if (typeof value === 'object' && value !== null) {
-                                pairHistorySets[key] = new Set(Object.keys(value)); 
-                            } else {
-                                pairHistorySets[key] = new Set();
-                            }
-                        }
-                        activeChampionship.pairHistory = pairHistorySets;
-                    } else {
-                         activeChampionship.pairHistory = {}; // Garante que é um objeto para o resto do app
+                // Tratamento de Histórico (Sets vs Arrays)
+                if (activeChampionship.pairHistory && typeof activeChampionship.pairHistory === 'object') {
+                    const pairHistorySets = {};
+                    for (const key in activeChampionship.pairHistory) { 
+                        const value = activeChampionship.pairHistory[key];
+                        if (Array.isArray(value)) pairHistorySets[key] = new Set(value);
+                        else if (typeof value === 'object' && value !== null) pairHistorySets[key] = new Set(Object.keys(value)); 
+                        else pairHistorySets[key] = new Set();
                     }
+                    activeChampionship.pairHistory = pairHistorySets;
+                } else { activeChampionship.pairHistory = {}; }
 
-                    if (activeChampionship.opponentHistory && typeof activeChampionship.opponentHistory === 'object') {
-                        const opponentHistorySets = {};
-                        for (const key in activeChampionship.opponentHistory) { 
-                            const value = activeChampionship.opponentHistory[key];
-                             if (Array.isArray(value)) {
-                                opponentHistorySets[key] = new Set(value);
-                            } else if (typeof value === 'object' && value !== null) {
-                                opponentHistorySets[key] = new Set(Object.keys(value));
-                            } else {
-                                opponentHistorySets[key] = new Set();
-                            }
-                        }
-                        activeChampionship.opponentHistory = opponentHistorySets;
-                    } else {
-                        activeChampionship.opponentHistory = {}; // Garante que é um objeto para o resto do app
+                if (activeChampionship.opponentHistory && typeof activeChampionship.opponentHistory === 'object') {
+                    const opponentHistorySets = {};
+                    for (const key in activeChampionship.opponentHistory) { 
+                        const value = activeChampionship.opponentHistory[key];
+                        if (Array.isArray(value)) opponentHistorySets[key] = new Set(value);
+                        else if (typeof value === 'object' && value !== null) opponentHistorySets[key] = new Set(Object.keys(value));
+                        else opponentHistorySets[key] = new Set();
                     }
-                    
-                    render(); // Renderiza a view do campeonato com os dados atualizados
+                    activeChampionship.opponentHistory = opponentHistorySets;
+                } else { activeChampionship.opponentHistory = {}; }
+
+                // Define permissão de edição: Só pode editar se for o DONO
+                appState.canEdit = (targetOwnerId === appState.userId);
+
+                if (appState.isTelaoMode) renderTelaoView();
+                else renderChampionshipView();
+
+            } else {
+                // Se não achou no usuário e não é o Mestre, tenta buscar no Mestre (link direto compartilhado)
+                if (targetOwnerId === appState.userId && appState.userId !== MASTER_ID) {
+                    setupListener(MASTER_ID); // Tenta de novo na pasta do Mestre
                 } else {
-                    showModal("Erro", "Não foi possível carregar os dados deste campeonato. (O doc 'data/main' não foi encontrado).");
+                    showModal("Erro", "Campeonato não encontrado.");
                     if (!appState.isTelaoMode) navigateTo('championshipList');
-                    else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro: Campeonato não encontrado.</h1>`;
                 }
-            }, (error) => {
-                console.error("Erro ao carregar campeonato ativo:", error);
-                showModal("Erro", "Não foi possível carregar este campeonato. Verifique as regras do Firestore.");
-                if (!appState.isTelaoMode) navigateTo('championshipList');
-                else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro de conexão.</h1>`;
-            });
-        };
-        /**
-         * Ouve a lista de nomes de Rankings (app_data/rankings)
-         */
-        const listenToRankingsList = () => {
-            unsubscribeRankingsList();
-            const rankingsDocRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
-            
-            unsubscribeRankingsList = onSnapshot(rankingsDocRef, async (docSnap) => {
-                let list = [];
-                if (docSnap.exists()) {
-                    list = docSnap.data().list || [];
-                }
-                
-                // Se não existir nenhum ranking, cria o "Ranking Geral" padrão
-                if (list.length === 0) {
-                    try {
-                        const defaultRanking = { id: "ranking_geral", name: "Ranking Geral" };
-                        await setDoc(rankingsDocRef, { list: [defaultRanking] });
-                        allRankings = [defaultRanking];
-                    } catch (error) {
-                        console.error("Erro ao criar ranking padrão:", error);
-                        showModal("Erro Crítico", "Não foi possível inicializar a lista de rankings.");
-                        return;
-                    }
-                } else {
-                    allRankings = list;
-                }
-                
-                // Define o rankingId atual se não estiver definido ou se o selecionado foi excluído
-                const selectedRankingExists = allRankings.some(r => r.id === appState.currentRankingId);
-                if ((!appState.currentRankingId || !selectedRankingExists) && allRankings.length > 0) {
-                    appState.currentRankingId = allRankings[0].id;
-                } else if (allRankings.length === 0) {
-                    appState.currentRankingId = null; 
-                }
-                
-                // (Re)Inicia o listener de jogadores com o rankingId correto
-                listenToGlobalPlayers();
-                
-                // Renderiza a view (exceto telão, que não depende da lista de rankings)
-                if (!appState.isTelaoMode) {
-                    render();
-                }
-            }, (error) => {
-                console.error("Erro ao carregar lista de rankings:", error);
-                showModal("Erro Crítico", "Não foi possível carregar a lista de rankings.");
-            });
-        };
+            }
+        }, (error) => {
+             console.log("Erro de permissão ou não encontrado:", error);
+        });
+    };
+
+    setupListener(ownerId);
+};
         
         // =================================================================
-        // === INICIALIZAÇÃO (Controle de Acesso)
-        // =================================================================
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                // USUÁRIO LOGOU COM SUCESSO
-                console.log("Usuário conectado:", user.email);
-                
-                appState.userId = user.uid; // <--- AQUI ESTÁ O SEGREDO (Cada um tem seu ID)
-                appState.userEmail = user.email;
-                appState.isAuthReady = true;
-                appState.isAdmin = true; // Todo usuário logado é dono dos seus dados
-                
-                userIdFooter.textContent = user.email; // Mostra email no rodapé
+// === INICIALIZAÇÃO (Atualizada com Segurança)
+// =================================================================
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        // USUÁRIO LOGADO
+        console.log("Usuário conectado:", user.email);
+        
+        appState.userId = user.uid; // O ID agora é o UID do usuário (Segurança!)
+        appState.userEmail = user.email;
+        appState.isAuthReady = true;
+        appState.isAdmin = true; // Cada usuário é Admin dos seus próprios dados
+        
+        if(userIdFooter) userIdFooter.textContent = user.email; 
 
-                // Lógica do Telão
-                const urlParams = new URLSearchParams(window.location.search);
-                const telaoChampId = urlParams.get('champId');
-                
-                // Inicia os ouvintes (agora apontando para a pasta do usuário específico)
-                listenToChampionships();
-                listenToRankingsList(); 
-                
-                if (urlParams.has('telao') && telaoChampId) {
-                    appState.isTelaoMode = true;
-                    // Aplica estilo do telão
-                    const telaoStyles = document.createElement('style');
-                    telaoStyles.innerHTML = `body { background-color: #FFFAF0; overflow: hidden; height: 100vh; } #app-container { max-width: 100%; padding: 1rem 2rem; } header, footer { display: none !important; }`;
-                    document.head.appendChild(telaoStyles);
-                    
-                    navigateTo('telaoView', telaoChampId);
-                } else {
-                    appState.isTelaoMode = false;
-                    if (appState.currentView === 'loading' || appState.currentView === 'login') {
-                        navigateTo('championshipList');
-                    }
-                }
-            } else {
-                // USUÁRIO SAIU OU NÃO ESTÁ LOGADO
-                console.log("Nenhum usuário conectado.");
-                appState.userId = null;
-                appState.userEmail = null;
-                appState.isAdmin = false;
-                navigateTo('login');
+        // Verifica se é link de Telão
+        const urlParams = new URLSearchParams(window.location.search);
+        const telaoChampId = urlParams.get('champId');
+        
+        // Inicia os ouvintes de dados
+        listenToChampionships();
+        listenToRankingsList(); 
+        
+        if (urlParams.has('telao') && telaoChampId) {
+            // Lógica do Telão
+            appState.isTelaoMode = true;
+            const telaoStyles = document.createElement('style');
+            telaoStyles.innerHTML = `body { background-color: #FFFAF0; overflow: hidden; height: 100vh; } #app-container { max-width: 100%; padding: 1rem 2rem; } header, footer { display: none !important; }`;
+            document.head.appendChild(telaoStyles);
+            
+            navigateTo('telaoView', telaoChampId);
+        } else {
+            // Modo Normal
+            appState.isTelaoMode = false;
+            // Se estava na tela de carregamento ou login, vai para a lista
+            if (appState.currentView === 'loading' || appState.currentView === 'login') {
+                navigateTo('championshipList');
             }
-        });
-
+        }
+    } else {
+        // USUÁRIO DESLOGADO
+        console.log("Nenhum usuário conectado.");
+        appState.userId = null;
+        appState.userEmail = null;
+        appState.isAdmin = false;
+        navigateTo('login');
+    }
+});
