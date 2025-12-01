@@ -2223,7 +2223,7 @@ const renderTelaoView = () => {
                 mainContent.innerHTML = `
                 <div class="text-center py-20 animate-fade-in">
                     <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600 mx-auto"></div>
-                    <p class="mt-4 text-gray-500">Aguardando dados do torneio...</p>
+                    <p class="mt-4 text-gray-500">Aguardando dados...</p>
                 </div>
                 `;
                 return;
@@ -2233,44 +2233,40 @@ const renderTelaoView = () => {
             const champName = champInfo ? champInfo.name : "Campeonato";
             const champType = champInfo?.type || 'mata_mata';
             
-            // Título melhorado (com fundo branco e sombra)
-            let html = `<h1 class="text-3xl font-bold text-center text-cyan-700 my-2 h-[6vh] flex items-center justify-center bg-white shadow-sm mx-4 rounded-b-lg">🏖️ ${champName} 🎾</h1>`;
+            // Título super compacto
+            let html = `<h1 class="text-2xl font-bold text-center text-cyan-800 my-1 h-[5vh] flex items-center justify-center bg-white shadow-sm mx-2 rounded">🏖️ ${champName} 🎾</h1>`;
             
             let contentHtml = '';
             
-            // --- 1. MODO INSCRIÇÃO (Comum a todos) ---
             if (activeChampionship.status === 'registration') {
                 contentHtml = renderPlayerRegistration_ReadOnly();
             }
-            // --- 2. MODO SORTUDO (NOVO LAYOUT 30/70) ---
             else if (champType === 'sortudo') {
+                // --- MODO SORTUDO (COMPACTO SEM SCROLL) ---
                 
-                // Gera o HTML do Ranking
                 const rankingHtml = renderLeaderboard_Sortudo_ReadOnly(champInfo?.status === 'finished');
                 
-                // Gera o HTML das Rodadas
                 let roundsHtml = '';
                 if (activeChampionship.status === 'rounds' || champInfo?.status === 'finished') {
                     roundsHtml = renderRounds_Sortudo_ReadOnly();
                 } else {
-                    roundsHtml = `<div class="col-span-full flex items-center justify-center text-gray-400 text-xl h-full">Aguardando início das rodadas...</div>`;
+                    roundsHtml = `<div class="col-span-full flex items-center justify-center text-gray-400 text-sm h-full">Aguardando rodadas...</div>`;
                 }
 
-                // Monta o Grid Assimétrico (30% Ranking | 70% Rodadas)
                 contentHtml = `
-                <div class="flex flex-row w-full h-[90vh] px-4 gap-4 animate-fade-in pb-4">
-                    <div class="w-[30%] h-full flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                        <div class="bg-cyan-600 text-white p-3 text-center font-bold text-xl shadow-md z-10">
-                            🏆 Classificação
+                <div class="flex flex-row w-full h-[93vh] px-2 gap-2 animate-fade-in pb-2 overflow-hidden">
+                    <div class="w-[30%] h-full flex flex-col bg-white rounded shadow border border-gray-200 overflow-hidden">
+                        <div class="bg-cyan-700 text-white py-1 text-center font-bold text-sm uppercase tracking-wider shadow-sm shrink-0">
+                            Classificação
                         </div>
-                        <div class="overflow-y-auto flex-grow p-2">
+                        <div class="p-1 h-full overflow-hidden">
                              ${rankingHtml}
                         </div>
                     </div>
 
-                    <div class="w-[70%] h-full flex flex-col bg-slate-50 rounded-xl shadow-inner border border-gray-200 overflow-hidden p-2">
-                        <div class="overflow-y-auto h-full pr-1">
-                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3">
+                    <div class="w-[70%] h-full flex flex-col bg-slate-100 rounded shadow-inner border border-gray-200 overflow-hidden p-1">
+                        <div class="h-full overflow-hidden">
+                            <div class="grid grid-cols-3 xl:grid-cols-4 gap-2 h-full content-start">
                                 ${roundsHtml}
                             </div>
                         </div>
@@ -2278,49 +2274,37 @@ const renderTelaoView = () => {
                 </div>
                 `;
             } 
-            // --- 3. MODO MATA-MATA (LÓGICA ORIGINAL RESTAURADA) ---
             else {
+                // ... MANTÉM O CÓDIGO DO MATA-MATA (CÓDIGO ORIGINAL) ...
                 let bracketData = {};
-
-                if (champInfo?.status === 'finished') {
-                    bracketData = renderKnockoutView_ReadOnly(true);
-                } else if (activeChampionship.status === 'knockout') {
-                    bracketData = renderKnockoutView_ReadOnly(false);
-                } 
+                if (champInfo?.status === 'finished') bracketData = renderKnockoutView_ReadOnly(true);
+                else if (activeChampionship.status === 'knockout') bracketData = renderKnockoutView_ReadOnly(false);
                 
-                // Verifica se está em fase de grupos
                 if (activeChampionship.status === 'groups') {
-                    const numGroups = activeChampionship.groups.length;
-                    contentHtml = `
-                    <div class="grid gap-2 w-full h-[92vh] px-2 animate-fade-in" style="grid-template-columns: repeat(${numGroups}, minmax(0, 1fr));">
-                        ${renderGroupStage_ReadOnly()}
-                    </div>
-                    `;
-                }
-                
-                // Se não for grupos e tiver dados de chave (bracket), exibe as chaves
-                if (!contentHtml && bracketData.goldHtml) {
+                     const numGroups = activeChampionship.groups.length;
+                     contentHtml = `
+                     <div class="grid gap-2 w-full h-[92vh] px-2 animate-fade-in" style="grid-template-columns: repeat(${numGroups}, minmax(0, 1fr));">
+                         ${renderGroupStage_ReadOnly()}
+                     </div>`;
+                } else if (bracketData.goldHtml) {
                      contentHtml = `
                      <div class="flex flex-row w-full h-[88vh] px-2 gap-4 animate-fade-in items-stretch">
                         <div class="flex-1 w-1/2 h-full overflow-hidden">${bracketData.goldHtml}</div>
                         <div class="w-px bg-gray-300 h-[90%] self-center"></div>
                         <div class="flex-1 w-1/2 h-full overflow-hidden">${bracketData.silverHtml}</div>
                      </div>
-                     
-                     <div class="fixed bottom-0 left-0 w-full bg-gray-800 text-white text-center py-2 z-50 h-[6vh] flex items-center justify-center shadow-lg border-t-4 border-rose-500">
+                     <div class="fixed bottom-0 left-0 w-full bg-gray-800 text-white text-center py-2 z-50 h-[6vh] flex items-center justify-center border-t-4 border-rose-500">
                         ${bracketData.coveiroHtml}
-                     </div>
-                     `;
+                     </div>`;
                 }
             }
 
             html += contentHtml;
             mainContent.innerHTML = html;
             
-            // Ajustes de CSS específicos do modo Telão
             if (appState.isTelaoMode) {
-                 document.body.style.backgroundColor = '#f8fafc'; // Cor de fundo suave
-                 document.body.style.overflow = 'hidden'; // Trava rolagem
+                 document.body.style.backgroundColor = '#f1f5f9';
+                 document.body.style.overflow = 'hidden'; // TRAVA TOTAL DO SCROLL
                  document.body.style.height = '100vh';
             }
         };
@@ -2549,66 +2533,38 @@ const renderTelaoView = () => {
             const roundsHtml = Object.keys(rounds).sort((a,b) => a-b).map(roundNum => `<div class="p-2">Visualização Admin</div>`).join('');
             return `<div class="bg-white p-4 text-center text-gray-500">Visualização disponível no Modo Telão.</div>`;
         };
-        /**
-         * Renderiza Leaderboard (Read-Only)
-         */
         const renderLeaderboard_Sortudo_ReadOnly = (isFinished) => {
             const { leaderboard } = getLeaderboard_Sortudo();
             
+            if (leaderboard.length === 0) return '<p class="text-center text-xs text-gray-400">.</p>';
+
             const playerRows = leaderboard.map((player, index) => {
                 const rank = index + 1;
-                let medal = '';
-                if (rank === 1) medal = '🥇';
-                if (rank === 2) medal = '🥈';
-                if (rank === 3) medal = '🥉';
+                let rankDisplay = `<span class="font-bold text-gray-500 w-5 text-right mr-1">#${rank}</span>`;
+                let bgClass = "bg-gray-50";
+                let textClass = "text-gray-700";
                 
-                const isCoveiro = (rank === leaderboard.length && leaderboard.length > 3);
-                const saldoClass = player.saldo > 0 ? 'text-emerald-600' : (player.saldo < 0 ? 'text-rose-600' : 'text-gray-500');
+                // Cores sutis para Top 3
+                if (rank === 1) { rankDisplay = '🥇'; bgClass = "bg-yellow-100"; textClass = "text-yellow-900 font-bold"; }
+                if (rank === 2) { rankDisplay = '🥈'; bgClass = "bg-gray-200"; textClass = "text-gray-900 font-bold"; }
+                if (rank === 3) { rankDisplay = '🥉'; bgClass = "bg-orange-100"; textClass = "text-orange-900 font-bold"; }
                 
+                // Nomes truncados para não quebrar linha
                 return `
-                    <tr class="border-b border-amber-100">
-                        <td class="p-3 sm:p-4 font-bold text-lg text-cyan-600">${rank}º ${medal}</td>
-                        <td class="p-3 sm:p-4 font-medium text-gray-800 text-lg">${player.name} ${isCoveiro ? '👻' : ''}</td>
-                        <td class="p-3 sm:p-4 font-bold text-xl text-orange-600">${player.totalGames}</td>
-                        <td class="p-3 sm:p-4 font-bold text-lg ${saldoClass}">${player.saldo > 0 ? '+' : ''}${player.saldo}</td>
-                        <td class="p-3 sm:p-4 text-center text-gray-500">${player.gamesLost}</td>
-                    </tr>
+                    <div class="flex items-center px-2 py-1 rounded border border-gray-200 ${bgClass} h-8 shadow-sm">
+                        <div class="text-sm mr-2">${rankDisplay}</div>
+                        <div class="text-xs sm:text-sm truncate ${textClass} w-full">${player.name}</div>
+                    </div>
                 `;
             }).join('');
-            
-            // Cabeçalho da Tabela
-            const tableHeader = `
-                <thead class="bg-amber-100">
-                    <tr class="text-left">
-                        <th class="p-3 sm:p-4 rounded-tl-lg text-gray-600">Pos.</th>
-                        <th class="p-3 sm:p-4 text-gray-600">Jogador</th>
-                        <th class="p-3 sm:p-4 text-gray-600">Games Ganhos</th>
-                        <th class="p-3 sm:p-4 text-gray-600">Saldo</th>
-                        <th class="p-3 sm:p-4 text-center rounded-tr-lg text-gray-600">Games Perdidos</th>
-                    </tr>
-                </thead>
-            `;
 
+            // Grid com 2 colunas para caber o dobro de jogadores na vertical
             return `
-                <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200 mb-8 w-full lg:w-auto">
-                    <h2 class="text-3xl font-bold mb-6 text-purple-600 flex items-center gap-3">
-                        ${icons.shuffle} Classificação ao Vivo
-                    </h2>
-                    <div class="overflow-x-auto">
-                        <table class="w-full min-w-max">
-                            ${tableHeader}
-                            <tbody class="divide-y divide-amber-100">
-                                ${playerRows}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
+                <div class="grid grid-cols-2 gap-x-2 gap-y-1 content-start h-full overflow-hidden">
+                    ${playerRows}
+                </div>`;
         };
         
-        /**
-         * Renderiza Rodadas (Read-Only)
-         */
         const renderRounds_Sortudo_ReadOnly = () => {
             const playerNameMap = new Map(activeChampionship.players.map(p => [p.id, p.name]));
 
@@ -2618,41 +2574,43 @@ const renderTelaoView = () => {
                     const [p1, p2, p3, p4] = match.p;
                     const [s1, s2] = match.score;
                     
-                    const pair1Name = `${playerNameMap.get(p1) || '?'} / ${playerNameMap.get(p2) || '?'}`;
-                    const pair2Name = `${playerNameMap.get(p3) || '?'} / ${playerNameMap.get(p4) || '?'}`;
+                    // Apenas primeiro nome para economizar espaço
+                    const n = (id) => (playerNameMap.get(id) || '?').split(' ')[0];
+                    const pair1 = `${n(p1)}/${n(p2)}`;
+                    const pair2 = `${n(p3)}/${n(p4)}`;
+
+                    let scoreHtml = `<span class="text-[10px] text-gray-400 bg-gray-100 px-1 rounded">vs</span>`;
+                    
+                    if (s1 !== null && s2 !== null) {
+                        // Placar destacado
+                        const c1 = s1 > s2 ? 'text-black font-bold' : 'text-gray-500';
+                        const c2 = s2 > s1 ? 'text-black font-bold' : 'text-gray-500';
+                        scoreHtml = `<div class="flex text-xs bg-gray-200 px-1 rounded"><span class="${c1}">${s1}</span><span class="text-gray-400 mx-0.5">:</span><span class="${c2}">${s2}</span></div>`;
+                    }
 
                     return `
-                    <div class="bg-amber-100 p-3 sm:p-4 rounded-lg border border-amber-200">
-                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
-                            <span class="text-base text-gray-700 text-center sm:text-left">${pair1Name}</span>
-                            <span class="font-bold text-cyan-600">vs</span>
-                            <span class="text-base text-gray-700 text-center sm:text-right">${pair2Name}</span>
-                        </div>
-                        <div class="flex justify-center items-center gap-3 mt-3">
-                            <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
-                                ${s1 === null ? '-' : s1}
-                            </span>
-                            <span class="text-gray-500 text-xl">-</span>
-                             <span class="w-20 bg-white border border-gray-300 text-gray-800 rounded-lg p-2 text-center text-2xl font-bold opacity-70">
-                                ${s2 === null ? '-' : s2}
-                            </span>
-                        </div>
+                    <div class="flex justify-between items-center bg-white px-1 py-0.5 rounded border-b border-gray-100 last:border-0 h-6">
+                        <span class="text-[10px] text-gray-600 truncate w-[40%] text-right leading-none">${pair1}</span>
+                        <div class="w-[20%] flex justify-center">${scoreHtml}</div>
+                        <span class="text-[10px] text-gray-600 truncate w-[40%] text-left leading-none">${pair2}</span>
                     </div>
                     `;
                 }).join('');
                 
-                const luckyPlayersHtml = round.luckyPlayers.map(pId => playerNameMap.get(pId) || '?').join(' / ');
+                // Sortudos (texto muito pequeno)
+                const luckyHtml = round.luckyPlayers.length > 0 
+                    ? `<div class="text-[9px] text-purple-700 bg-purple-50 px-1 text-center truncate border-t border-purple-100">Sortudos: ${round.luckyPlayers.map(id => (playerNameMap.get(id)||'?').split(' ')[0]).join(', ')}</div>` 
+                    : '';
 
                 return `
-                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-fade-in w-full sm:max-w-sm border border-gray-200">
-                    <h3 class="text-3xl font-bold text-cyan-600 mb-4">Rodada ${roundIndex + 1}</h3>
-                    ${luckyPlayersHtml ? `
-                        <div class="mb-4 bg-emerald-50 border border-emerald-200 p-3 rounded-lg text-sm">
-                            <span class="font-semibold text-emerald-700">Sortudos (BYE):</span> ${luckyPlayersHtml}
-                            <span class="text-emerald-700">(+${activeChampionship.config.luckyGames} games)</span>
-                        </div>
-                    ` : ''}
-                    <div class="space-y-4">${matchesHtml}</div>
+                <div class="bg-white rounded border border-gray-300 overflow-hidden flex flex-col shadow-sm">
+                    <div class="bg-gray-200 text-center py-0.5 border-b border-gray-300">
+                        <span class="font-bold text-gray-700 text-[10px] uppercase">Rodada ${roundIndex + 1}</span>
+                    </div>
+                    <div class="flex-grow flex flex-col justify-center">
+                        ${matchesHtml}
+                    </div>
+                    ${luckyHtml}
                 </div>
                 `;
             }).join('');
