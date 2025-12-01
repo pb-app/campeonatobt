@@ -139,7 +139,7 @@
 
         <footer class="text-center mt-8 text-gray-500 text-sm">
             <p>ID da Liga: <span id="user-id-footer">Conectando...</span></p>
-            <p>App de Ranking v5.4.9 (final)</p>
+            <p>App de Ranking v5.6.9 (Quadra)</p>
         </footer>
     </div>
 
@@ -2218,10 +2218,7 @@
             return `<div class="space-y-8 animate-fade-in">${roundsHtml}</div>`;
         };
         
-// =================================================================
-        // === VIEW: TELÃO (Bifurcação)
-        // =================================================================
-        const renderTelaoView = () => {
+const renderTelaoView = () => {
              if (!activeChampionship) {
                 mainContent.innerHTML = `
                 <div class="text-center py-20 animate-fade-in">
@@ -2236,47 +2233,74 @@
             const champName = champInfo ? champInfo.name : "Campeonato";
             const champType = champInfo?.type || 'mata_mata';
             
-            // Título bem compacto (5% da altura)
-            let html = `<h1 class="text-2xl sm:text-3xl font-bold text-center text-cyan-600 my-2 animate-fade-in h-[5vh] flex items-center justify-center">🏖️ ${champName} 🎾</h1>`;
+            // Título melhorado (com fundo branco e sombra)
+            let html = `<h1 class="text-3xl font-bold text-center text-cyan-700 my-2 h-[6vh] flex items-center justify-center bg-white shadow-sm mx-4 rounded-b-lg">🏖️ ${champName} 🎾</h1>`;
             
-            let bottomRowHtml = '';
+            let contentHtml = '';
             
+            // --- 1. MODO INSCRIÇÃO (Comum a todos) ---
             if (activeChampionship.status === 'registration') {
-                bottomRowHtml = renderPlayerRegistration_ReadOnly();
+                contentHtml = renderPlayerRegistration_ReadOnly();
             }
+            // --- 2. MODO SORTUDO (NOVO LAYOUT 30/70) ---
             else if (champType === 'sortudo') {
-                // Modo Sortudo (Layout Original)
-                let sortudoContent = '';
-                if (champInfo?.status === 'finished') {
-                    sortudoContent = renderLeaderboard_Sortudo_ReadOnly(true);
-                } else if (activeChampionship.status === 'rounds') {
-                    sortudoContent = renderLeaderboard_Sortudo_ReadOnly(false);
-                    sortudoContent += renderRounds_Sortudo_ReadOnly();
+                
+                // Gera o HTML do Ranking
+                const rankingHtml = renderLeaderboard_Sortudo_ReadOnly(champInfo?.status === 'finished');
+                
+                // Gera o HTML das Rodadas
+                let roundsHtml = '';
+                if (activeChampionship.status === 'rounds' || champInfo?.status === 'finished') {
+                    roundsHtml = renderRounds_Sortudo_ReadOnly();
+                } else {
+                    roundsHtml = `<div class="col-span-full flex items-center justify-center text-gray-400 text-xl h-full">Aguardando início das rodadas...</div>`;
                 }
-                bottomRowHtml = `<div class="flex flex-wrap justify-center gap-6 animate-fade-in">${sortudoContent}</div>`;
+
+                // Monta o Grid Assimétrico (30% Ranking | 70% Rodadas)
+                contentHtml = `
+                <div class="flex flex-row w-full h-[90vh] px-4 gap-4 animate-fade-in pb-4">
+                    <div class="w-[30%] h-full flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                        <div class="bg-cyan-600 text-white p-3 text-center font-bold text-xl shadow-md z-10">
+                            🏆 Classificação
+                        </div>
+                        <div class="overflow-y-auto flex-grow p-2">
+                             ${rankingHtml}
+                        </div>
+                    </div>
+
+                    <div class="w-[70%] h-full flex flex-col bg-slate-50 rounded-xl shadow-inner border border-gray-200 overflow-hidden p-2">
+                        <div class="overflow-y-auto h-full pr-1">
+                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3">
+                                ${roundsHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
             } 
+            // --- 3. MODO MATA-MATA (LÓGICA ORIGINAL RESTAURADA) ---
             else {
-                // Modo Mata-Mata (LAYOUT 16:9 OTIMIZADO)
                 let bracketData = {};
 
                 if (champInfo?.status === 'finished') {
                     bracketData = renderKnockoutView_ReadOnly(true);
                 } else if (activeChampionship.status === 'knockout') {
                     bracketData = renderKnockoutView_ReadOnly(false);
-                } else if (activeChampionship.status === 'groups') {
-                    // Layout de Grupos (já otimizado na etapa anterior)
+                } 
+                
+                // Verifica se está em fase de grupos
+                if (activeChampionship.status === 'groups') {
                     const numGroups = activeChampionship.groups.length;
-                    bottomRowHtml = `
+                    contentHtml = `
                     <div class="grid gap-2 w-full h-[92vh] px-2 animate-fade-in" style="grid-template-columns: repeat(${numGroups}, minmax(0, 1fr));">
                         ${renderGroupStage_ReadOnly()}
                     </div>
                     `;
                 }
                 
-                // Se for Mata-Mata (Brackets)
-                if (!bottomRowHtml && bracketData.goldHtml) {
-                     // Altura calculada: 100vh - Título - Rodapé Coveiro
-                     bottomRowHtml = `
+                // Se não for grupos e tiver dados de chave (bracket), exibe as chaves
+                if (!contentHtml && bracketData.goldHtml) {
+                     contentHtml = `
                      <div class="flex flex-row w-full h-[88vh] px-2 gap-4 animate-fade-in items-stretch">
                         <div class="flex-1 w-1/2 h-full overflow-hidden">${bracketData.goldHtml}</div>
                         <div class="w-px bg-gray-300 h-[90%] self-center"></div>
@@ -2290,11 +2314,12 @@
                 }
             }
 
-            html += bottomRowHtml;
+            html += contentHtml;
             mainContent.innerHTML = html;
             
+            // Ajustes de CSS específicos do modo Telão
             if (appState.isTelaoMode) {
-                 document.body.style.backgroundColor = '#FFFAF0'; 
+                 document.body.style.backgroundColor = '#f8fafc'; // Cor de fundo suave
                  document.body.style.overflow = 'hidden'; // Trava rolagem
                  document.body.style.height = '100vh';
             }
