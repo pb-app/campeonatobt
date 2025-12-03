@@ -479,87 +479,90 @@ import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/fir
 // =================================================================
 // === VIEW: LOGIN (Versão Comercial com Firebase Auth)
 // =================================================================
-const renderLogin = () => {
-    mainContent.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in border border-gray-200 mt-10">
-            <div class="text-center mb-8">
-                <h2 class="text-3xl font-bold text-cyan-600">Ranking BT Pro 🎾</h2>
-                <p class="text-gray-500 mt-2">Área do Organizador</p>
-            </div>
-            
-            <form id="login-form" class="space-y-6">
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">E-mail</label>
-                    <input type="email" id="email" required placeholder="admin@suaarena.com"
-                        class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm">
+// =================================================================
+        // === VIEW: LOGIN (Versão Comercial com Firebase Auth)
+        // =================================================================
+        const renderLogin = () => {
+            mainContent.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in border border-gray-200 mt-10">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-cyan-600">Ranking BT Pro 🎾</h2>
+                        <p class="text-gray-500 mt-2">Área do Organizador</p>
+                    </div>
+                    
+                    <form id="login-form" class="space-y-6">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700">E-mail</label>
+                            <input type="email" id="email" required placeholder="admin@suaarena.com"
+                                class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
+                            <input type="password" id="password" required placeholder="••••••"
+                                class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm">
+                        </div>
+
+                        <div id="login-error" class="text-rose-600 text-sm text-center hidden bg-rose-50 p-2 rounded border border-rose-200"></div>
+
+                        <button type="submit" id="btn-entrar"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors">
+                            Entrar
+                        </button>
+                    </form>
+
+                    <div class="mt-6 border-t border-gray-200 pt-4 text-center">
+                         <p class="text-xs text-gray-400 mb-3">Apenas visualização</p>
+                         <button
+                            id="visitor-login-btn"
+                            class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-md transition-all flex items-center justify-center gap-2 text-sm">
+                            ${icons.eye}
+                            Entrar como Visitante
+                        </button>
+                    </div>
                 </div>
+            `;
+
+            // Lógica do Login Seguro
+            const loginForm = document.getElementById('login-form');
+            const errorMsg = document.getElementById('login-error');
+            const btnEntrar = document.getElementById('btn-entrar');
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
                 
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
-                    <input type="password" id="password" required placeholder="••••••"
-                        class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm">
-                </div>
+                btnEntrar.disabled = true;
+                btnEntrar.textContent = "Verificando...";
+                errorMsg.classList.add('hidden');
 
-                <div id="login-error" class="text-rose-600 text-sm text-center hidden bg-rose-50 p-2 rounded border border-rose-200"></div>
+                try {
+                    // Autenticação Real do Firebase
+                    await signInWithEmailAndPassword(auth, email, password);
+                    // O redirecionamento acontece automaticamente no onAuthStateChanged
+                    
+                } catch (error) {
+                    console.error(error);
+                    btnEntrar.disabled = false;
+                    btnEntrar.textContent = "Entrar";
+                    errorMsg.classList.remove('hidden');
+                    
+                    if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                        errorMsg.textContent = "E-mail ou senha incorretos.";
+                    } else if (error.code === 'auth/too-many-requests') {
+                        errorMsg.textContent = "Muitas tentativas. Aguarde um momento.";
+                    } else {
+                        errorMsg.textContent = "Erro: " + error.message;
+                    }
+                }
+            });
 
-                <button type="submit" id="btn-entrar"
-                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors">
-                    Entrar
-                </button>
-            </form>
-
-            <div class="mt-6 border-t border-gray-200 pt-4 text-center">
-                 <p class="text-xs text-gray-400 mb-3">Apenas visualização</p>
-                 <button
-                    id="visitor-login-btn"
-                    class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-md transition-all flex items-center justify-center gap-2 text-sm">
-                    ${icons.eye}
-                    Entrar como Visitante
-                </button>
-            </div>
-        </div>
-    `;
-
-    // Lógica do Login Seguro
-    const loginForm = document.getElementById('login-form');
-    const errorMsg = document.getElementById('login-error');
-    const btnEntrar = document.getElementById('btn-entrar');
-
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        
-        btnEntrar.disabled = true;
-        btnEntrar.textContent = "Verificando...";
-        errorMsg.classList.add('hidden');
-
-        try {
-            // Autenticação Real do Firebase
-            await signInWithEmailAndPassword(auth, email, password);
-            // O redirecionamento acontece automaticamente no onAuthStateChanged
-            
-        } catch (error) {
-            console.error(error);
-            btnEntrar.disabled = false;
-            btnEntrar.textContent = "Entrar";
-            errorMsg.classList.remove('hidden');
-            
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-                errorMsg.textContent = "E-mail ou senha incorretos.";
-            } else if (error.code === 'auth/too-many-requests') {
-                errorMsg.textContent = "Muitas tentativas. Aguarde um momento.";
-            } else {
-                errorMsg.textContent = "Erro: " + error.message;
-            }
-        }
-    });
-
-    document.getElementById('visitor-login-btn').addEventListener('click', () => {
-        appState.isAdmin = false;
-        navigateTo('championshipList');
-    });
-};
+            document.getElementById('visitor-login-btn').addEventListener('click', () => {
+                appState.isAdmin = false;
+                navigateTo('championshipList');
+            });
+        };
 
         // =================================================================
         // === VIEW: LISTA DE CAMPEONATOS
@@ -4611,11 +4614,15 @@ const renderTelaoView = () => {
         // =================================================================
         // === INICIALIZAÇÃO E CONTROLE DE SESSÃO
         // =================================================================
+        // =================================================================
+        // === INICIALIZAÇÃO E CONTROLE DE SESSÃO
+        // =================================================================
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 // Se não tiver ninguém logado, manda para a tela de login
-                // (Exceto se for modo Telão, que precisa tratar diferente depois)
-                if (!appState.isAuthReady && !window.location.search.includes('telao')) {
+                // (Exceto se for modo Telão, que vamos tratar abaixo)
+                const urlParams = new URLSearchParams(window.location.search);
+                if (!appState.isAuthReady && !urlParams.has('telao')) {
                      appState.currentView = 'login';
                      render();
                 }
@@ -4630,30 +4637,34 @@ const renderTelaoView = () => {
                     // Define o ID do usuário para carregar APENAS os dados dele
                     appState = { 
                         ...appState, 
-                        userId: user.uid, // <--- O PULO DO GATO: Usa o ID único do Firebase
+                        userId: user.uid, // <--- A MÁGICA: Usa o ID único do Firebase
                         isAuthReady: true,
                         isAdmin: !isAnonymous // Só é admin se não for anônimo
                     };
                     
-                    userIdFooter.textContent = isAnonymous ? "Visitante" : user.email;
+                    const userIdFooter = document.getElementById('user-id-footer');
+                    if(userIdFooter) userIdFooter.textContent = isAnonymous ? "Visitante" : user.email;
 
-                    // Inicia os listeners
+                    // Inicia os listeners para carregar OS DADOS DESTE USUÁRIO
                     listenToChampionships();
                     listenToRankingsList(); 
                     
-                    // Verifica Telão
+                    // Verifica se é Modo Telão
                     const urlParams = new URLSearchParams(window.location.search);
                     const telaoChampId = urlParams.get('champId');
 
                     if (urlParams.has('telao') && telaoChampId) {
                         appState.isTelaoMode = true;
-                        // Estilos do Telão...
+                        appState.isAdmin = false; // Telão nunca é admin
+                        
+                        // Estilos do Telão
                         const telaoStyles = document.createElement('style');
                         telaoStyles.innerHTML = `body { background-color: #FFFAF0; } #app-container { max-width: 100%; padding: 1rem 2rem; } header, footer { display: none !important; }`;
                         document.head.appendChild(telaoStyles);
+                        
                         navigateTo('telaoView', telaoChampId);
                     } else {
-                        // Se logou com sucesso, vai pra lista
+                        // Se logou com sucesso e não é telão, vai pra lista
                         if (appState.currentView === 'login' || appState.currentView === 'loading') {
                              navigateTo('championshipList');
                         }
