@@ -986,12 +986,23 @@
         };
         
         /**
-         * Lida com a exclusão de um campeonato
+         * Lida com a exclusão de um campeonato (COM MODAL PRO)
          */
         const handleDeleteChampionship = async (champId) => {
             const champ = championships.find(c => c.id === champId);
-            if (window.prompt(`Para confirmar, digite o nome do campeonato: "${champ.name}"`) !== champ.name) {
-                showModal("Cancelado", "A exclusão foi cancelada.");
+            
+            // Modal de Segurança (Confirmar Exclusão)
+            const confirmacao = await showDialog({
+                type: 'prompt', // Usamos prompt para forçar digitar o nome
+                title: 'Excluir Campeonato?',
+                message: `CUIDADO: Isso apagará todos os jogos e dados deste torneio.<br><br>Para confirmar, digite o nome: <b>${champ.name}</b>`,
+                placeholder: 'Digite o nome aqui...',
+                confirmText: 'EXCLUIR DEFINITIVAMENTE',
+                confirmColor: 'bg-rose-600 hover:bg-rose-700' // Botão Vermelho
+            });
+
+            if (confirmacao !== champ.name) {
+                if (confirmacao !== null) showDialog({ title: "Cancelado", message: "O nome digitado não confere." });
                 return;
             }
             
@@ -1000,17 +1011,27 @@
                 await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main'));
                 // Exclui o documento principal
                 await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId));
+                
+                showDialog({ title: "Excluído", message: "Campeonato removido com sucesso." });
             } catch (error) {
-                console.error("Erro ao excluir campeonato:", error);
-                showModal("Erro", "Não foi possível excluir o campeonato.");
+                console.error("Erro ao excluir:", error);
+                showDialog({ title: "Erro", message: "Não foi possível excluir." });
             }
         };
         /**
-         * Lida com a adição de um novo Ranking (lista de nomes)
+         * Lida com a adição de um novo Ranking (COM MODAL PRO)
          */
         const handleAddNewRanking = async () => {
-            const name = prompt("Nome do novo ranking (ex: Temporada 2025):");
-            if (!name || name.trim() === '') return;
+            // Substitui o prompt nativo pelo nosso Modal Lindo
+            const name = await showDialog({
+                type: 'prompt',
+                title: 'Novo Ranking',
+                message: 'Digite o nome da nova temporada ou ranking:',
+                placeholder: 'Ex: Verão 2025',
+                confirmText: 'Criar Ranking'
+            });
+
+            if (!name || name.trim() === '') return; // Usuário cancelou ou deixou vazio
             
             // Gera um ID amigável (slug)
             const id = name.trim().toLowerCase()
@@ -1018,12 +1039,12 @@
                 .replace(/[^a-z0-9-]/g, ''); 
                 
             if (!id) {
-                showModal("Erro", "Nome inválido. Use letras e números.");
+                showDialog({ title: "Erro", message: "Nome inválido. Use letras e números." });
                 return;
             }
             
             if (allRankings.find(r => r.id === id || r.name.toLowerCase() === name.trim().toLowerCase())) {
-                showModal("Erro", "Um ranking com esse nome ou ID já existe.");
+                showDialog({ title: "Duplicado", message: "Já existe um ranking com esse nome." });
                 return;
             }
             
@@ -1031,12 +1052,11 @@
             const newList = [...allRankings, newRanking];
             
             try {
-                // Salva a *lista* de rankings em app_data
                 await setDoc(doc(db, 'users', appState.userId, 'app_data', 'rankings'), { list: newList });
-                showModal("Sucesso!", `Ranking "${name.trim()}" foi criado.`);
+                showDialog({ title: "Sucesso!", message: `Ranking "${name.trim()}" criado com sucesso!` });
             } catch (error) {
                 console.error("Erro ao criar ranking:", error);
-                showModal("Erro", "Não foi possível salvar o novo ranking.");
+                showDialog({ title: "Erro", message: "Não foi possível salvar." });
             }
         };
 
