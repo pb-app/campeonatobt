@@ -1352,14 +1352,14 @@
         const addChampionshipViewListeners = (champInfo, champType) => {
             if (appState.isAdmin) {
                 
-                // --- Listener do Botão Editar Nome ---
+                // Edição de nomes
                 document.querySelectorAll('.edit-name-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         handleEditPlayerName(btn.dataset.id, btn.dataset.name);
                     });
                 });
 
-                // --- NOVO: Listener para salvar a Quadra (ao mudar o valor) ---
+                // Quadra (Mata-Mata)
                 document.querySelectorAll('.court-input').forEach(input => {
                     input.addEventListener('change', async (e) => {
                         const val = e.target.value;
@@ -1379,7 +1379,23 @@
                         await saveActiveChampionship(newChampData);
                     });
                 });
-                // -------------------------------------------------------------
+                
+                // --- NOVO: Quadra (Sortudo) ---
+                document.querySelectorAll('.court-input-sortudo').forEach(input => {
+                    input.addEventListener('change', async (e) => {
+                        const val = e.target.value;
+                        const rIndex = e.target.dataset.roundIndex;
+                        const mIndex = e.target.dataset.matchIndex;
+                        
+                        const newChampData = JSON.parse(JSON.stringify(activeChampionship));
+                        // Atualiza a quadra no array de rodadas
+                        if(newChampData.rounds[rIndex] && newChampData.rounds[rIndex].matches[mIndex]) {
+                             newChampData.rounds[rIndex].matches[mIndex].court = val;
+                             await saveActiveChampionship(newChampData);
+                        }
+                    });
+                });
+                // -----------------------------
 
                 if (activeChampionship.status === 'registration') {
                     const addExistingForm = document.getElementById('add-existing-player-form');
@@ -2165,9 +2181,22 @@
                     return `
                     <div class="bg-amber-50 p-3 sm:p-4 rounded-lg border border-amber-200">
                         <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
-                            <span class="text-sm text-gray-700 text-center sm:text-left">${pair1Name}</span>
-                            <span class="font-bold text-cyan-600">vs</span>
-                            <span class="text-sm text-gray-700 text-center sm:text-right">${pair2Name}</span>
+                            <span class="text-sm text-gray-700 text-center sm:text-left w-full sm:w-auto">${pair1Name}</span>
+                            
+                            <div class="flex flex-col items-center mx-2">
+                                <span class="font-bold text-cyan-600 text-xs">vs</span>
+                                <input 
+                                    type="number" 
+                                    placeholder="Q." 
+                                    value="${match.court || ''}" 
+                                    class="court-input-sortudo w-12 text-center text-xs border border-gray-300 rounded mt-1 bg-white focus:ring-2 focus:ring-cyan-500"
+                                    data-round-index="${roundIndex}"
+                                    data-match-index="${matchIndex}"
+                                    ${isDisabled}
+                                >
+                            </div>
+
+                            <span class="text-sm text-gray-700 text-center sm:text-right w-full sm:w-auto">${pair2Name}</span>
                         </div>
                         <div class="flex justify-center items-center gap-3 mt-3">
                             <input
@@ -2574,7 +2603,7 @@ const renderTelaoView = () => {
                     const [p1, p2, p3, p4] = match.p;
                     const [s1, s2] = match.score;
                     
-                    // Apenas primeiro nome para economizar espaço
+                    // Apenas primeiro nome
                     const n = (id) => (playerNameMap.get(id) || '?').split(' ')[0];
                     const pair1 = `${n(p1)}/${n(p2)}`;
                     const pair2 = `${n(p3)}/${n(p4)}`;
@@ -2582,22 +2611,26 @@ const renderTelaoView = () => {
                     let scoreHtml = `<span class="text-[10px] text-gray-400 bg-gray-100 px-1 rounded">vs</span>`;
                     
                     if (s1 !== null && s2 !== null) {
-                        // Placar destacado
                         const c1 = s1 > s2 ? 'text-black font-bold' : 'text-gray-500';
                         const c2 = s2 > s1 ? 'text-black font-bold' : 'text-gray-500';
                         scoreHtml = `<div class="flex text-xs bg-gray-200 px-1 rounded"><span class="${c1}">${s1}</span><span class="text-gray-400 mx-0.5">:</span><span class="${c2}">${s2}</span></div>`;
                     }
+                    
+                    // --- NOVO: Badge da Quadra ---
+                    const courtHtml = match.court 
+                        ? `<span class="absolute top-0 right-0 bg-purple-600 text-white text-[8px] font-bold px-1 rounded-bl shadow-sm z-10">Q${match.court}</span>` 
+                        : '';
 
                     return `
-                    <div class="flex justify-between items-center bg-white px-1 py-0.5 rounded border-b border-gray-100 last:border-0 h-6">
-                        <span class="text-[10px] text-gray-600 truncate w-[40%] text-right leading-none">${pair1}</span>
+                    <div class="relative flex justify-between items-center bg-white px-1 py-0.5 rounded border-b border-gray-100 last:border-0 h-6">
+                        ${courtHtml}
+                        <span class="text-[10px] text-gray-600 truncate w-[40%] text-right leading-none pr-1">${pair1}</span>
                         <div class="w-[20%] flex justify-center">${scoreHtml}</div>
-                        <span class="text-[10px] text-gray-600 truncate w-[40%] text-left leading-none">${pair2}</span>
+                        <span class="text-[10px] text-gray-600 truncate w-[40%] text-left leading-none pl-1">${pair2}</span>
                     </div>
                     `;
                 }).join('');
                 
-                // Sortudos (texto muito pequeno)
                 const luckyHtml = round.luckyPlayers.length > 0 
                     ? `<div class="text-[9px] text-purple-700 bg-purple-50 px-1 text-center truncate border-t border-purple-100">Sortudos: ${round.luckyPlayers.map(id => (playerNameMap.get(id)||'?').split(' ')[0]).join(', ')}</div>` 
                     : '';
@@ -2607,7 +2640,7 @@ const renderTelaoView = () => {
                     <div class="bg-gray-200 text-center py-0.5 border-b border-gray-300">
                         <span class="font-bold text-gray-700 text-[10px] uppercase">Rodada ${roundIndex + 1}</span>
                     </div>
-                    <div class="flex-grow flex flex-col justify-center">
+                    <div class="flex-grow flex flex-col justify-center bg-slate-50">
                         ${matchesHtml}
                     </div>
                     ${luckyHtml}
