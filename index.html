@@ -187,13 +187,14 @@
 
         // Configuração do Firebase (Substitua pelos seus dados)
         const firebaseConfig = {
-          apiKey: "AIzaSyDeS-rk8OJKhghv1djVucmR3-erOa-ppMY",
-          authDomain: "campeonato-sortudo.firebaseapp.com",
-          projectId: "campeonato-sortudo",
-          storageBucket: "campeonato-sortudo.firebasestorage.app",
-          messagingSenderId: "706083235199",
-          appId: "1:706083235199:web:5eca6041bb817401ee264a"
-        };
+  apiKey: "AIzaSyDssRXcskF1ozqVrTDmQX09QP7GrAWZKNg",
+  authDomain: "raking-beach-tennis-pro.firebaseapp.com",
+  projectId: "raking-beach-tennis-pro",
+  storageBucket: "raking-beach-tennis-pro.firebasestorage.app",
+  messagingSenderId: "289005072476",
+  appId: "1:289005072476:web:9934650195920baf343699",
+  measurementId: "G-FW62QF334R"
+};
 
         // Inicialização dos serviços do Firebase
         const app = initializeApp(firebaseConfig);
@@ -205,9 +206,7 @@
         // === CONSTANTES E ESTADO GLOBAL
         // =================================================================
         
-        // ID Mestre (Admin)
-        const MESTRE_USER_ID = "campeonato-sortudo-admin";
-        const ADMIN_PASSWORD = "adm2025"; 
+        
 
         // Estado global reativo do aplicativo
         let appState = {
@@ -471,44 +470,95 @@
         // =================================================================
         // === VIEW: LOGIN
         // =================================================================
-        const renderLogin = () => {
-            mainContent.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
-                    <h2 class="text-3xl font-bold text-center text-cyan-600 mb-8">Bem-vindo(a) 🎾</h2>
-                    
-                    <div class="space-y-4">
-                        <button
-                            id="visitor-login-btn"
-                            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 px-6 rounded-lg shadow-sm transition-all flex items-center justify-center gap-3 text-lg">
-                            ${icons.eye}
-                            Modo Visitante
-                        </button>
-                        
-                        <button
-                            id="admin-login-btn"
-                            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
-                            ${icons.logIn}
-                            Modo Administrador
-                        </button>
-                    </div>
-                </div>
-            `;
+        // =================================================================
+// === VIEW: LOGIN (Versão Comercial com Firebase Auth)
+// =================================================================
+import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-            // Listeners da tela de Login
-            document.getElementById('visitor-login-btn').addEventListener('click', () => {
-                appState.isAdmin = false;
-                navigateTo('championshipList');
-            });
-            document.getElementById('admin-login-btn').addEventListener('click', () => {
-                const password = prompt("Digite a senha de administrador:");
-                if (password === ADMIN_PASSWORD) {
-                    appState.isAdmin = true;
-                    navigateTo('championshipList');
-                } else if (password !== null) { 
-                    showModal("Acesso Negado", "Senha incorreta.");
-                }
-            });
-        };
+const renderLogin = () => {
+    mainContent.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in border border-gray-200 mt-10">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-cyan-600">Área do Organizador 🎾</h2>
+                <p class="text-gray-500 mt-2">Ranking Beach Tennis Pro</p>
+            </div>
+            
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">E-mail</label>
+                    <input type="email" id="email" required 
+                        class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm">
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
+                    <input type="password" id="password" required 
+                        class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm">
+                </div>
+
+                <div id="login-error" class="text-red-600 text-sm text-center hidden"></div>
+
+                <button type="submit" id="btn-entrar"
+                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors">
+                    Entrar
+                </button>
+            </form>
+
+            <div class="mt-6 border-t border-gray-200 pt-4">
+                 <button
+                    id="visitor-login-btn"
+                    class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-md transition-all flex items-center justify-center gap-2 text-sm">
+                    ${icons.eye}
+                    Acessar como Visitante (Apenas Visualizar)
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Lógica do Login
+    const loginForm = document.getElementById('login-form');
+    const errorMsg = document.getElementById('login-error');
+    const btnEntrar = document.getElementById('btn-entrar');
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        btnEntrar.disabled = true;
+        btnEntrar.textContent = "Verificando...";
+        errorMsg.classList.add('hidden');
+
+        try {
+            // Autenticação Real do Firebase
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            
+            // Sucesso! O onAuthStateChanged lá no final do código vai capturar isso
+            // e redirecionar automaticamente.
+            console.log("Logado como:", user.email);
+            
+        } catch (error) {
+            console.error(error);
+            btnEntrar.disabled = false;
+            btnEntrar.textContent = "Entrar";
+            errorMsg.classList.remove('hidden');
+            
+            if (error.code === 'auth/invalid-credential') {
+                errorMsg.textContent = "E-mail ou senha incorretos.";
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMsg.textContent = "Muitas tentativas. Tente novamente mais tarde.";
+            } else {
+                errorMsg.textContent = "Erro ao fazer login: " + error.message;
+            }
+        }
+    });
+
+    document.getElementById('visitor-login-btn').addEventListener('click', () => {
+        appState.isAdmin = false;
+        navigateTo('championshipList');
+    });
+};
 
         // =================================================================
         // === VIEW: LISTA DE CAMPEONATOS
