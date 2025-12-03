@@ -165,12 +165,31 @@
         // === IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
         // =================================================================
         import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        
+        // Importações de Autenticação (Login)
         import { 
             getAuth, 
             signInAnonymously, 
             onAuthStateChanged,
             signInWithEmailAndPassword
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // Importações do Banco de Dados (ISTO ESTAVA FALTANDO!)
+        import {
+            getFirestore,
+            collection,
+            doc,
+            getDoc,
+            setDoc,
+            addDoc,
+            updateDoc, // Adicionei updateDoc por segurança
+            deleteDoc,
+            writeBatch,
+            runTransaction,
+            query,
+            onSnapshot,
+            Timestamp
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Configuração do Firebase (Substitua pelos seus dados)
         const firebaseConfig = {
