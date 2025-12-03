@@ -180,12 +180,13 @@
         // =================================================================
         import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         
-        // Importações de Autenticação (Login)
+        // Importações de Autenticação
         import { 
             getAuth, 
             signInAnonymously, 
             onAuthStateChanged,
-            signInWithEmailAndPassword
+            signInWithEmailAndPassword,
+            signOut // <--- ADICIONE ESTA LINHA (com a vírgula antes)
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // Importações do Banco de Dados (ISTO ESTAVA FALTANDO!)
@@ -525,6 +526,8 @@
                 }
             }
             
+           // ... (parte de cima da função renderHeaderButtons continua igual) ...
+            
             headerButtons.innerHTML = navHtml + authHtml; 
 
             // Adiciona listeners aos botões renderizados
@@ -534,8 +537,25 @@
             const listBtn = document.getElementById('nav-to-list');
             if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
             
+            // --- AQUI ESTÁ A CORREÇÃO DO LOGOUT ---
             const loginBtn = document.getElementById('nav-to-login');
-            if (loginBtn) loginBtn.addEventListener('click', () => navigateTo('login'));
+            if (loginBtn) {
+                loginBtn.addEventListener('click', () => {
+                    if (appState.isAdmin) {
+                        // Se for Admin, faz o LOGOUT REAL do Firebase
+                        signOut(auth).then(() => {
+                            // Recarrega a página para limpar a memória e voltar ao login
+                            window.location.reload();
+                        }).catch((error) => {
+                            console.error("Erro ao sair:", error);
+                            alert("Erro ao tentar sair.");
+                        });
+                    } else {
+                        // Se não for Admin, apenas navega para a tela de login
+                        navigateTo('login');
+                    }
+                });
+            }
         };
 
         // === VIEW: LOGIN (Versão Comercial com Firebase Auth)
