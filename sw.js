@@ -1,5 +1,5 @@
 // Nome do cache
-const CACHE_NAME = "ranking-bt-v1";
+const CACHE_NAME = "ranking-bt-v4";
 
 // Arquivos que serão armazenados em cache
 const FILES_TO_CACHE = [
