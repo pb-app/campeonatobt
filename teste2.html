@@ -4572,12 +4572,11 @@ const renderTelaoView = () => {
                 }
             }
             
-            // Usuário está logado (anônimo ou não)
+           // Usuário está logado (anônimo ou não)
             if (user && !appState.isAuthReady) {
-                // Força o uso do ID Mestre
-                const effectiveUserId = MESTRE_USER_ID; 
-                appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
-                userIdFooter.textContent = effectiveUserId; 
+                // USA O SEU ID REAL (Para recuperar dados antigos)
+                appState = { ...appState, userId: user.uid, isAuthReady: true };
+                userIdFooter.textContent = "ID: " + user.uid.slice(0, 6) + "..."; 
                 
                 // Verifica se está entrando em Modo Telão
                 const urlParams = new URLSearchParams(window.location.search);
