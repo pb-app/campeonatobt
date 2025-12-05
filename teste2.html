@@ -4425,26 +4425,61 @@ const renderTelaoView = () => {
          * Ouve a lista de campeonatos
          */
         const listenToChampionships = () => {
-            unsubscribeChampionships();
-            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
-            const q = query(champCollectionRef);
+            const q = query(collection(db, 'users', appState.userId, 'championships'));
             
-            unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
-                championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            unsubscribeChampionships = onSnapshot(q, async (snapshot) => {
+                championships = [];
+                snapshot.forEach(doc => {
+                    championships.push({ id: doc.id, ...doc.data() });
+                });
+
+                // --- AUTO-CORREÇÃO DE RANKINGS (MÁGICA) ---
+                // Verifica se tem algum campeonato usando um ranking que "sumiu" da lista
+                if (allRankings.length > 0) {
+                    let listChanged = false;
+                    // Cria uma cópia da lista atual para não travar
+                    const newList = [...allRankings]; 
+                    const currentIds = new Set(newList.map(r => r.id));
+
+                    championships.forEach(champ => {
+                        // Se o campeonato tem ranking, mas ele NÃO está na lista
+                        if (champ.rankingId && !currentIds.has(champ.rankingId)) {
+                            console.log("Resgatando ranking perdido:", champ.rankingId);
+                            // Adiciona ele de volta na lista automaticamente
+                            newList.push({ 
+                                id: champ.rankingId, 
+                                name: `Ranking Recuperado (${champ.name})` 
+                            });
+                            currentIds.add(champ.rankingId);
+                            listChanged = true;
+                        }
+                    });
+
+                    // Se achou algo perdido, salva a lista corrigida no banco
+                    if (listChanged) {
+                        try {
+                            await setDoc(doc(db, 'users', appState.userId, 'app_data', 'rankings'), { list: newList });
+                            console.log("Lista de rankings corrigida com sucesso!");
+                        } catch (e) {
+                            console.error("Erro ao auto-corrigir rankings:", e);
+                        }
+                    }
+                }
+                // ---------------------------------------------
+
+                renderChampionshipList();
                 
-                if (appState.currentView === 'championshipList') {
-                    render();
+                // Se estiver com algum campeonato aberto, atualiza ele em tempo real
+                if (activeChampionship) {
+                    const updated = championships.find(c => c.id === activeChampionship.id);
+                    if (updated) {
+                        activeChampionship = { ...activeChampionship, ...updated };
+                        if (appState.currentView === 'championshipView') renderChampionshipView();
+                        if (appState.currentView === 'telaoView') renderTelaoView();
+                    }
                 }
-                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
-                    // Atualiza o telão se o status do campeonato mudar (ex: 'finished')
-                    render();
-                }
-            }, (error) => {
-                console.error("Erro ao carregar campeonatos:", error);
-                showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
             });
         };
-
      /**
          * Ouve os dados de um campeonato específico (data/main)
          */
