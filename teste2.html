@@ -4585,7 +4585,7 @@ const renderTelaoView = () => {
         };
 
         /**
-         * Ouve a lista de campeonatos (Modo Portal Global)
+         * Ouve a lista de campeonatos (CORRIGIDO PARA IDENTIFICAR O DONO)
          */
         const listenToChampionships = () => {
             if (unsubscribeChampionships) unsubscribeChampionships();
@@ -4593,32 +4593,36 @@ const renderTelaoView = () => {
             let q;
 
             if (appState.isAdmin) {
-                // ADMIN: Vê apenas a sua própria pasta
+                // Admin vê os seus
                 q = query(collection(db, 'users', appState.userId, 'championships'));
             } else {
-                // VISITANTE: Vê tudo (Collection Group)
-                // Isso transforma seu app em um Portal de Torneios
+                // Visitante vê de todos (Portal Global)
                 q = query(collectionGroup(db, 'championships'));
             }
 
             unsubscribeChampionships = onSnapshot(q, (snapshot) => {
                 const list = [];
                 snapshot.forEach(doc => {
-                    // Adiciona apenas se tiver nome (evita documentos fantasmas)
-                    if (doc.data().name) {
-                        list.push({ id: doc.id, ...doc.data() });
-                    }
+                    // TRUQUE DE MESTRE:
+                    // Descobre quem é o dono desse campeonato olhando o caminho do banco
+                    // O caminho é users/{DONO_ID}/championships/{CHAMP_ID}
+                    const ownerId = doc.ref.parent.parent ? doc.ref.parent.parent.id : appState.userId;
+
+                    list.push({ 
+                        id: doc.id, 
+                        ownerId: ownerId, // <--- Salvamos o dono aqui!
+                        ...doc.data() 
+                    });
                 });
                 
-                // Ordena por data (mais recentes primeiro)
+                // Ordena por data
                 championships = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 
-                // Atualiza a tela se estiver na lista
                 if (appState.currentView === 'championshipList') {
-                    render();
+                    renderChampionshipList();
                 }
-                
-                // Destrava o carregamento
+
+                // Destrava tela se estiver carregando
                 const spinner = document.getElementById('loading-spinner');
                 const main = document.getElementById('main-content');
                 if(spinner) spinner.classList.add('hidden');
@@ -4626,84 +4630,78 @@ const renderTelaoView = () => {
 
             }, (error) => {
                 console.error("Erro ao buscar campeonatos:", error);
-                
-                // TRATAMENTO DE ERRO DE ÍNDICE (Importante para o Modo Global)
+                // Se der erro de índice (para visitante), mostra o link
                 if (error.message.includes('requires an index')) {
                      const linkMatches = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
                      const link = linkMatches ? linkMatches[0] : "https://console.firebase.google.com";
-
                      showDialog({
                         title: "Configuração Necessária ⚠️",
-                        message: `Para exibir todos os torneios, o Firebase precisa de um Índice.<br><br>
-                                 <a href="${link}" target="_blank" style="color: blue; text-decoration: underline; font-weight: bold;">
-                                    CLIQUE AQUI PARA CRIAR O ÍNDICE
-                                 </a>`,
+                        message: `Falta o índice de busca global.<br><a href="${link}" target="_blank" style="color: blue;">CLIQUE AQUI PARA CRIAR</a>`,
                         confirmText: "Entendi"
                      });
                 }
             });
         };
 
-     /**
-         * Ouve os dados de um campeonato específico (data/main)
+          /**
+         * Ouve os dados de um campeonato (CORRIGIDO PARA LER DO DONO CERTO)
          */
         const listenToActiveChampionship = (champId) => {
             unsubscribeActiveChampionship();
-            const champDataRef = doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main');
+
+            // 1. Descobre quem é o dono do campeonato que queremos ver
+            const targetChamp = championships.find(c => c.id === champId);
+            
+            // Se achou o camp na lista, usa o ownerId dele. Se não, usa o usuário atual (fallback)
+            const targetOwnerId = targetChamp ? (targetChamp.ownerId || appState.userId) : appState.userId;
+
+            // 2. Monta o caminho usando o ID DO DONO, não necessariamente o meu ID
+            const champDataRef = doc(db, 'users', targetOwnerId, 'championships', champId, 'data', 'main');
             
             unsubscribeActiveChampionship = onSnapshot(champDataRef, (docSnap) => {
                 if (docSnap.exists()) {
                     activeChampionship = { id: docSnap.id, ...docSnap.data() };
                     
-                    // *** CORREÇÃO (Bug de Iteração v2): Adiciona checagem extra para 'null' e 'typeof object' ***
-                    // Garante que o histórico é um objeto (e não null) antes de tentar iterar
+                    // Tratamento de Histórico (converte Objetos para Sets para não dar erro)
                     if (activeChampionship.pairHistory && typeof activeChampionship.pairHistory === 'object') {
                         const pairHistorySets = {};
                         for (const key in activeChampionship.pairHistory) { 
                             const value = activeChampionship.pairHistory[key];
-                            if (Array.isArray(value)) {
-                                pairHistorySets[key] = new Set(value);
-                            } else if (typeof value === 'object' && value !== null) {
-                                pairHistorySets[key] = new Set(Object.keys(value)); 
-                            } else {
-                                pairHistorySets[key] = new Set();
-                            }
+                            pairHistorySets[key] = new Set(Array.isArray(value) ? value : []);
                         }
                         activeChampionship.pairHistory = pairHistorySets;
-                    } else {
-                         activeChampionship.pairHistory = {}; // Garante que é um objeto para o resto do app
-                    }
+                    } else { activeChampionship.pairHistory = {}; }
 
                     if (activeChampionship.opponentHistory && typeof activeChampionship.opponentHistory === 'object') {
                         const opponentHistorySets = {};
                         for (const key in activeChampionship.opponentHistory) { 
                             const value = activeChampionship.opponentHistory[key];
-                             if (Array.isArray(value)) {
-                                opponentHistorySets[key] = new Set(value);
-                            } else if (typeof value === 'object' && value !== null) {
-                                opponentHistorySets[key] = new Set(Object.keys(value));
-                            } else {
-                                opponentHistorySets[key] = new Set();
-                            }
+                            opponentHistorySets[key] = new Set(Array.isArray(value) ? value : []);
                         }
                         activeChampionship.opponentHistory = opponentHistorySets;
+                    } else { activeChampionship.opponentHistory = {}; }
+                    
+                    render(); 
+                } else {
+                    // Se o documento data/main não existe
+                    console.error("Doc data/main não encontrado em:", champDataRef.path);
+                    
+                    if(appState.isAdmin) {
+                        showDialog({ title: "Dados Antigos", message: "Este campeonato é antigo e não possui a nova estrutura de dados. Por favor, exclua-o e crie um novo." });
                     } else {
-                        activeChampionship.opponentHistory = {}; // Garante que é um objeto para o resto do app
+                        showDialog({ title: "Erro", message: "Dados do campeonato indisponíveis." });
                     }
                     
-                    render(); // Renderiza a view do campeonato com os dados atualizados
-                } else {
-                    showModal("Erro", "Não foi possível carregar os dados deste campeonato. (O doc 'data/main' não foi encontrado).");
                     if (!appState.isTelaoMode) navigateTo('championshipList');
-                    else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro: Campeonato não encontrado.</h1>`;
                 }
             }, (error) => {
-                console.error("Erro ao carregar campeonato ativo:", error);
-                showModal("Erro", "Não foi possível carregar este campeonato. Verifique as regras do Firestore.");
+                console.error("Erro de permissão ou conexão:", error);
+                // Geralmente erro de permissão se o visitante tentar ler dados privados
+                showDialog({ title: "Acesso Negado", message: "Você não tem permissão para ver os detalhes deste campeonato ou ele foi excluído." });
                 if (!appState.isTelaoMode) navigateTo('championshipList');
-                else mainContent.innerHTML = `<h1 class="text-4xl text-rose-500 text-center p-10">Erro de conexão.</h1>`;
             });
         };
+        
         /**
          * Ouve a lista de nomes de Rankings (app_data/rankings)
          */
