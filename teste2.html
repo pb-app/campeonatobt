@@ -4557,37 +4557,51 @@ const renderTelaoView = () => {
         // =================================================================
         // === INICIALIZAÇÃO DO APP
         // =================================================================
-        if (user && !appState.isAuthReady) {
-                // Força o uso do ID Mestre
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                try {
+                    await signInAnonymously(auth);
+                } catch (error) {
+                    console.error("Erro login:", error);
+                    return;
+                }
+            }
+            
+            // Usuário logado
+            if (user && !appState.isAuthReady) {
+                // --- VOLTA AO ORIGINAL: Força o ID do Admin ---
+                // Isso garante que puxe do "campeonato-sortudo-admin" igual estava na sua foto
                 const effectiveUserId = MESTRE_USER_ID; 
-                appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
-                userIdFooter.textContent = effectiveUserId; 
                 
-                // Verifica se está entrando em Modo Telão
+                appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
+                
+                // Mostra o ID no rodapé
+                if(userIdFooter) userIdFooter.textContent = effectiveUserId; 
+                
+                // Configuração inicial
                 const urlParams = new URLSearchParams(window.location.search);
                 const telaoChampId = urlParams.get('champId');
                 
-                // Inicia os listeners principais
+                // Inicia a busca dos dados (Campeonatos e Rankings) neste ID
                 listenToChampionships();
-                listenToRankingsList(); // Isso também vai iniciar o listenToGlobalPlayers()
+                listenToRankingsList(); 
                 
                 if (urlParams.has('telao') && telaoChampId) {
                     // MODO TELÃO
                     appState.isTelaoMode = true;
                     appState.isAdmin = false; 
                     
-                    // Aplica estilos CSS para o Telão (remove header/footer, muda fundo)
                     const telaoStyles = document.createElement('style');
                     telaoStyles.innerHTML = `
-                        body { background-color: #FFFAF0; } 
-                        #app-container { max-width: 100%; padding: 1rem 2rem; }
-                        header, footer { display: none !important; }
+                        body { background-color: #f1f5f9; } 
+                        #app-container { max-width: 100%; padding: 0.5rem; height: 100vh; overflow: hidden; }
+                        header, footer, #installBanner { display: none !important; }
                     `;
                     document.head.appendChild(telaoStyles);
                     
                     navigateTo('telaoView', telaoChampId);
                 } else {
-                    // MODO NORMAL (Admin/Visitante)
+                    // MODO NORMAL
                     appState.isTelaoMode = false;
                     navigateTo('login');
                 }
