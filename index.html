@@ -637,9 +637,17 @@
                 }
             });
 
-            document.getElementById('visitor-login-btn').addEventListener('click', () => {
-                appState.isAdmin = false;
-                navigateTo('championshipList');
+           document.getElementById('visitor-login-btn').addEventListener('click', () => {
+        const btnVisitor = document.getElementById('visitor-login-btn');
+        btnVisitor.textContent = "Entrando...";
+        btnVisitor.disabled = true;
+
+        // Faz login anônimo para ativar os listeners do Firebase
+        signInAnonymously(auth).catch((error) => {
+            console.error("Erro no login anônimo:", error);
+            alert("Erro ao entrar como visitante.");
+            btnVisitor.textContent = "Tentar Novamente";
+            btnVisitor.disabled = false;
             });
         };
 
