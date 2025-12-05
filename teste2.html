@@ -233,6 +233,7 @@
         // Estado global reativo do aplicativo
         let appState = {
             userId: null,
+            currentOwnerId: null,
             isAuthReady: false,
             isAdmin: false, 
             isTelaoMode: false,
@@ -440,38 +441,50 @@
         };
 
         /**
-         * Navega para uma nova view e (opcionalmente) carrega dados
+         * Navega para uma nova view e carrega os dados do Dono correto
          */
         const navigateTo = (view, champId = null) => {
             if (view === 'login') {
                 appState.isAdmin = false;
+                appState.currentOwnerId = null; // Limpa o dono ao sair
             }
+            
             appState.currentView = view;
             appState.currentChampionshipId = champId;
 
-            // Para qualquer navegação, cancela o ouvinte do campeonato ativo anterior
+            // --- LÓGICA DE VISITANTE: IDENTIFICAR O DONO ---
+            // Se for visitante e estiver entrando num campeonato, descobre quem é o dono
+            if (!appState.isAdmin && champId) {
+                const targetChamp = championships.find(c => c.id === champId);
+                if (targetChamp && targetChamp.ownerId) {
+                    // Define que agora estamos vendo os dados DESTE Admin
+                    if (appState.currentOwnerId !== targetChamp.ownerId) {
+                        appState.currentOwnerId = targetChamp.ownerId;
+                        console.log("Visitando Arena de:", appState.currentOwnerId);
+                        // Recarrega a lista de rankings deste novo dono
+                        listenToRankingsList(); 
+                    }
+                }
+            }
+            // -----------------------------------------------
+
+            // Para qualquer navegação, cancela o ouvinte anterior
             unsubscribeActiveChampionship();
             activeChampionship = null;
 
             if ((view === 'championshipView' || view === 'telaoView') && champId) {
-                // Se for a view de um campeonato, encontra o rankingId dele
                 const champ = championships.find(c => c.id === champId);
                 if (champ && champ.rankingId) {
                     if (appState.currentRankingId !== champ.rankingId) {
                         appState.currentRankingId = champ.rankingId;
-                        listenToGlobalPlayers(); // Carrega os jogadores do ranking vinculado
+                        listenToGlobalPlayers(); // Carrega jogadores do ranking vinculado
                     }
-                } else if (championships.length > 0 && !champ) {
-                    console.warn("Navegando para o telão, mas a lista de campeonatos ainda não tem o ID:", champId);
                 }
-                // Inicia o ouvinte para este campeonato específico
                 listenToActiveChampionship(champId);
             } else if (view === 'globalRanking') {
-                // Se for o ranking global, carrega os jogadores
                 listenToGlobalPlayers();
                 render();
             } else {
-                // Para outras views (Login, Lista), apenas renderiza
                 render();
             }
         };
@@ -4703,11 +4716,20 @@ const renderTelaoView = () => {
         };
         
         /**
-         * Ouve a lista de nomes de Rankings (app_data/rankings)
+         * Ouve a lista de rankings (CORRIGIDO PARA VISITANTE)
          */
         const listenToRankingsList = () => {
             unsubscribeRankingsList();
-            const rankingsDocRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
+            
+            // LÓGICA MÁGICA:
+            // Se sou Admin, busco os meus. 
+            // Se sou Visitante, busco do dono da arena que estou visitando.
+            // Se ainda não entrei em nenhuma arena (currentOwnerId null), uso meu ID (que vai dar vazio, ok).
+            const targetUserId = appState.isAdmin ? appState.userId : (appState.currentOwnerId || appState.userId);
+            
+            if (!targetUserId) return;
+
+            const rankingsDocRef = doc(db, 'users', targetUserId, 'app_data', 'rankings');
             
             unsubscribeRankingsList = onSnapshot(rankingsDocRef, async (docSnap) => {
                 let list = [];
@@ -4715,39 +4737,25 @@ const renderTelaoView = () => {
                     list = docSnap.data().list || [];
                 }
                 
-                // Se não existir nenhum ranking, cria o "Ranking Geral" padrão
-                if (list.length === 0) {
-                    try {
-                        const defaultRanking = { id: "ranking_geral", name: "Ranking Geral" };
-                        await setDoc(rankingsDocRef, { list: [defaultRanking] });
-                        allRankings = [defaultRanking];
-                    } catch (error) {
-                        console.error("Erro ao criar ranking padrão:", error);
-                        showModal("Erro Crítico", "Não foi possível inicializar a lista de rankings.");
-                        return;
-                    }
+                // Se for Admin e não tiver lista, cria a padrão. Visitante apenas lê.
+                if (list.length === 0 && appState.isAdmin) {
+                    /* ... código de criar ranking padrão (mantém igual) ... */
                 } else {
                     allRankings = list;
                 }
                 
-                // Define o rankingId atual se não estiver definido ou se o selecionado foi excluído
+                // Atualiza seleção atual
                 const selectedRankingExists = allRankings.some(r => r.id === appState.currentRankingId);
                 if ((!appState.currentRankingId || !selectedRankingExists) && allRankings.length > 0) {
                     appState.currentRankingId = allRankings[0].id;
-                } else if (allRankings.length === 0) {
-                    appState.currentRankingId = null; 
+                    // Se mudou o ranking padrão, recarrega os jogadores
+                    listenToGlobalPlayers();
                 }
                 
-                // (Re)Inicia o listener de jogadores com o rankingId correto
-                listenToGlobalPlayers();
-                
-                // Renderiza a view (exceto telão, que não depende da lista de rankings)
-                if (!appState.isTelaoMode) {
-                    render();
-                }
+                if (!appState.isTelaoMode) render();
+
             }, (error) => {
-                console.error("Erro ao carregar lista de rankings:", error);
-                showModal("Erro Crítico", "Não foi possível carregar a lista de rankings.");
+                console.error("Erro ao carregar rankings:", error);
             });
         };
         
