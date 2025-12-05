@@ -4564,36 +4564,29 @@ const renderTelaoView = () => {
         // =================================================================
 
         /**
-         * Ouve a coleção de jogadores do ranking selecionado
+         * Ouve a coleção de jogadores (CORRIGIDO PARA VISITANTE)
          */
         const listenToGlobalPlayers = () => {
             unsubscribeGlobalPlayers(); 
             
-            if (!appState.currentRankingId) {
-                console.warn("Nenhum rankingId selecionado. listenToGlobalPlayers() abortado.");
-                globalPlayers = [];
-                if(appState.currentView === 'globalRanking') render();
-                return;
-            }
+            if (!appState.currentRankingId) return;
             
-            // O caminho para os jogadores é /users/{userId}/rankings/{rankingId}/players
-            const playersCollectionRef = collection(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players');
+            // LÓGICA MÁGICA (A mesma de cima):
+            const targetUserId = appState.isAdmin ? appState.userId : (appState.currentOwnerId || appState.userId);
+            
+            // Busca na pasta do DONO DA ARENA, não do visitante
+            const playersCollectionRef = collection(db, 'users', targetUserId, 'rankings', appState.currentRankingId, 'players');
+            
             const q = query(playersCollectionRef);
             
             unsubscribeGlobalPlayers = onSnapshot(q, (querySnapshot) => {
                 globalPlayers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
-                if (appState.currentView === 'globalRanking') {
-                    render();
-                }
-                if (appState.currentView === 'championshipView' && activeChampionship?.status === 'registration') {
+                if (appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') {
                     render();
                 }
             }, (error) => {
-                console.error(`Erro ao carregar ranking ${appState.currentRankingId}:`, error);
-                showModal("Erro", "Não foi possível carregar o ranking selecionado.");
-                globalPlayers = [];
-                if(appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') render();
+                console.error("Erro ao carregar jogadores:", error);
             });
         };
 
