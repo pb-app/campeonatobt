@@ -4578,7 +4578,7 @@ const renderTelaoView = () => {
         };
 
         // =================================================================
-        // === LISTENERS DO FIRESTORE (COM TRATAMENTO DE ERRO)
+        // === LISTENERS DO FIRESTORE (VERSÃO QUE MOSTRA O ERRO NA TELA)
         // =================================================================
         
         const listenToChampionships = () => {
@@ -4587,14 +4587,15 @@ const renderTelaoView = () => {
             let q;
 
             if (appState.isAdmin) {
+                // Admin vê só os seus
                 q = query(collection(db, 'users', appState.userId, 'championships'));
             } else {
-                // Busca global (Visitante)
+                // Visitante vê todos (Gera erro se não tiver índice)
                 q = query(collectionGroup(db, 'championships'));
             }
 
             unsubscribeChampionships = onSnapshot(q, (snapshot) => {
-                // SUCESSO: Processa os dados
+                // --- SUCESSO ---
                 const list = [];
                 snapshot.forEach(doc => {
                     list.push({ id: doc.id, ...doc.data() });
@@ -4602,37 +4603,40 @@ const renderTelaoView = () => {
                 
                 championships = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 
-                // Se estiver travado no loading, libera a tela!
-                if (appState.currentView === 'loading' || appState.currentView === 'championshipList') {
-                    renderChampionshipList();
-                    // Garante que o spinner suma
-                    const spinner = document.getElementById('loading-spinner');
-                    const main = document.getElementById('main-content');
-                    if(spinner) spinner.classList.add('hidden');
-                    if(main) main.classList.remove('hidden');
-                }
-            }, (error) => {
-                // ERRO: Destrava a tela e mostra o problema
-                console.error("Erro ao buscar campeonatos:", error);
+                // Se deu tudo certo, tira o carregamento e mostra a lista
+                const spinner = document.getElementById('loading-spinner');
+                const main = document.getElementById('main-content');
                 
-                // Esconde o spinner para você ver o erro
+                if (appState.currentView === 'championshipList') {
+                    renderChampionshipList();
+                }
+                
+                // Força o spinner a sumir
+                if(spinner) spinner.classList.add('hidden');
+                if(main) main.classList.remove('hidden');
+
+            }, (error) => {
+                // --- ERRO (AQUI ESTÁ A CORREÇÃO) ---
+                console.error("Erro detectado:", error);
+                
+                // 1. Tira o spinner para a tela não travar
                 const spinner = document.getElementById('loading-spinner');
                 if(spinner) spinner.classList.add('hidden');
 
-                // Verifica se é o erro do Índice
+                // 2. Verifica se é o erro de Índice e MOSTRA O LINK NA TELA
                 if (error.message.includes('requires an index')) {
-                     // Tenta extrair o link do erro automaticamente
+                     // Tenta pegar o link automaticamente
                      const linkMatches = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
                      const link = linkMatches ? linkMatches[0] : "https://console.firebase.google.com";
 
                      showDialog({
-                        title: "Configuração Necessária ⚠️",
-                        message: `O Firebase bloqueou a busca global porque falta um Índice.<br><br>
-                                 <b>Clique no link abaixo para criar automaticamente:</b><br><br>
-                                 <a href="${link}" target="_blank" style="color: blue; text-decoration: underline; font-weight: bold; word-break: break-all;">
+                        title: "⚠️ Configuração Necessária",
+                        message: `Para o modo Visitante funcionar, o Firebase exige uma configuração de segurança.<br><br>
+                                 <b>Clique no link abaixo para corrigir automaticamente:</b><br><br>
+                                 <a href="${link}" target="_blank" style="color: blue; text-decoration: underline; font-weight: bold; word-break: break-all; display: block; padding: 10px; background: #f0f9ff; border-radius: 5px;">
                                     CLIQUE AQUI PARA CRIAR O ÍNDICE
                                  </a>
-                                 <br><br>Depois de criar, espere 5 minutos e recarregue a página.`,
+                                 <br>Depois de criar, espere 5 minutos e recarregue.`,
                         confirmText: "Entendi"
                      });
                 } else {
