@@ -538,26 +538,21 @@
             const listBtn = document.getElementById('nav-to-list');
             if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
             
-            // --- AQUI ESTÁ A CORREÇÃO DO LOGOUT ---
+            // Listener do botão de Login/Sair (CORRIGIDO PARA DESTRAVAR VISITANTE)
             const loginBtn = document.getElementById('nav-to-login');
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
-                    if (appState.isAdmin) {
-                        // Se for Admin, faz o LOGOUT REAL do Firebase
-                        signOut(auth).then(() => {
-                            // Recarrega a página para limpar a memória e voltar ao login
-                            window.location.reload();
-                        }).catch((error) => {
-                            console.error("Erro ao sair:", error);
-                            alert("Erro ao tentar sair.");
-                        });
-                    } else {
-                        // Se não for Admin, apenas navega para a tela de login
-                        navigateTo('login');
-                    }
+                    // FORÇA O LOGOUT (mesmo se for visitante anônimo)
+                    signOut(auth).then(() => {
+                        // Recarrega a página limpa (sem parâmetros na URL)
+                        window.location.href = window.location.pathname; 
+                    }).catch((error) => {
+                        console.error("Erro ao sair:", error);
+                        // Se der erro, tenta recarregar na força bruta
+                        window.location.reload(); 
+                    });
                 });
             }
-        };
 
         // === VIEW: LOGIN (Versão Comercial com Firebase Auth)
         // =================================================================
