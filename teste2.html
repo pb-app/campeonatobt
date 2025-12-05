@@ -193,7 +193,6 @@
         import {
             getFirestore,
             collection,
-            collectionGroup,
             doc,
             getDoc,
             setDoc,
@@ -538,21 +537,26 @@
             const listBtn = document.getElementById('nav-to-list');
             if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
             
-            // Listener do botão de Login/Sair (CORRIGIDO PARA DESTRAVAR VISITANTE)
+            // --- AQUI ESTÁ A CORREÇÃO DO LOGOUT ---
             const loginBtn = document.getElementById('nav-to-login');
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
-                    // FORÇA O LOGOUT (mesmo se for visitante anônimo)
-                    signOut(auth).then(() => {
-                        // Recarrega a página limpa (sem parâmetros na URL)
-                        window.location.href = window.location.pathname; 
-                    }).catch((error) => {
-                        console.error("Erro ao sair:", error);
-                        // Se der erro, tenta recarregar na força bruta
-                        window.location.reload(); 
-                    });
+                    if (appState.isAdmin) {
+                        // Se for Admin, faz o LOGOUT REAL do Firebase
+                        signOut(auth).then(() => {
+                            // Recarrega a página para limpar a memória e voltar ao login
+                            window.location.reload();
+                        }).catch((error) => {
+                            console.error("Erro ao sair:", error);
+                            alert("Erro ao tentar sair.");
+                        });
+                    } else {
+                        // Se não for Admin, apenas navega para a tela de login
+                        navigateTo('login');
+                    }
                 });
             }
+        };
 
         // === VIEW: LOGIN (Versão Comercial com Firebase Auth)
         // =================================================================
@@ -632,17 +636,9 @@
                 }
             });
 
-           document.getElementById('visitor-login-btn').addEventListener('click', () => {
-        const btnVisitor = document.getElementById('visitor-login-btn');
-        btnVisitor.textContent = "Entrando...";
-        btnVisitor.disabled = true;
-
-        // Faz login anônimo para ativar os listeners do Firebase
-        signInAnonymously(auth).catch((error) => {
-            console.error("Erro no login anônimo:", error);
-            alert("Erro ao entrar como visitante.");
-            btnVisitor.textContent = "Tentar Novamente";
-            btnVisitor.disabled = false;
+            document.getElementById('visitor-login-btn').addEventListener('click', () => {
+                appState.isAdmin = false;
+                navigateTo('championshipList');
             });
         };
 
@@ -4577,76 +4573,27 @@ const renderTelaoView = () => {
             });
         };
 
-        // =================================================================
-        // === LISTENERS DO FIRESTORE (VERSÃO QUE MOSTRA O ERRO NA TELA)
-        // =================================================================
-        
+        /**
+         * Ouve a lista de campeonatos
+         */
         const listenToChampionships = () => {
-            if (unsubscribeChampionships) unsubscribeChampionships();
-
-            let q;
-
-            if (appState.isAdmin) {
-                // Admin vê só os seus
-                q = query(collection(db, 'users', appState.userId, 'championships'));
-            } else {
-                // Visitante vê todos (Gera erro se não tiver índice)
-                q = query(collectionGroup(db, 'championships'));
-            }
-
-            unsubscribeChampionships = onSnapshot(q, (snapshot) => {
-                // --- SUCESSO ---
-                const list = [];
-                snapshot.forEach(doc => {
-                    list.push({ id: doc.id, ...doc.data() });
-                });
-                
-                championships = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                
-                // Se deu tudo certo, tira o carregamento e mostra a lista
-                const spinner = document.getElementById('loading-spinner');
-                const main = document.getElementById('main-content');
+            unsubscribeChampionships();
+            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
+            const q = query(champCollectionRef);
+            
+            unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
+                championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
                 if (appState.currentView === 'championshipList') {
-                    renderChampionshipList();
+                    render();
                 }
-                
-                // Força o spinner a sumir
-                if(spinner) spinner.classList.add('hidden');
-                if(main) main.classList.remove('hidden');
-
+                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
+                    // Atualiza o telão se o status do campeonato mudar (ex: 'finished')
+                    render();
+                }
             }, (error) => {
-                // --- ERRO (AQUI ESTÁ A CORREÇÃO) ---
-                console.error("Erro detectado:", error);
-                
-                // 1. Tira o spinner para a tela não travar
-                const spinner = document.getElementById('loading-spinner');
-                if(spinner) spinner.classList.add('hidden');
-
-                // 2. Verifica se é o erro de Índice e MOSTRA O LINK NA TELA
-                if (error.message.includes('requires an index')) {
-                     // Tenta pegar o link automaticamente
-                     const linkMatches = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
-                     const link = linkMatches ? linkMatches[0] : "https://console.firebase.google.com";
-
-                     showDialog({
-                        title: "⚠️ Configuração Necessária",
-                        message: `Para o modo Visitante funcionar, o Firebase exige uma configuração de segurança.<br><br>
-                                 <b>Clique no link abaixo para corrigir automaticamente:</b><br><br>
-                                 <a href="${link}" target="_blank" style="color: blue; text-decoration: underline; font-weight: bold; word-break: break-all; display: block; padding: 10px; background: #f0f9ff; border-radius: 5px;">
-                                    CLIQUE AQUI PARA CRIAR O ÍNDICE
-                                 </a>
-                                 <br>Depois de criar, espere 5 minutos e recarregue.`,
-                        confirmText: "Entendi"
-                     });
-                } else {
-                    // Outro erro qualquer
-                    showDialog({
-                        title: "Erro ao Carregar",
-                        message: "Ocorreu um erro: " + error.message,
-                        confirmText: "OK"
-                    });
-                }
+                console.error("Erro ao carregar campeonatos:", error);
+                showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
             });
         };
 
