@@ -190,14 +190,15 @@
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // Importações do Banco de Dados (ISTO ESTAVA FALTANDO!)
-        import {
+       import {
             getFirestore,
             collection,
+            collectionGroup, // <--- ADICIONE ESTA LINHA IMPORTANTE
             doc,
             getDoc,
             setDoc,
             addDoc,
-            updateDoc, // Adicionei updateDoc por segurança
+            updateDoc,
             deleteDoc,
             writeBatch,
             runTransaction,
@@ -636,9 +637,19 @@
                 }
             });
 
+            // Listener do botão de Visitante (CORRIGIDO)
             document.getElementById('visitor-login-btn').addEventListener('click', () => {
-                appState.isAdmin = false;
-                navigateTo('championshipList');
+                const btnVisitor = document.getElementById('visitor-login-btn');
+                btnVisitor.textContent = "Entrando...";
+                btnVisitor.disabled = true;
+
+                // Faz login anônimo para o Firebase liberar o acesso
+                signInAnonymously(auth).catch((error) => {
+                    console.error("Erro no login anônimo:", error);
+                    alert("Erro ao conectar como visitante. Tente novamente.");
+                    btnVisitor.textContent = "Entrar como Visitante";
+                    btnVisitor.disabled = false;
+                });
             });
         };
 
@@ -4574,26 +4585,62 @@ const renderTelaoView = () => {
         };
 
         /**
-         * Ouve a lista de campeonatos
+         * Ouve a lista de campeonatos (Modo Portal Global)
          */
         const listenToChampionships = () => {
-            unsubscribeChampionships();
-            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
-            const q = query(champCollectionRef);
-            
-            unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
-                championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (unsubscribeChampionships) unsubscribeChampionships();
+
+            let q;
+
+            if (appState.isAdmin) {
+                // ADMIN: Vê apenas a sua própria pasta
+                q = query(collection(db, 'users', appState.userId, 'championships'));
+            } else {
+                // VISITANTE: Vê tudo (Collection Group)
+                // Isso transforma seu app em um Portal de Torneios
+                q = query(collectionGroup(db, 'championships'));
+            }
+
+            unsubscribeChampionships = onSnapshot(q, (snapshot) => {
+                const list = [];
+                snapshot.forEach(doc => {
+                    // Adiciona apenas se tiver nome (evita documentos fantasmas)
+                    if (doc.data().name) {
+                        list.push({ id: doc.id, ...doc.data() });
+                    }
+                });
                 
+                // Ordena por data (mais recentes primeiro)
+                championships = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                
+                // Atualiza a tela se estiver na lista
                 if (appState.currentView === 'championshipList') {
                     render();
                 }
-                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
-                    // Atualiza o telão se o status do campeonato mudar (ex: 'finished')
-                    render();
-                }
+                
+                // Destrava o carregamento
+                const spinner = document.getElementById('loading-spinner');
+                const main = document.getElementById('main-content');
+                if(spinner) spinner.classList.add('hidden');
+                if(main) main.classList.remove('hidden');
+
             }, (error) => {
-                console.error("Erro ao carregar campeonatos:", error);
-                showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
+                console.error("Erro ao buscar campeonatos:", error);
+                
+                // TRATAMENTO DE ERRO DE ÍNDICE (Importante para o Modo Global)
+                if (error.message.includes('requires an index')) {
+                     const linkMatches = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+                     const link = linkMatches ? linkMatches[0] : "https://console.firebase.google.com";
+
+                     showDialog({
+                        title: "Configuração Necessária ⚠️",
+                        message: `Para exibir todos os torneios, o Firebase precisa de um Índice.<br><br>
+                                 <a href="${link}" target="_blank" style="color: blue; text-decoration: underline; font-weight: bold;">
+                                    CLIQUE AQUI PARA CRIAR O ÍNDICE
+                                 </a>`,
+                        confirmText: "Entendi"
+                     });
+                }
             });
         };
 
