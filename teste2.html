@@ -143,20 +143,34 @@
         </footer>
     </div>
 
-    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full mx-auto animate-fade-in-sm">
-            <div class="flex justify-between items-center mb-4">
-                <h3 id="modal-title" class="text-xl sm:text-2xl font-bold text-cyan-600"></h3>
-                <button id="modal-close-icon" class="text-gray-500 hover:text-gray-900 transition-colors">
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm w-full mx-auto transform scale-100 transition-transform duration-300 border border-gray-100">
+            
+            <div class="flex justify-between items-start mb-4">
+                <h3 id="modal-title" class="text-xl sm:text-2xl font-bold text-cyan-600 leading-tight"></h3>
+                <button id="modal-close-icon" class="text-gray-400 hover:text-gray-600 transition-colors p-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
-            <div id="modal-message" class="text-gray-700 text-sm sm:text-base mb-6 max-h-60 overflow-y-auto"></div>
-            <button
-                id="modal-close-btn"
-                class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50">
-                Entendi
-            </button>
+            
+            <div id="modal-message" class="text-gray-600 text-base mb-6 leading-relaxed"></div>
+            
+            <div id="modal-input-container" class="hidden mb-6">
+                <input type="text" id="modal-input" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all shadow-sm" autocomplete="off">
+            </div>
+
+            <div class="flex gap-3">
+                <button
+                    id="modal-cancel-btn"
+                    class="hidden flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    Cancelar
+                </button>
+                <button
+                    id="modal-confirm-btn"
+                    class="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1">
+                    Confirmar
+                </button>
+            </div>
         </div>
     </div>
 
@@ -165,35 +179,44 @@
         // === IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
         // =================================================================
         import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        
+        // Importações de Autenticação
         import { 
             getAuth, 
             signInAnonymously, 
-            onAuthStateChanged 
+            onAuthStateChanged,
+            signInWithEmailAndPassword,
+            signOut // <--- ADICIONE ESTA LINHA (com a vírgula antes)
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            setDoc, 
-            onSnapshot, 
-            collection, 
-            query,
-            Timestamp,
+
+        // Importações do Banco de Dados (ISTO ESTAVA FALTANDO!)
+        import {
+            getFirestore,
+            collection,
+            collectionGroup,
+            doc,
             getDoc,
+            setDoc,
+            addDoc,
+            updateDoc, // Adicionei updateDoc por segurança
+            deleteDoc,
             writeBatch,
             runTransaction,
-            deleteDoc,
-            addDoc // *** CORREÇÃO 1: Importar addDoc ***
+            query,
+            onSnapshot,
+            Timestamp
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Configuração do Firebase (Substitua pelos seus dados)
         const firebaseConfig = {
-          apiKey: "AIzaSyDeS-rk8OJKhghv1djVucmR3-erOa-ppMY",
-          authDomain: "campeonato-sortudo.firebaseapp.com",
-          projectId: "campeonato-sortudo",
-          storageBucket: "campeonato-sortudo.firebasestorage.app",
-          messagingSenderId: "706083235199",
-          appId: "1:706083235199:web:5eca6041bb817401ee264a"
-        };
+  apiKey: "AIzaSyDssRXcskF1ozqVrTDmQX09QP7GrAWZKNg",
+  authDomain: "raking-beach-tennis-pro.firebaseapp.com",
+  projectId: "raking-beach-tennis-pro",
+  storageBucket: "raking-beach-tennis-pro.firebasestorage.app",
+  messagingSenderId: "289005072476",
+  appId: "1:289005072476:web:9934650195920baf343699",
+  measurementId: "G-FW62QF334R"
+};
 
         // Inicialização dos serviços do Firebase
         const app = initializeApp(firebaseConfig);
@@ -205,9 +228,7 @@
         // === CONSTANTES E ESTADO GLOBAL
         // =================================================================
         
-        // ID Mestre (Admin)
-        const MESTRE_USER_ID = "campeonato-sortudo-admin";
-        const ADMIN_PASSWORD = "adm2025"; 
+        
 
         // Estado global reativo do aplicativo
         let appState = {
@@ -292,34 +313,85 @@
         };
 
         // =================================================================
-        // === CONTROLES DO DOM E MODAL
+        // === CONTROLES DO DOM E MODAL (Versão Pro)
         // =================================================================
         
-        // Funções utilitárias para mostrar/esconder o Modal
-        const showModal = (title, message) => {
-            modalTitle.textContent = title;
-            modalMessage.innerHTML = message; 
-            modal.classList.remove('hidden');
-        };
-        const hideModal = () => modal.classList.add('hidden');
-        
-        // Referências do DOM (buscadas após o carregamento do script)
+        // Referências do DOM
         const appContainer = document.getElementById('app-container');
         const mainContent = document.getElementById('main-content');
         const loadingSpinner = document.getElementById('loading-spinner');
         const headerButtons = document.getElementById('header-buttons');
         const userIdFooter = document.getElementById('user-id-footer');
+        
+        // Referências do Modal
         const modal = document.getElementById('modal');
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
-        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const modalInputContainer = document.getElementById('modal-input-container');
+        const modalInput = document.getElementById('modal-input');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
         const modalCloseIcon = document.getElementById('modal-close-icon');
 
-        // Adiciona listeners do Modal
-        modalCloseBtn.addEventListener('click', hideModal);
-        modalCloseIcon.addEventListener('click', hideModal);
-        modal.addEventListener('click', hideModal);
-        modal.firstElementChild.addEventListener('click', (e) => e.stopPropagation()); // Impede de fechar ao clicar dentro do modal
+        let currentModalResolve = null; // Guarda a promessa ativa
+
+        // Função Genérica para abrir o Modal (Substitui alert, prompt e confirm)
+        const showDialog = ({ title, message, type = 'alert', placeholder = '', confirmText = 'OK', confirmColor = 'bg-cyan-600' }) => {
+            return new Promise((resolve) => {
+                currentModalResolve = resolve;
+
+                // Configura Textos
+                modalTitle.textContent = title;
+                modalMessage.innerHTML = message;
+                modalConfirmBtn.textContent = confirmText;
+                
+                // Configura Cor do Botão (Ex: vermelho para excluir)
+                modalConfirmBtn.className = `flex-1 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 ${confirmColor} hover:opacity-90`;
+
+                // Reseta visibilidade
+                modalInputContainer.classList.add('hidden');
+                modalCancelBtn.classList.add('hidden');
+                modalInput.value = '';
+
+                // Configurações por Tipo
+                if (type === 'prompt') {
+                    modalInputContainer.classList.remove('hidden');
+                    modalCancelBtn.classList.remove('hidden');
+                    modalInput.placeholder = placeholder;
+                    modalInput.focus();
+                } else if (type === 'confirm') {
+                    modalCancelBtn.classList.remove('hidden');
+                }
+
+                // Mostra o Modal
+                modal.classList.remove('hidden');
+            });
+        };
+
+        const closeModal = (value) => {
+            modal.classList.add('hidden');
+            if (currentModalResolve) {
+                currentModalResolve(value);
+                currentModalResolve = null;
+            }
+        };
+
+        // Listeners do Modal
+        modalConfirmBtn.onclick = () => {
+            const inputValue = !modalInputContainer.classList.contains('hidden') ? modalInput.value : true;
+            closeModal(inputValue);
+        };
+        
+        modalCancelBtn.onclick = () => closeModal(null); // Retorna null ao cancelar
+        modalCloseIcon.onclick = () => closeModal(null);
+        
+        // Atalho para Enter no input
+        modalInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') modalConfirmBtn.click();
+        });
+
+        // --- Funções de Atalho (Compatibilidade) ---
+        const showModal = (title, msg) => showDialog({ title, message: msg }); // Alerta simples
 
 
         // =================================================================
@@ -455,6 +527,8 @@
                 }
             }
             
+           // ... (parte de cima da função renderHeaderButtons continua igual) ...
+            
             headerButtons.innerHTML = navHtml + authHtml; 
 
             // Adiciona listeners aos botões renderizados
@@ -464,49 +538,111 @@
             const listBtn = document.getElementById('nav-to-list');
             if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
             
+            // Listener do botão de Login/Sair (CORRIGIDO PARA DESTRAVAR VISITANTE)
             const loginBtn = document.getElementById('nav-to-login');
-            if (loginBtn) loginBtn.addEventListener('click', () => navigateTo('login'));
-        };
+            if (loginBtn) {
+                loginBtn.addEventListener('click', () => {
+                    // FORÇA O LOGOUT (mesmo se for visitante anônimo)
+                    signOut(auth).then(() => {
+                        // Recarrega a página limpa (sem parâmetros na URL)
+                        window.location.href = window.location.pathname; 
+                    }).catch((error) => {
+                        console.error("Erro ao sair:", error);
+                        // Se der erro, tenta recarregar na força bruta
+                        window.location.reload(); 
+                    });
+                });
+            }
 
-        // =================================================================
-        // === VIEW: LOGIN
+        // === VIEW: LOGIN (Versão Comercial com Firebase Auth)
         // =================================================================
         const renderLogin = () => {
             mainContent.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in">
-                    <h2 class="text-3xl font-bold text-center text-cyan-600 mb-8">Bem-vindo(a) 🎾</h2>
+                <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto animate-fade-in border border-gray-200 mt-10">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-cyan-600">Ranking BT Pro 🎾</h2>
+                        <p class="text-gray-500 mt-2">Área do Organizador</p>
+                    </div>
                     
-                    <div class="space-y-4">
-                        <button
-                            id="visitor-login-btn"
-                            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 px-6 rounded-lg shadow-sm transition-all flex items-center justify-center gap-3 text-lg">
-                            ${icons.eye}
-                            Modo Visitante
-                        </button>
+                    <form id="login-form" class="space-y-6">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700">E-mail</label>
+                            <input type="email" id="email" required placeholder="admin@suaarena.com"
+                                class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm">
+                        </div>
                         
-                        <button
-                            id="admin-login-btn"
-                            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 text-lg">
-                            ${icons.logIn}
-                            Modo Administrador
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
+                            <input type="password" id="password" required placeholder="••••••"
+                                class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm">
+                        </div>
+
+                        <div id="login-error" class="text-rose-600 text-sm text-center hidden bg-rose-50 p-2 rounded border border-rose-200"></div>
+
+                        <button type="submit" id="btn-entrar"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors">
+                            Entrar
+                        </button>
+                    </form>
+
+                    <div class="mt-6 border-t border-gray-200 pt-4 text-center">
+                         <p class="text-xs text-gray-400 mb-3">Apenas visualização</p>
+                         <button
+                            id="visitor-login-btn"
+                            class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-md transition-all flex items-center justify-center gap-2 text-sm">
+                            ${icons.eye}
+                            Entrar como Visitante
                         </button>
                     </div>
                 </div>
             `;
 
-            // Listeners da tela de Login
-            document.getElementById('visitor-login-btn').addEventListener('click', () => {
-                appState.isAdmin = false;
-                navigateTo('championshipList');
-            });
-            document.getElementById('admin-login-btn').addEventListener('click', () => {
-                const password = prompt("Digite a senha de administrador:");
-                if (password === ADMIN_PASSWORD) {
-                    appState.isAdmin = true;
-                    navigateTo('championshipList');
-                } else if (password !== null) { 
-                    showModal("Acesso Negado", "Senha incorreta.");
+            // Lógica do Login Seguro
+            const loginForm = document.getElementById('login-form');
+            const errorMsg = document.getElementById('login-error');
+            const btnEntrar = document.getElementById('btn-entrar');
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                btnEntrar.disabled = true;
+                btnEntrar.textContent = "Verificando...";
+                errorMsg.classList.add('hidden');
+
+                try {
+                    // Autenticação Real do Firebase
+                    await signInWithEmailAndPassword(auth, email, password);
+                    // O redirecionamento acontece automaticamente no onAuthStateChanged
+                    
+                } catch (error) {
+                    console.error(error);
+                    btnEntrar.disabled = false;
+                    btnEntrar.textContent = "Entrar";
+                    errorMsg.classList.remove('hidden');
+                    
+                    if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                        errorMsg.textContent = "E-mail ou senha incorretos.";
+                    } else if (error.code === 'auth/too-many-requests') {
+                        errorMsg.textContent = "Muitas tentativas. Aguarde um momento.";
+                    } else {
+                        errorMsg.textContent = "Erro: " + error.message;
+                    }
                 }
+            });
+
+           document.getElementById('visitor-login-btn').addEventListener('click', () => {
+        const btnVisitor = document.getElementById('visitor-login-btn');
+        btnVisitor.textContent = "Entrando...";
+        btnVisitor.disabled = true;
+
+        // Faz login anônimo para ativar os listeners do Firebase
+        signInAnonymously(auth).catch((error) => {
+            console.error("Erro no login anônimo:", error);
+            alert("Erro ao entrar como visitante.");
+            btnVisitor.textContent = "Tentar Novamente";
+            btnVisitor.disabled = false;
             });
         };
 
@@ -874,12 +1010,23 @@
         };
         
         /**
-         * Lida com a exclusão de um campeonato
+         * Lida com a exclusão de um campeonato (COM MODAL PRO)
          */
         const handleDeleteChampionship = async (champId) => {
             const champ = championships.find(c => c.id === champId);
-            if (window.prompt(`Para confirmar, digite o nome do campeonato: "${champ.name}"`) !== champ.name) {
-                showModal("Cancelado", "A exclusão foi cancelada.");
+            
+            // Modal de Segurança (Confirmar Exclusão)
+            const confirmacao = await showDialog({
+                type: 'prompt', // Usamos prompt para forçar digitar o nome
+                title: 'Excluir Campeonato?',
+                message: `CUIDADO: Isso apagará todos os jogos e dados deste torneio.<br><br>Para confirmar, digite o nome: <b>${champ.name}</b>`,
+                placeholder: 'Digite o nome aqui...',
+                confirmText: 'EXCLUIR DEFINITIVAMENTE',
+                confirmColor: 'bg-rose-600 hover:bg-rose-700' // Botão Vermelho
+            });
+
+            if (confirmacao !== champ.name) {
+                if (confirmacao !== null) showDialog({ title: "Cancelado", message: "O nome digitado não confere." });
                 return;
             }
             
@@ -888,17 +1035,27 @@
                 await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId, 'data', 'main'));
                 // Exclui o documento principal
                 await deleteDoc(doc(db, 'users', appState.userId, 'championships', champId));
+                
+                showDialog({ title: "Excluído", message: "Campeonato removido com sucesso." });
             } catch (error) {
-                console.error("Erro ao excluir campeonato:", error);
-                showModal("Erro", "Não foi possível excluir o campeonato.");
+                console.error("Erro ao excluir:", error);
+                showDialog({ title: "Erro", message: "Não foi possível excluir." });
             }
         };
         /**
-         * Lida com a adição de um novo Ranking (lista de nomes)
+         * Lida com a adição de um novo Ranking (COM MODAL PRO)
          */
         const handleAddNewRanking = async () => {
-            const name = prompt("Nome do novo ranking (ex: Temporada 2025):");
-            if (!name || name.trim() === '') return;
+            // Substitui o prompt nativo pelo nosso Modal Lindo
+            const name = await showDialog({
+                type: 'prompt',
+                title: 'Novo Ranking',
+                message: 'Digite o nome da nova temporada ou ranking:',
+                placeholder: 'Ex: Verão 2025',
+                confirmText: 'Criar Ranking'
+            });
+
+            if (!name || name.trim() === '') return; // Usuário cancelou ou deixou vazio
             
             // Gera um ID amigável (slug)
             const id = name.trim().toLowerCase()
@@ -906,12 +1063,12 @@
                 .replace(/[^a-z0-9-]/g, ''); 
                 
             if (!id) {
-                showModal("Erro", "Nome inválido. Use letras e números.");
+                showDialog({ title: "Erro", message: "Nome inválido. Use letras e números." });
                 return;
             }
             
             if (allRankings.find(r => r.id === id || r.name.toLowerCase() === name.trim().toLowerCase())) {
-                showModal("Erro", "Um ranking com esse nome ou ID já existe.");
+                showDialog({ title: "Duplicado", message: "Já existe um ranking com esse nome." });
                 return;
             }
             
@@ -919,12 +1076,11 @@
             const newList = [...allRankings, newRanking];
             
             try {
-                // Salva a *lista* de rankings em app_data
                 await setDoc(doc(db, 'users', appState.userId, 'app_data', 'rankings'), { list: newList });
-                showModal("Sucesso!", `Ranking "${name.trim()}" foi criado.`);
+                showDialog({ title: "Sucesso!", message: `Ranking "${name.trim()}" criado com sucesso!` });
             } catch (error) {
                 console.error("Erro ao criar ranking:", error);
-                showModal("Erro", "Não foi possível salvar o novo ranking.");
+                showDialog({ title: "Erro", message: "Não foi possível salvar." });
             }
         };
 
@@ -4421,27 +4577,72 @@ const renderTelaoView = () => {
             });
         };
 
-        /**
-         * Ouve a lista de campeonatos
-         */
+        // =================================================================
+        // === LISTENERS DO FIRESTORE (COM TRATAMENTO DE ERRO)
+        // =================================================================
+        
         const listenToChampionships = () => {
-            unsubscribeChampionships();
-            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
-            const q = query(champCollectionRef);
-            
-            unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
-                championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (unsubscribeChampionships) unsubscribeChampionships();
+
+            let q;
+
+            if (appState.isAdmin) {
+                q = query(collection(db, 'users', appState.userId, 'championships'));
+            } else {
+                // Busca global (Visitante)
+                q = query(collectionGroup(db, 'championships'));
+            }
+
+            unsubscribeChampionships = onSnapshot(q, (snapshot) => {
+                // SUCESSO: Processa os dados
+                const list = [];
+                snapshot.forEach(doc => {
+                    list.push({ id: doc.id, ...doc.data() });
+                });
                 
-                if (appState.currentView === 'championshipList') {
-                    render();
-                }
-                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
-                    // Atualiza o telão se o status do campeonato mudar (ex: 'finished')
-                    render();
+                championships = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                
+                // Se estiver travado no loading, libera a tela!
+                if (appState.currentView === 'loading' || appState.currentView === 'championshipList') {
+                    renderChampionshipList();
+                    // Garante que o spinner suma
+                    const spinner = document.getElementById('loading-spinner');
+                    const main = document.getElementById('main-content');
+                    if(spinner) spinner.classList.add('hidden');
+                    if(main) main.classList.remove('hidden');
                 }
             }, (error) => {
-                console.error("Erro ao carregar campeonatos:", error);
-                showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
+                // ERRO: Destrava a tela e mostra o problema
+                console.error("Erro ao buscar campeonatos:", error);
+                
+                // Esconde o spinner para você ver o erro
+                const spinner = document.getElementById('loading-spinner');
+                if(spinner) spinner.classList.add('hidden');
+
+                // Verifica se é o erro do Índice
+                if (error.message.includes('requires an index')) {
+                     // Tenta extrair o link do erro automaticamente
+                     const linkMatches = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+                     const link = linkMatches ? linkMatches[0] : "https://console.firebase.google.com";
+
+                     showDialog({
+                        title: "Configuração Necessária ⚠️",
+                        message: `O Firebase bloqueou a busca global porque falta um Índice.<br><br>
+                                 <b>Clique no link abaixo para criar automaticamente:</b><br><br>
+                                 <a href="${link}" target="_blank" style="color: blue; text-decoration: underline; font-weight: bold; word-break: break-all;">
+                                    CLIQUE AQUI PARA CRIAR O ÍNDICE
+                                 </a>
+                                 <br><br>Depois de criar, espere 5 minutos e recarregue a página.`,
+                        confirmText: "Entendi"
+                     });
+                } else {
+                    // Outro erro qualquer
+                    showDialog({
+                        title: "Erro ao Carregar",
+                        message: "Ocorreu um erro: " + error.message,
+                        confirmText: "OK"
+                    });
+                }
             });
         };
 
@@ -4557,55 +4758,64 @@ const renderTelaoView = () => {
         // =================================================================
         // === INICIALIZAÇÃO DO APP
         // =================================================================
+        // =================================================================
+        // === INICIALIZAÇÃO E CONTROLE DE SESSÃO
+        // =================================================================
+        // =================================================================
+        // === INICIALIZAÇÃO E CONTROLE DE SESSÃO
+        // =================================================================
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
-                try {
-                    await signInAnonymously(auth);
-                } catch (error) {
-                    console.error("Erro na autenticação anônima:", error);
-                    let errorMessage = "Não foi possível conectar ao Firebase. Verifique sua conexão.";
-                    if (error.code === 'auth/configuration-not-found') {
-                        errorMessage = "Erro de Autenticação: O 'Login Anônimo' (Anonymous) não está ATIVADO no seu painel do Firebase.";
-                    }
-                    showModal("Erro de Autenticação", errorMessage);
-                    return;
-                }
-            }
-            
-            // Usuário está logado (anônimo ou não)
-            if (user && !appState.isAuthReady) {
-                // Força o uso do ID Mestre
-                const effectiveUserId = MESTRE_USER_ID; 
-                appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
-                userIdFooter.textContent = effectiveUserId; 
-                
-                // Verifica se está entrando em Modo Telão
+                // Se não tiver ninguém logado, manda para a tela de login
+                // (Exceto se for modo Telão, que vamos tratar abaixo)
                 const urlParams = new URLSearchParams(window.location.search);
-                const telaoChampId = urlParams.get('champId');
-                
-                // Inicia os listeners principais
-                listenToChampionships();
-                listenToRankingsList(); // Isso também vai iniciar o listenToGlobalPlayers()
-                
-                if (urlParams.has('telao') && telaoChampId) {
-                    // MODO TELÃO
-                    appState.isTelaoMode = true;
-                    appState.isAdmin = false; 
+                if (!appState.isAuthReady && !urlParams.has('telao')) {
+                     appState.currentView = 'login';
+                     render();
+                }
+            } else {
+                // Usuário Logado!
+                if (!appState.isAuthReady) {
                     
-                    // Aplica estilos CSS para o Telão (remove header/footer, muda fundo)
-                    const telaoStyles = document.createElement('style');
-                    telaoStyles.innerHTML = `
-                        body { background-color: #FFFAF0; } 
-                        #app-container { max-width: 100%; padding: 1rem 2rem; }
-                        header, footer { display: none !important; }
-                    `;
-                    document.head.appendChild(telaoStyles);
+                    // SEGURANÇA: Se o usuário for anônimo, ele NÃO é admin.
+                    // Se ele logou com email (signInWithEmailAndPassword), ele É admin.
+                    const isAnonymous = user.isAnonymous;
                     
-                    navigateTo('telaoView', telaoChampId);
-                } else {
-                    // MODO NORMAL (Admin/Visitante)
-                    appState.isTelaoMode = false;
-                    navigateTo('login');
+                    // Define o ID do usuário para carregar APENAS os dados dele
+                    appState = { 
+                        ...appState, 
+                        userId: user.uid, // <--- A MÁGICA: Usa o ID único do Firebase
+                        isAuthReady: true,
+                        isAdmin: !isAnonymous // Só é admin se não for anônimo
+                    };
+                    
+                    const userIdFooter = document.getElementById('user-id-footer');
+                    if(userIdFooter) userIdFooter.textContent = isAnonymous ? "Visitante" : user.email;
+
+                    // Inicia os listeners para carregar OS DADOS DESTE USUÁRIO
+                    listenToChampionships();
+                    listenToRankingsList(); 
+                    
+                    // Verifica se é Modo Telão
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const telaoChampId = urlParams.get('champId');
+
+                    if (urlParams.has('telao') && telaoChampId) {
+                        appState.isTelaoMode = true;
+                        appState.isAdmin = false; // Telão nunca é admin
+                        
+                        // Estilos do Telão
+                        const telaoStyles = document.createElement('style');
+                        telaoStyles.innerHTML = `body { background-color: #FFFAF0; } #app-container { max-width: 100%; padding: 1rem 2rem; } header, footer { display: none !important; }`;
+                        document.head.appendChild(telaoStyles);
+                        
+                        navigateTo('telaoView', telaoChampId);
+                    } else {
+                        // Se logou com sucesso e não é telão, vai pra lista
+                        if (appState.currentView === 'login' || appState.currentView === 'loading') {
+                             navigateTo('championshipList');
+                        }
+                    }
                 }
             }
         });
