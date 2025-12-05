@@ -4572,11 +4572,13 @@ const renderTelaoView = () => {
                 }
             }
             
-           // Usuário está logado (anônimo ou não)
+            // Usuário está logado (anônimo ou não)
             if (user && !appState.isAuthReady) {
-                // USA O SEU ID REAL (Para recuperar dados antigos)
-                appState = { ...appState, userId: user.uid, isAuthReady: true };
-                userIdFooter.textContent = "ID: " + user.uid.slice(0, 6) + "..."; 
+                // --- VOLTAR PARA O MODO ADMIN (Fixa os dados numa conta só) ---
+                const effectiveUserId = MESTRE_USER_ID; 
+                
+                appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
+                userIdFooter.textContent = "Modo Admin: " + effectiveUserId; 
                 
                 // Verifica se está entrando em Modo Telão
                 const urlParams = new URLSearchParams(window.location.search);
@@ -4584,25 +4586,25 @@ const renderTelaoView = () => {
                 
                 // Inicia os listeners principais
                 listenToChampionships();
-                listenToRankingsList(); // Isso também vai iniciar o listenToGlobalPlayers()
+                listenToRankingsList(); 
                 
                 if (urlParams.has('telao') && telaoChampId) {
                     // MODO TELÃO
                     appState.isTelaoMode = true;
                     appState.isAdmin = false; 
                     
-                    // Aplica estilos CSS para o Telão (remove header/footer, muda fundo)
+                    // Aplica estilos CSS para o Telão
                     const telaoStyles = document.createElement('style');
                     telaoStyles.innerHTML = `
-                        body { background-color: #FFFAF0; } 
-                        #app-container { max-width: 100%; padding: 1rem 2rem; }
-                        header, footer { display: none !important; }
+                        body { background-color: #f1f5f9; } 
+                        #app-container { max-width: 100%; padding: 0.5rem; height: 100vh; overflow: hidden; }
+                        header, footer, #installBanner { display: none !important; }
                     `;
                     document.head.appendChild(telaoStyles);
                     
                     navigateTo('telaoView', telaoChampId);
                 } else {
-                    // MODO NORMAL (Admin/Visitante)
+                    // MODO NORMAL
                     appState.isTelaoMode = false;
                     navigateTo('login');
                 }
