@@ -4574,27 +4574,42 @@ const renderTelaoView = () => {
             });
         };
 
-        /**
-         * Ouve a lista de campeonatos
-         */
+        // =================================================================
+        // === LISTENERS DO FIRESTORE (TEMPO REAL)
+        // =================================================================
+        
+        // (Replaces the old listenToChampionships)
         const listenToChampionships = () => {
-            unsubscribeChampionships();
-            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
-            const q = query(champCollectionRef);
-            
-            unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
-                championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (unsubscribeChampionships) unsubscribeChampionships();
+
+            let q;
+
+            if (appState.isAdmin) {
+                // CENÁRIO 1: ADMIN (Dono da Arena)
+                // Vê apenas os campeonatos que ele criou (para editar/excluir)
+                q = query(collection(db, 'users', appState.userId, 'championships'));
+            } else {
+                // CENÁRIO 2: VISITANTE (Espectador)
+                // Vê TODOS os campeonatos de TODAS as arenas (Portal de Eventos)
+                // Usamos 'collectionGroup' para pegar tudo que se chama 'championships' no banco
+                q = query(collectionGroup(db, 'championships'));
+            }
+
+            unsubscribeChampionships = onSnapshot(q, (snapshot) => {
+                const list = [];
+                snapshot.forEach(doc => {
+                    list.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Ordena por data de criação (se houver) ou nome
+                championships = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 
                 if (appState.currentView === 'championshipList') {
-                    render();
-                }
-                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
-                    // Atualiza o telão se o status do campeonato mudar (ex: 'finished')
-                    render();
+                    renderChampionshipList();
                 }
             }, (error) => {
-                console.error("Erro ao carregar campeonatos:", error);
-                showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
+                console.error("Erro ao buscar campeonatos:", error);
+                // IMPORTANTE: Se aparecer erro de índice no console, o link estará aqui
             });
         };
 
