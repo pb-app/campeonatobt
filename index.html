@@ -193,7 +193,6 @@
         import {
             getFirestore,
             collection,
-            collectionGroup,
             doc,
             getDoc,
             setDoc,
@@ -538,21 +537,26 @@
             const listBtn = document.getElementById('nav-to-list');
             if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
             
-            // Listener do botão de Login/Sair (CORRIGIDO PARA DESTRAVAR VISITANTE)
+            // --- AQUI ESTÁ A CORREÇÃO DO LOGOUT ---
             const loginBtn = document.getElementById('nav-to-login');
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
-                    // FORÇA O LOGOUT (mesmo se for visitante anônimo)
-                    signOut(auth).then(() => {
-                        // Recarrega a página limpa (sem parâmetros na URL)
-                        window.location.href = window.location.pathname; 
-                    }).catch((error) => {
-                        console.error("Erro ao sair:", error);
-                        // Se der erro, tenta recarregar na força bruta
-                        window.location.reload(); 
-                    });
+                    if (appState.isAdmin) {
+                        // Se for Admin, faz o LOGOUT REAL do Firebase
+                        signOut(auth).then(() => {
+                            // Recarrega a página para limpar a memória e voltar ao login
+                            window.location.reload();
+                        }).catch((error) => {
+                            console.error("Erro ao sair:", error);
+                            alert("Erro ao tentar sair.");
+                        });
+                    } else {
+                        // Se não for Admin, apenas navega para a tela de login
+                        navigateTo('login');
+                    }
                 });
             }
+        };
 
         // === VIEW: LOGIN (Versão Comercial com Firebase Auth)
         // =================================================================
@@ -632,17 +636,9 @@
                 }
             });
 
-           document.getElementById('visitor-login-btn').addEventListener('click', () => {
-        const btnVisitor = document.getElementById('visitor-login-btn');
-        btnVisitor.textContent = "Entrando...";
-        btnVisitor.disabled = true;
-
-        // Faz login anônimo para ativar os listeners do Firebase
-        signInAnonymously(auth).catch((error) => {
-            console.error("Erro no login anônimo:", error);
-            alert("Erro ao entrar como visitante.");
-            btnVisitor.textContent = "Tentar Novamente";
-            btnVisitor.disabled = false;
+            document.getElementById('visitor-login-btn').addEventListener('click', () => {
+                appState.isAdmin = false;
+                navigateTo('championshipList');
             });
         };
 
@@ -4577,42 +4573,27 @@ const renderTelaoView = () => {
             });
         };
 
-        // =================================================================
-        // === LISTENERS DO FIRESTORE (TEMPO REAL)
-        // =================================================================
-        
-        // (Replaces the old listenToChampionships)
+        /**
+         * Ouve a lista de campeonatos
+         */
         const listenToChampionships = () => {
-            if (unsubscribeChampionships) unsubscribeChampionships();
-
-            let q;
-
-            if (appState.isAdmin) {
-                // CENÁRIO 1: ADMIN (Dono da Arena)
-                // Vê apenas os campeonatos que ele criou (para editar/excluir)
-                q = query(collection(db, 'users', appState.userId, 'championships'));
-            } else {
-                // CENÁRIO 2: VISITANTE (Espectador)
-                // Vê TODOS os campeonatos de TODAS as arenas (Portal de Eventos)
-                // Usamos 'collectionGroup' para pegar tudo que se chama 'championships' no banco
-                q = query(collectionGroup(db, 'championships'));
-            }
-
-            unsubscribeChampionships = onSnapshot(q, (snapshot) => {
-                const list = [];
-                snapshot.forEach(doc => {
-                    list.push({ id: doc.id, ...doc.data() });
-                });
-                
-                // Ordena por data de criação (se houver) ou nome
-                championships = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            unsubscribeChampionships();
+            const champCollectionRef = collection(db, 'users', appState.userId, 'championships');
+            const q = query(champCollectionRef);
+            
+            unsubscribeChampionships = onSnapshot(q, (querySnapshot) => {
+                championships = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
                 if (appState.currentView === 'championshipList') {
-                    renderChampionshipList();
+                    render();
+                }
+                if (appState.isTelaoMode && appState.currentView === 'telaoView') {
+                    // Atualiza o telão se o status do campeonato mudar (ex: 'finished')
+                    render();
                 }
             }, (error) => {
-                console.error("Erro ao buscar campeonatos:", error);
-                // IMPORTANTE: Se aparecer erro de índice no console, o link estará aqui
+                console.error("Erro ao carregar campeonatos:", error);
+                showModal("Erro", "Não foi possível carregar o histórico de campeonatos.");
             });
         };
 
