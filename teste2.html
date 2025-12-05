@@ -4557,34 +4557,32 @@ const renderTelaoView = () => {
         // =================================================================
         // === INICIALIZAÇÃO DO APP
         // =================================================================
-        onAuthStateChanged(auth, async (user) => {
+       onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 try {
                     await signInAnonymously(auth);
                 } catch (error) {
-                    console.error("Erro na autenticação anônima:", error);
-                    let errorMessage = "Não foi possível conectar ao Firebase. Verifique sua conexão.";
-                    if (error.code === 'auth/configuration-not-found') {
-                        errorMessage = "Erro de Autenticação: O 'Login Anônimo' (Anonymous) não está ATIVADO no seu painel do Firebase.";
-                    }
-                    showModal("Erro de Autenticação", errorMessage);
+                    console.error("Erro login:", error);
                     return;
                 }
             }
             
-            // Usuário está logado (anônimo ou não)
+            // Usuário logado
             if (user && !appState.isAuthReady) {
-                // --- VOLTAR PARA O MODO ADMIN (Fixa os dados numa conta só) ---
+                // --- VOLTA AO ORIGINAL: Força o ID do Admin ---
+                // Isso garante que puxe do "campeonato-sortudo-admin" igual estava na sua foto
                 const effectiveUserId = MESTRE_USER_ID; 
                 
                 appState = { ...appState, userId: effectiveUserId, isAuthReady: true };
-                userIdFooter.textContent = "Modo Admin: " + effectiveUserId; 
                 
-                // Verifica se está entrando em Modo Telão
+                // Mostra o ID no rodapé
+                if(userIdFooter) userIdFooter.textContent = effectiveUserId; 
+                
+                // Configuração inicial
                 const urlParams = new URLSearchParams(window.location.search);
                 const telaoChampId = urlParams.get('champId');
                 
-                // Inicia os listeners principais
+                // Inicia a busca dos dados (Campeonatos e Rankings) neste ID
                 listenToChampionships();
                 listenToRankingsList(); 
                 
@@ -4593,7 +4591,6 @@ const renderTelaoView = () => {
                     appState.isTelaoMode = true;
                     appState.isAdmin = false; 
                     
-                    // Aplica estilos CSS para o Telão
                     const telaoStyles = document.createElement('style');
                     telaoStyles.innerHTML = `
                         body { background-color: #f1f5f9; } 
