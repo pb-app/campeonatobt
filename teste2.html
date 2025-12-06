@@ -174,6 +174,31 @@
         </div>
     </div>
 
+        <div id="player-actions-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[10000] transition-opacity duration-300">
+        <div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden transform transition-all border border-gray-100">
+            <div class="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 id="action-player-name" class="font-bold text-gray-700 text-lg">Nome do Jogador</h3>
+                <button id="close-actions-btn" class="text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-3">
+                <button id="action-edit-name" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-cyan-50 text-gray-700 font-medium transition-colors border border-gray-100">
+                    <span class="bg-cyan-100 text-cyan-600 p-2 rounded-lg">✏️</span> Editar Nome
+                </button>
+                <button id="action-edit-points" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-orange-50 text-gray-700 font-medium transition-colors border border-gray-100">
+                    <span class="bg-orange-100 text-orange-600 p-2 rounded-lg">🔢</span> Ajustar Pontuação
+                </button>
+                <button id="action-delete" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-rose-50 text-rose-600 font-medium transition-colors border border-rose-100">
+                    <span class="bg-rose-100 text-rose-600 p-2 rounded-lg">🗑️</span> Excluir Jogador
+                </button>
+            </div>
+            <div class="p-4 bg-gray-50 text-center">
+                <button id="action-cancel" class="text-gray-500 font-medium text-sm hover:text-gray-700">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
     <script type="module">
         // =================================================================
         // === IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
@@ -1284,106 +1309,229 @@
             }
         };
 
-       // =================================================================
-        // === VIEW: RANKING GERAL
-        // =================================================================
+       /**
+         * Renderiza a tabela de Ranking Geral (COM BOTÃO DE AÇÕES)
+         */
         const renderGlobalRanking = () => {
-            // Ordena os jogadores por pontos
-            const sortedPlayers = [...globalPlayers].sort((a, b) => b.points - a.points);
-            
-            const rankingsHtml = sortedPlayers.length === 0
-                ? `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhum jogador neste ranking.</td></tr>`
-                : sortedPlayers.map((player, index) => `
-                    <tr class="border-b border-amber-100 animate-fade-in-sm">
-                        <td class="p-3 sm:p-4 font-bold text-lg text-cyan-600">${index + 1}º</td>
-                        <td class="p-3 sm:p-4 font-medium text-gray-800">${player.name}</td>
-                        <td class="p-3 sm:p-4 font-bold text-xl text-orange-600">${player.points || 0}</td>
-                        <td class="p-3 sm:p-4 text-center text-emerald-600">${player.goldWins || 0}</td>
-                        <td class="p-3 sm:p-4 text-center text-gray-600">${player.silverWins || 0}</td>
-                        <td class="p-3 sm:p-4 text-center text-rose-600">${player.coveiroWins || 0}</td>
-                    </tr>
-                `).join('');
-
-            // Opções de rankings para o <select>
-            const rankingsOptions = allRankings.map(r => 
-                `<option value="${r.id}" ${r.id === appState.currentRankingId ? 'selected' : ''}>
-                    ${r.name}
-                </option>`
-            ).join('');
-
-            // Botões de Admin
-            let adminButtonsHtml = '';
-            if (appState.isAdmin) {
-                adminButtonsHtml = `
-                <button id="manage-rankings-btn" class="flex-shrink-0 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold p-3 rounded-lg shadow-sm transition-all" title="Gerenciar Rankings">
-                    ${icons.settings}
-                </button>
-                
-                <button id="reset-season-btn" class="flex-shrink-0 bg-rose-500 hover:bg-rose-600 text-white font-bold p-3 rounded-lg shadow-sm transition-all" title="Nova Temporada (Zerar Pontos)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                </button>
-                `;
+            // ... (código de setup inicial) ...
+            if (allRankings.length === 0) {
+                /* ... (manter igual ao original, se não tiver ranking) ... */
+                mainContent.innerHTML = `<div class="text-center p-10"><p>Nenhum ranking criado.</p></div>`;
+                return;
             }
-            
-            const printButtonHtml = `
-                <button id="print-ranking-pdf-btn" class="flex-shrink-0 bg-cyan-600 hover:bg-cyan-700 text-white font-bold p-3 rounded-lg shadow-sm transition-all" title="Gerar PDF do Ranking">
-                    ${icons.fileDown}
-                </button>
-            `;
 
-            const rankingSelectorHtml = `
-                <div class="mb-6">
-                    <label for="ranking-view-select" class="block text-sm font-medium text-gray-700 mb-1">Visualizando Ranking:</label>
-                    <div class="flex gap-2">
-                        <select id="ranking-view-select" class="w-full bg-white border border-gray-300 text-gray-800 rounded-lg p-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                            ${rankingsOptions.length > 0 ? rankingsOptions : '<option disabled>Nenhum ranking...</option>'}
-                        </select>
-                        ${adminButtonsHtml}
-                        ${printButtonHtml}
+            const currentRanking = allRankings.find(r => r.id === appState.currentRankingId) || allRankings[0];
+            
+            // Ordenação (Pontos > Saldo > Nome)
+            const sortedPlayers = [...globalPlayers].sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points;
+                if ((b.balance || 0) !== (a.balance || 0)) return (b.balance || 0) - (a.balance || 0);
+                return a.name.localeCompare(b.name);
+            });
+
+            // HTML da Lista
+            const listHtml = sortedPlayers.map((player, index) => {
+                // Medalhas para Top 3
+                let posDisplay = `<span class="font-bold text-gray-500 text-lg w-6 text-center">${index + 1}º</span>`;
+                if (index === 0) posDisplay = `<span class="text-2xl">🥇</span>`;
+                if (index === 1) posDisplay = `<span class="text-2xl">🥈</span>`;
+                if (index === 2) posDisplay = `<span class="text-2xl">🥉</span>`;
+
+                // Botão de Opções (Só aparece para Admin)
+                const actionButton = appState.isAdmin ? `
+                    <button class="player-options-btn p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition-all" 
+                            data-id="${player.id}" 
+                            data-name="${player.name}"
+                            data-points="${player.points}"
+                            data-balance="${player.balance || 0}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                    </button>
+                ` : '';
+
+                return `
+                <div class="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow mb-3">
+                    <div class="flex items-center gap-4">
+                        <div class="flex-shrink-0 w-8 text-center">${posDisplay}</div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg leading-tight">${player.name}</h3>
+                            <div class="text-xs text-gray-400 mt-1 flex gap-2">
+                                <span>Saldo: ${player.balance || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <span class="block font-black text-2xl text-cyan-600">${player.points}</span>
+                            <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Pontos</span>
+                        </div>
+                        ${actionButton}
                     </div>
                 </div>
-            `;
+                `;
+            }).join('');
+
+            // Botão Novo Ranking (Só Admin)
+            const addRankingBtn = appState.isAdmin ? `
+                <button id="btn-add-ranking" class="p-2 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition-colors">
+                    ${icons.plus}
+                </button>` : '';
 
             mainContent.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 animate-fade-in border border-gray-200">
-                    <h2 class="text-3xl font-bold mb-6 text-cyan-600 flex items-center gap-3">
-                        🏆 ${icons.award} Ranking Geral
-                    </h2>
-                    ${rankingSelectorHtml}
-                    <div class="overflow-x-auto">
-                        <table class="w-full min-w-max text-left">
-                            <thead>
-                                <tr class="bg-amber-100">
-                                    <th class="p-3 sm:p-4 rounded-tl-lg text-gray-600">Pos.</th>
-                                    <th class="p-3 sm:p-4 text-gray-600">Jogador</th>
-                                    <th class="p-3 sm:p-4 text-gray-600">Pontos</th>
-                                    <th class="p-3 sm:p-4 text-center text-gray-600">🥇 Ouro</th>
-                                    <th class="p-3 sm:p-4 text-center text-gray-600">🥈 Prata</th>
-                                    <th class="p-3 sm:p-4 text-center rounded-tr-lg text-gray-600">👻 ${icons.shovelSmall}</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-amber-100">
-                                ${rankingsHtml}
-                            </tbody>
-                        </table>
+                <div class="animate-fade-in max-w-2xl mx-auto pb-20">
+                    <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl p-6 text-white shadow-lg mb-6 sticky top-0 z-10">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h2 class="text-3xl font-bold">Ranking 🏆</h2>
+                                <p class="text-gray-400 text-sm">Temporada Atual</p>
+                            </div>
+                            ${addRankingBtn}
+                        </div>
+                        
+                        <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                            ${allRankings.map(r => `
+                                <button class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${r.id === appState.currentRankingId ? 'bg-cyan-500 text-white shadow-lg transform scale-105' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
+                                    onclick="appState.currentRankingId = '${r.id}'; render(); listenToGlobalPlayers();">
+                                    ${r.name}
+                                </button>
+                            `).join('')}
+                        </div>
                     </div>
+
+                    <div class="space-y-1">
+                        ${listHtml || '<div class="text-center text-gray-500 py-10">Nenhum jogador pontuou ainda.</div>'}
+                    </div>
+
+                    ${appState.isAdmin ? `
+                    <button id="fab-add-player" class="fixed bottom-6 right-6 bg-cyan-600 hover:bg-cyan-700 text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center z-40">
+                        ${icons.plus}
+                    </button>` : ''}
                 </div>
             `;
 
-            // Listeners da tela de Ranking
-            const rankingViewSelect = document.getElementById('ranking-view-select');
-            if (rankingViewSelect) rankingViewSelect.addEventListener('change', handleViewRankingChange);
-            
-            const manageRankingsBtn = document.getElementById('manage-rankings-btn');
-            if (manageRankingsBtn) manageRankingsBtn.addEventListener('click', renderRankingManagementModal);
-            
-            const printRankingBtn = document.getElementById('print-ranking-pdf-btn');
-            if (printRankingBtn) printRankingBtn.addEventListener('click', handlePrintRankingPDF);
-
-            // Novo Listener: Botão Resetar Temporada
-            const resetSeasonBtn = document.getElementById('reset-season-btn');
-            if (resetSeasonBtn) resetSeasonBtn.addEventListener('click', handleResetSeason);
+            // Listeners
+            if(appState.isAdmin) {
+                document.getElementById('btn-add-ranking')?.addEventListener('click', handleAddNewRanking);
+                document.getElementById('fab-add-player')?.addEventListener('click', handleAddPlayerManually);
+                
+                // Listener dos botões de opção (Abrem o novo Menu)
+                document.querySelectorAll('.player-options-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const player = {
+                            id: btn.dataset.id,
+                            name: btn.dataset.name,
+                            points: parseInt(btn.dataset.points),
+                            balance: parseInt(btn.dataset.balance)
+                        };
+                        openPlayerActions(player); // <--- Nova função que vamos criar
+                    });
+                });
+            }
         };
+
+         // =================================================================
+        // === LÓGICA DO MENU DE AÇÕES DO JOGADOR
+        // =================================================================
+        
+        let currentPlayerInMenu = null; // Guarda quem estamos editando
+
+        const openPlayerActions = (player) => {
+            currentPlayerInMenu = player;
+            const modal = document.getElementById('player-actions-modal');
+            const nameTitle = document.getElementById('action-player-name');
+            
+            nameTitle.textContent = player.name;
+            modal.classList.remove('hidden');
+
+            // Animação de entrada
+            const content = modal.querySelector('div');
+            content.classList.add('translate-y-full');
+            setTimeout(() => content.classList.remove('translate-y-full'), 10);
+        };
+
+        const closePlayerActions = () => {
+            const modal = document.getElementById('player-actions-modal');
+            modal.classList.add('hidden');
+            currentPlayerInMenu = null;
+        };
+
+        // Listeners do Modal de Ações
+        document.getElementById('close-actions-btn').addEventListener('click', closePlayerActions);
+        document.getElementById('action-cancel').addEventListener('click', closePlayerActions);
+
+        // 1. EDITAR NOME
+        document.getElementById('action-edit-name').addEventListener('click', async () => {
+            closePlayerActions();
+            if (!currentPlayerInMenu) return;
+
+            const newName = await showDialog({
+                type: 'prompt',
+                title: 'Editar Nome',
+                message: `Novo nome para <b>${currentPlayerInMenu.name}</b>:`,
+                placeholder: currentPlayerInMenu.name,
+                confirmText: 'Salvar'
+            });
+
+            if (newName && newName.trim()) {
+                try {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', currentPlayerInMenu.id);
+                    await updateDoc(playerRef, { name: newName.trim() });
+                    showDialog({ title: "Sucesso", message: "Nome atualizado!" });
+                } catch (e) {
+                    console.error(e);
+                    showDialog({ title: "Erro", message: "Falha ao atualizar nome." });
+                }
+            }
+        });
+
+        // 2. AJUSTAR PONTOS
+        document.getElementById('action-edit-points').addEventListener('click', async () => {
+            closePlayerActions();
+            if (!currentPlayerInMenu) return;
+
+            const newPointsStr = await showDialog({
+                type: 'prompt',
+                title: 'Ajustar Pontos',
+                message: `Pontuação atual: <b>${currentPlayerInMenu.points}</b><br>Digite o novo valor total:`,
+                placeholder: currentPlayerInMenu.points,
+                confirmText: 'Atualizar Pontos'
+            });
+
+            if (newPointsStr !== null && !isNaN(newPointsStr)) {
+                try {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', currentPlayerInMenu.id);
+                    await updateDoc(playerRef, { points: parseInt(newPointsStr) });
+                    // Nota: O saldo permanece o mesmo. Para mudar saldo, precisaríamos de outro prompt, mas geralmente pontos é o que importa.
+                } catch (e) {
+                    console.error(e);
+                    showDialog({ title: "Erro", message: "Falha ao atualizar pontos." });
+                }
+            }
+        });
+
+        // 3. EXCLUIR JOGADOR
+        document.getElementById('action-delete').addEventListener('click', async () => {
+            closePlayerActions();
+            if (!currentPlayerInMenu) return;
+
+            const confirm = await showDialog({
+                title: 'Excluir Jogador?',
+                message: `Tem certeza que deseja remover <b>${currentPlayerInMenu.name}</b> do ranking?<br>Isso não pode ser desfeito.`,
+                confirmText: 'Sim, Excluir',
+                confirmColor: 'bg-rose-600'
+            });
+
+            if (confirm) {
+                try {
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', currentPlayerInMenu.id);
+                    await deleteDoc(playerRef);
+                    showDialog({ title: "Excluído", message: "Jogador removido com sucesso." });
+                } catch (e) {
+                    console.error(e);
+                    showDialog({ title: "Erro", message: "Falha ao excluir." });
+                }
+            }
+        });
+        
         /**
          * Zera a pontuação de todos os jogadores para iniciar nova temporada
          */
