@@ -413,32 +413,38 @@
                 return;
             }
 
+            
+
             // Renderiza os botões do cabeçalho (exceto no telão)
             if (!appState.isTelaoMode) {
                 renderHeaderButtons();
             }
 
             // Seleciona qual view renderizar
-            switch (appState.currentView) {
-                case 'login': 
-                    renderLogin();
-                    break;
-                case 'championshipList':
-                    renderChampionshipList();
-                    break;
-                case 'globalRanking':
-                    renderGlobalRanking();
-                    break;
-                case 'championshipView':
-                    renderChampionshipView();
-                    break;
-                case 'telaoView':
-                    renderTelaoView();
-                    break;
-                default:
-                    mainContent.innerHTML = `<p>Estado desconhecido: ${appState.currentView}</p>`;
-            }
-        };
+           // Seleciona qual view renderizar
+        switch (appState.currentView) {
+            case 'arenaList': // <--- VERIFIQUE SE ISTO ESTÁ AQUI
+                renderArenaList();
+                break;
+
+            case 'login': 
+                renderLogin();
+                break;
+            case 'championshipList':
+                renderChampionshipList();
+                break;
+            case 'globalRanking':
+                renderGlobalRanking();
+                break;
+            case 'championshipView':
+                renderChampionshipView();
+                break;
+            case 'telaoView':
+                renderTelaoView();
+                break;
+            default:
+                mainContent.innerHTML = `<p>Estado desconhecido: ${appState.currentView}</p>`;
+        }
 
         /**
          * Navega para uma nova view e carrega os dados do Dono correto
@@ -572,6 +578,98 @@
             }
         };
 
+         // =================================================================
+        // === VIEW: PORTAL DE ARENAS (NOVA TELA INICIAL)
+        // =================================================================
+        const renderArenaList = () => {
+            // 1. Agrupa campeonatos por Dono (Arena)
+            const arenasMap = {};
+            
+            championships.forEach(champ => {
+                const ownerId = champ.ownerId || 'desconhecido';
+                if (!arenasMap[ownerId]) {
+                    arenasMap[ownerId] = {
+                        id: ownerId,
+                        name: `Arena ${ownerId.slice(0, 5)}...`, // Nome provisório (melhoraremos depois)
+                        tournaments: []
+                    };
+                }
+                arenasMap[ownerId].tournaments.push(champ);
+            });
+
+            const arenasList = Object.values(arenasMap);
+
+            // 2. HTML da Lista de Arenas
+            const arenasListHtml = arenasList.length === 0
+                ? `<div class="text-center py-10 text-gray-500">
+                     <p class="text-xl">Nenhum torneio encontrado.</p>
+                     <p class="text-sm mt-2">As arenas aparecerão aqui assim que criarem campeonatos.</p>
+                   </div>`
+                : arenasList.map(arena => {
+                    const activeCount = arena.tournaments.length;
+                    // Tenta pegar o nome de um campeonato para usar como referência
+                    const lastChampName = arena.tournaments[0]?.name || "Torneios";
+                    
+                    return `
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all cursor-pointer arena-card-btn" 
+                         data-owner-id="${arena.id}">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-cyan-100 p-4 rounded-full text-cyan-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4 8 4v14"/><path d="M8 21v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold text-gray-800">Arena (ID: ${arena.id.slice(0,4)})</h3>
+                                <p class="text-sm text-gray-500">${activeCount} campeonato(s) ativo(s)</p>
+                                <p class="text-xs text-cyan-600 mt-1 font-medium">Último: ${lastChampName}</p>
+                            </div>
+                            <div class="text-gray-400">
+                                ${icons.arrowLeft.replace('<svg', '<svg style="transform: rotate(180deg);"')}
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+            // 3. Renderiza a Tela Principal
+            mainContent.innerHTML = `
+                <div class="animate-fade-in space-y-8">
+                    <div class="text-center py-8 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-3xl shadow-xl text-white mb-8 mx-2 sm:mx-0">
+                        <h1 class="text-3xl sm:text-5xl font-black mb-2 tracking-tight">Portal BT 🎾</h1>
+                        <p class="text-cyan-100 text-lg">Encontre arenas e acompanhe torneios em tempo real.</p>
+                        <div class="mt-6">
+                             <button id="btn-sou-arena" class="bg-white text-cyan-700 font-bold py-2 px-6 rounded-full shadow hover:bg-gray-100 transition-all text-sm">
+                                🔐 Sou Dono de Arena (Login)
+                             </button>
+                        </div>
+                    </div>
+
+                    <div class="px-2 sm:px-0">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            🏟️ Arenas Disponíveis
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${arenasListHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Listeners
+            document.getElementById('btn-sou-arena').addEventListener('click', () => {
+                navigateTo('login');
+            });
+
+            document.querySelectorAll('.arena-card-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const ownerId = btn.dataset.ownerId;
+                    // Simula navegação para a lista filtrada dessa arena
+                    appState.currentOwnerId = ownerId;
+                    appState.isAdmin = false; // Garante modo visitante
+                    navigateTo('championshipList');
+                });
+            });
+        };
+        
         // === VIEW: LOGIN (Versão Comercial com Firebase Auth)
         // =================================================================
         const renderLogin = () => {
@@ -4751,68 +4849,66 @@ const renderTelaoView = () => {
                 console.error("Erro ao carregar rankings:", error);
             });
         };
-        
+     
         // =================================================================
-        // === INICIALIZAÇÃO DO APP
-        // =================================================================
-        // =================================================================
-        // === INICIALIZAÇÃO E CONTROLE DE SESSÃO
-        // =================================================================
-        // =================================================================
-        // === INICIALIZAÇÃO E CONTROLE DE SESSÃO
+        // === INICIALIZAÇÃO E CONTROLE DE SESSÃO (MODO PORTAL)
         // =================================================================
         onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                // Se não tiver ninguém logado, manda para a tela de login
-                // (Exceto se for modo Telão, que vamos tratar abaixo)
-                const urlParams = new URLSearchParams(window.location.search);
-                if (!appState.isAuthReady && !urlParams.has('telao')) {
-                     appState.currentView = 'login';
-                     render();
-                }
-            } else {
-                // Usuário Logado!
+            // Verifica URL para Telão (prioridade máxima)
+            const urlParams = new URLSearchParams(window.location.search);
+            const telaoChampId = urlParams.get('champId');
+
+            if (user) {
+                // --- CENÁRIO 1: DONO DA ARENA LOGADO ---
                 if (!appState.isAuthReady) {
-                    
-                    // SEGURANÇA: Se o usuário for anônimo, ele NÃO é admin.
-                    // Se ele logou com email (signInWithEmailAndPassword), ele É admin.
                     const isAnonymous = user.isAnonymous;
                     
-                    // Define o ID do usuário para carregar APENAS os dados dele
                     appState = { 
                         ...appState, 
-                        userId: user.uid, // <--- A MÁGICA: Usa o ID único do Firebase
+                        userId: user.uid, 
                         isAuthReady: true,
-                        isAdmin: !isAnonymous // Só é admin se não for anônimo
+                        isAdmin: !isAnonymous // Anônimo = Visitante, Email = Admin
                     };
                     
-                    const userIdFooter = document.getElementById('user-id-footer');
-                    if(userIdFooter) userIdFooter.textContent = isAnonymous ? "Visitante" : user.email;
+                    document.getElementById('user-id-footer').textContent = isAnonymous ? "Visitante" : user.email;
 
-                    // Inicia os listeners para carregar OS DADOS DESTE USUÁRIO
+                    // Inicia listeners
                     listenToChampionships();
                     listenToRankingsList(); 
                     
-                    // Verifica se é Modo Telão
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const telaoChampId = urlParams.get('champId');
-
-                    if (urlParams.has('telao') && telaoChampId) {
-                        appState.isTelaoMode = true;
-                        appState.isAdmin = false; // Telão nunca é admin
-                        
-                        // Estilos do Telão
-                        const telaoStyles = document.createElement('style');
-                        telaoStyles.innerHTML = `body { background-color: #FFFAF0; } #app-container { max-width: 100%; padding: 1rem 2rem; } header, footer { display: none !important; }`;
-                        document.head.appendChild(telaoStyles);
-                        
-                        navigateTo('telaoView', telaoChampId);
-                    } else {
-                        // Se logou com sucesso e não é telão, vai pra lista
-                        if (appState.currentView === 'login' || appState.currentView === 'loading') {
-                             navigateTo('championshipList');
+                    // Roteamento Pós-Login
+                    if (appState.currentView === 'loading' || appState.currentView === 'login') {
+                        if (appState.isAdmin) {
+                            navigateTo('championshipList'); // Admin vai para seus jogos
+                        } else {
+                            // Se for visitante anônimo, já vai carregar a lista no listenToChampionships
+                            if (!appState.currentView.includes('telao')) {
+                                navigateTo('arenaList'); // Visitante vai para o Portal
+                            }
                         }
                     }
+                }
+            } else {
+                // --- CENÁRIO 2: VISITANTE PÚBLICO (SEM LOGIN) ---
+                if (!appState.isAuthReady) {
+                     // Entra automaticamente como Anônimo para poder ler o banco
+                     // Isso é essencial para o Portal funcionar sem pedir senha
+                     signInAnonymously(auth).catch((error) => {
+                         console.error("Erro no auto-login anônimo:", error);
+                     });
+                     
+                     // Enquanto loga anônimo, define view inicial
+                     if (urlParams.has('telao') && telaoChampId) {
+                         // Lógica do Telão...
+                         appState.isTelaoMode = true;
+                         appState.isAdmin = false;
+                         /* ... insira o estilo do telão aqui se necessário ... */
+                         navigateTo('telaoView', telaoChampId);
+                     } else {
+                         // MUDANÇA: Agora vai para o Portal de Arenas
+                         appState.currentView = 'arenaList';
+                         // Listener global já vai ser acionado pelo signInAnonymously acima
+                     }
                 }
             }
         });
