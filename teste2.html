@@ -861,13 +861,26 @@
                 btnVisitor.textContent = "Entrando...";
                 btnVisitor.disabled = true;
 
-                // Faz login anônimo para o Firebase liberar o acesso
-                signInAnonymously(auth).catch((error) => {
-                    console.error("Erro no login anônimo:", error);
-                    alert("Erro ao conectar como visitante. Tente novamente.");
-                    btnVisitor.textContent = "Entrar como Visitante";
-                    btnVisitor.disabled = false;
-                });
+                // Tenta logar (ou reaproveitar o login anônimo atual)
+                signInAnonymously(auth)
+                    .then(() => {
+                        // SUCESSO: Força a ida para o Portal
+                        // Isso garante que saia da tela de login mesmo se já fosse anônimo antes
+                        appState.isAdmin = false; 
+                        navigateTo('arenaList');
+                    })
+                    .catch((error) => {
+                        console.error("Erro no login anônimo:", error);
+                        // Se for erro de "admin-restricted", avisa para ativar no console
+                        if(error.code === 'auth/admin-restricted-operation') {
+                            alert("O login anônimo não está ativado no Firebase Console.");
+                        } else {
+                            alert("Erro ao conectar como visitante. Tente novamente.");
+                        }
+                        
+                        btnVisitor.textContent = "Entrar como Visitante";
+                        btnVisitor.disabled = false;
+                    });
             });
         };
 
