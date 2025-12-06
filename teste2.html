@@ -1309,8 +1309,8 @@
             }
         };
 
-       /**
-         * Renderiza a tabela de Ranking Geral (CORRIGIDO: Sem onclick inline)
+          /**
+         * Renderiza a tabela de Ranking Geral (LIMPA - Sem listeners manuais)
          */
         const renderGlobalRanking = () => {
             // Verifica se tem rankings
@@ -1352,7 +1352,7 @@
                             data-name="${player.name}"
                             data-points="${player.points}"
                             data-balance="${player.balance || 0}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                     </button>
                 ` : '';
 
@@ -1417,36 +1417,21 @@
                 </div>
             `;
 
-            // --- LISTENERS (Aqui consertamos o erro do appState is not defined) ---
-            
-            // 1. Clique nas Abas de Ranking
+            // LISTENERS GERAIS (Abas e FAB)
             document.querySelectorAll('.ranking-tab-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    const newId = btn.dataset.id;
-                    appState.currentRankingId = newId;
-                    listenToGlobalPlayers(); // Recarrega os dados do novo ranking
-                    render(); // Atualiza a tela (para pintar a aba certa)
+                    appState.currentRankingId = btn.dataset.id;
+                    listenToGlobalPlayers();
+                    render();
                 });
             });
 
-            // 2. Outros botões de Admin
             if(appState.isAdmin) {
                 document.getElementById('btn-add-ranking')?.addEventListener('click', handleAddNewRanking);
                 document.getElementById('fab-add-player')?.addEventListener('click', handleAddPlayerManually);
-                
-                // Listener dos botões de opção (Três pontinhos)
-                document.querySelectorAll('.player-options-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const player = {
-                            id: btn.dataset.id,
-                            name: btn.dataset.name,
-                            points: parseInt(btn.dataset.points),
-                            balance: parseInt(btn.dataset.balance)
-                        };
-                        openPlayerActions(player); 
-                    });
-                });
             }
+            
+            // NOTA: O listener dos 3 pontinhos foi removido daqui e será colocado globalmente abaixo.
         };
 
          // =================================================================
@@ -1474,6 +1459,31 @@
             modal.classList.add('hidden');
             currentPlayerInMenu = null;
         };
+
+        // =================================================================
+        // === LISTENER GLOBAL PARA BOTÕES DINÂMICOS (A CORREÇÃO)
+        // =================================================================
+        
+        // Isso resolve o problema de "cliquei e nada aconteceu"
+        document.addEventListener('click', (e) => {
+            // Verifica se o clique foi em um botão de opções (ou no ícone dentro dele)
+            const btn = e.target.closest('.player-options-btn');
+            
+            if (btn) {
+                // Se achou o botão, executa a ação
+                const player = {
+                    id: btn.dataset.id,
+                    name: btn.dataset.name,
+                    points: parseInt(btn.dataset.points) || 0,
+                    balance: parseInt(btn.dataset.balance) || 0
+                };
+                
+                // Debug para você ver no console se funcionou
+                console.log("Botão de opções clicado:", player);
+                
+                openPlayerActions(player);
+            }
+        });
 
         // Listeners do Modal de Ações
         document.getElementById('close-actions-btn').addEventListener('click', closePlayerActions);
