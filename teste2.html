@@ -1490,21 +1490,24 @@
         document.getElementById('action-cancel').addEventListener('click', closePlayerActions);
 
         // 1. EDITAR NOME
-        document.getElementById('action-edit-name').addEventListener('click', async () => {
-            closePlayerActions();
-            if (!currentPlayerInMenu) return;
+        const btnEditName = document.getElementById('action-edit-name');
+        if (btnEditName) btnEditName.addEventListener('click', async () => {
+            const player = currentPlayerInMenu; // Salva o jogador ANTES de fechar
+            closePlayerActions(); // Fecha o menu (que limpa a variável global)
+            
+            if (!player) return;
 
             const newName = await showDialog({
                 type: 'prompt',
                 title: 'Editar Nome',
-                message: `Novo nome para <b>${currentPlayerInMenu.name}</b>:`,
-                placeholder: currentPlayerInMenu.name,
+                message: `Novo nome para <b>${player.name}</b>:`,
+                placeholder: player.name,
                 confirmText: 'Salvar'
             });
 
             if (newName && newName.trim()) {
                 try {
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', currentPlayerInMenu.id);
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', player.id);
                     await updateDoc(playerRef, { name: newName.trim() });
                     showDialog({ title: "Sucesso", message: "Nome atualizado!" });
                 } catch (e) {
@@ -1515,23 +1518,25 @@
         });
 
         // 2. AJUSTAR PONTOS
-        document.getElementById('action-edit-points').addEventListener('click', async () => {
+        const btnEditPoints = document.getElementById('action-edit-points');
+        if (btnEditPoints) btnEditPoints.addEventListener('click', async () => {
+            const player = currentPlayerInMenu; // Salva o jogador ANTES de fechar
             closePlayerActions();
-            if (!currentPlayerInMenu) return;
+            
+            if (!player) return;
 
             const newPointsStr = await showDialog({
                 type: 'prompt',
                 title: 'Ajustar Pontos',
-                message: `Pontuação atual: <b>${currentPlayerInMenu.points}</b><br>Digite o novo valor total:`,
-                placeholder: currentPlayerInMenu.points,
+                message: `Pontuação atual: <b>${player.points}</b><br>Digite o novo valor total:`,
+                placeholder: player.points.toString(),
                 confirmText: 'Atualizar Pontos'
             });
 
-            if (newPointsStr !== null && !isNaN(newPointsStr)) {
+            if (newPointsStr !== null && !isNaN(newPointsStr) && newPointsStr.trim() !== '') {
                 try {
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', currentPlayerInMenu.id);
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', player.id);
                     await updateDoc(playerRef, { points: parseInt(newPointsStr) });
-                    // Nota: O saldo permanece o mesmo. Para mudar saldo, precisaríamos de outro prompt, mas geralmente pontos é o que importa.
                 } catch (e) {
                     console.error(e);
                     showDialog({ title: "Erro", message: "Falha ao atualizar pontos." });
@@ -1540,22 +1545,25 @@
         });
 
         // 3. EXCLUIR JOGADOR
-        document.getElementById('action-delete').addEventListener('click', async () => {
+        const btnDeletePlayer = document.getElementById('action-delete');
+        if (btnDeletePlayer) btnDeletePlayer.addEventListener('click', async () => {
+            const player = currentPlayerInMenu; // Salva o jogador ANTES de fechar
             closePlayerActions();
-            if (!currentPlayerInMenu) return;
+            
+            if (!player) return;
 
             const confirm = await showDialog({
                 title: 'Excluir Jogador?',
-                message: `Tem certeza que deseja remover <b>${currentPlayerInMenu.name}</b> do ranking?<br>Isso não pode ser desfeito.`,
+                message: `Tem certeza que deseja remover <b>${player.name}</b>?<br>Isso não pode ser desfeito.`,
                 confirmText: 'Sim, Excluir',
                 confirmColor: 'bg-rose-600'
             });
 
             if (confirm) {
                 try {
-                    const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', currentPlayerInMenu.id);
+                    const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', player.id);
                     await deleteDoc(playerRef);
-                    showDialog({ title: "Excluído", message: "Jogador removido com sucesso." });
+                    showDialog({ title: "Excluído", message: "Jogador removido." });
                 } catch (e) {
                     console.error(e);
                     showDialog({ title: "Erro", message: "Falha ao excluir." });
