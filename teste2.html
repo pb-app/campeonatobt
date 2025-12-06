@@ -4683,6 +4683,17 @@ const renderTelaoView = () => {
                 if (appState.currentView === 'globalRanking' || appState.currentView === 'championshipView') {
                     render();
                 }
+              else if (appState.currentView === 'championshipList' && !appState.isAdmin) {
+                navHtml += `
+                <button
+                    id="nav-to-portal"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+                    ${icons.arrowLeft}
+                    Todas Arenas
+                </button>
+                `;
+            }
+                
             }, (error) => {
                 console.error("Erro ao carregar jogadores:", error);
             });
