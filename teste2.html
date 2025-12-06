@@ -496,13 +496,13 @@
         };
 
         /**
-         * Renderiza os botões de "Ranking" / "Voltar" / "Login/Sair" no cabeçalho
+         * Renderiza os botões do cabeçalho (CORRIGIDO: Voltar para Visitantes)
          */
         const renderHeaderButtons = () => {
             let navHtml = ''; 
             let authHtml = ''; 
 
-            // Botão de Navegação (Ranking Geral / Voltar)
+            // 1. Botões da Esquerda (Navegação Interna)
             if (appState.currentView === 'championshipList') {
                 navHtml = `
                 <button
@@ -523,8 +523,23 @@
                 `;
             }
 
-            // Botão de Autenticação (Login / Sair)
-            if (appState.currentView !== 'login') {
+            // 2. Botões da Direita (Auth ou Voltar ao Portal)
+            if (appState.currentView === 'login') {
+                authHtml = ''; // Nada na tela de login
+            }
+            // SE FOR VISITANTE DENTRO DE UMA ARENA -> MOSTRA BOTÃO VOLTAR
+            else if (appState.currentView === 'championshipList' && !appState.isAdmin) {
+                authHtml = `
+                <button
+                    id="nav-to-portal"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+                    ${icons.arrowLeft}
+                    Sair da Arena
+                </button>
+                `;
+            }
+            // CASO CONTRÁRIO -> MOSTRA LOGIN/LOGOUT PADRÃO
+            else {
                 if (appState.isAdmin) {
                     authHtml = `
                     <button
@@ -535,43 +550,46 @@
                     </button>
                     `;
                 } else {
+                    // Visitante no Portal ou em outras telas
                     authHtml = `
                     <button
                         id="nav-to-login"
                         class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
                         ${icons.logIn}
-                        Login (Admin)
+                        Sou Dono
                     </button>
                     `;
                 }
             }
             
-           // ... (parte de cima da função renderHeaderButtons continua igual) ...
-            
             headerButtons.innerHTML = navHtml + authHtml; 
 
-            // Adiciona listeners aos botões renderizados
+            // Listeners
             const rankingBtn = document.getElementById('nav-to-ranking');
             if (rankingBtn) rankingBtn.addEventListener('click', () => navigateTo('globalRanking'));
             
             const listBtn = document.getElementById('nav-to-list');
             if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
             
-            // --- AQUI ESTÁ A CORREÇÃO DO LOGOUT ---
+            // Listener do novo botão VOLTAR AO PORTAL
+            const portalBtn = document.getElementById('nav-to-portal');
+            if (portalBtn) portalBtn.addEventListener('click', () => {
+                appState.currentOwnerId = null; // Limpa a seleção da arena
+                navigateTo('arenaList');        // Volta pra tela inicial
+            });
+
+            // Listener de Login/Logout
             const loginBtn = document.getElementById('nav-to-login');
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
                     if (appState.isAdmin) {
-                        // Se for Admin, faz o LOGOUT REAL do Firebase
                         signOut(auth).then(() => {
-                            // Recarrega a página para limpar a memória e voltar ao login
                             window.location.reload();
                         }).catch((error) => {
                             console.error("Erro ao sair:", error);
                             alert("Erro ao tentar sair.");
                         });
                     } else {
-                        // Se não for Admin, apenas navega para a tela de login
                         navigateTo('login');
                     }
                 });
@@ -579,7 +597,7 @@
         };
 
          // =================================================================
-        // === VIEW: PORTAL DE ARENAS (NOVA TELA INICIAL)
+        // === VIEW: PORTAL DE ARENAS (SEM BOTÃO DUPLICADO)
         // =================================================================
         const renderArenaList = () => {
             // 1. Agrupa campeonatos por Dono (Arena)
@@ -590,7 +608,7 @@
                 if (!arenasMap[ownerId]) {
                     arenasMap[ownerId] = {
                         id: ownerId,
-                        name: `Arena ${ownerId.slice(0, 5)}...`, // Nome provisório (melhoraremos depois)
+                        name: `Arena ${ownerId.slice(0, 5)}...`,
                         tournaments: []
                     };
                 }
@@ -607,7 +625,6 @@
                    </div>`
                 : arenasList.map(arena => {
                     const activeCount = arena.tournaments.length;
-                    // Tenta pegar o nome de um campeonato para usar como referência
                     const lastChampName = arena.tournaments[0]?.name || "Torneios";
                     
                     return `
@@ -630,17 +647,12 @@
                     `;
                 }).join('');
 
-            // 3. Renderiza a Tela Principal
+            // 3. Renderiza a Tela Principal (LIMPA)
             mainContent.innerHTML = `
                 <div class="animate-fade-in space-y-8">
-                    <div class="text-center py-8 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-3xl shadow-xl text-white mb-8 mx-2 sm:mx-0">
+                    <div class="text-center py-10 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-3xl shadow-xl text-white mb-8 mx-2 sm:mx-0">
                         <h1 class="text-3xl sm:text-5xl font-black mb-2 tracking-tight">Portal BT 🎾</h1>
                         <p class="text-cyan-100 text-lg">Encontre arenas e acompanhe torneios em tempo real.</p>
-                        <div class="mt-6">
-                             <button id="btn-sou-arena" class="bg-white text-cyan-700 font-bold py-2 px-6 rounded-full shadow hover:bg-gray-100 transition-all text-sm">
-                                🔐 Sou Dono de Arena (Login)
-                             </button>
-                        </div>
                     </div>
 
                     <div class="px-2 sm:px-0">
@@ -654,17 +666,12 @@
                 </div>
             `;
 
-            // Listeners
-            document.getElementById('btn-sou-arena').addEventListener('click', () => {
-                navigateTo('login');
-            });
-
+            // Listeners dos Cards de Arena
             document.querySelectorAll('.arena-card-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const ownerId = btn.dataset.ownerId;
-                    // Simula navegação para a lista filtrada dessa arena
                     appState.currentOwnerId = ownerId;
-                    appState.isAdmin = false; // Garante modo visitante
+                    appState.isAdmin = false; 
                     navigateTo('championshipList');
                 });
             });
