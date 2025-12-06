@@ -1680,30 +1680,41 @@
         };
 
         /**
-         * Lida com a exclusão de um Ranking (lista de nomes)
+         * Exclui o Ranking Atual (CORRIGIDO)
          */
-        const handleDeleteRanking = async (rankingId, rankingName) => {
-            if (!confirm(`Tem certeza que deseja excluir o ranking "${rankingName}"? Esta ação não pode ser desfeita.`)) {
-                return;
-            }
-            
-            // Dupla verificação (não deve ser necessário, mas é seguro)
-            const inUse = championships.find(c => c.rankingId === rankingId);
-            if (inUse) {
-                showModal("Erro", `Não é possível excluir. Este ranking está em uso pelo campeonato "${inUse.name}".`);
-                return;
-            }
-            
-            // Filtra a lista de rankings
-            const newList = allRankings.filter(r => r.id !== rankingId);
-            
-            try {
-                // Salva a nova lista (sem o ranking excluído)
-                await setDoc(doc(db, 'users', appState.userId, 'app_data', 'rankings'), { list: newList });
-                hideModal(); // Fecha o modal de gerenciamento
-            } catch (error) {
-                console.error("Erro ao excluir ranking:", error);
-                showModal("Erro", "Não foi possível excluir o ranking.");
+        const handleDeleteRanking = async () => {
+            // Encontra o nome do ranking atual
+            const currentRankObj = allRankings.find(r => r.id === appState.currentRankingId);
+            const rankName = currentRankObj ? currentRankObj.name : "este ranking";
+
+            // O showDialog abre e FECHA SOZINHO ao clicar
+            const confirm = await showDialog({
+                title: 'Excluir Categoria?',
+                message: `Tem certeza que deseja apagar o ranking <b>${rankName}</b> inteiramente?<br><br>Os jogadores e pontos desta categoria deixarão de aparecer.`,
+                confirmText: 'Sim, Apagar',
+                confirmColor: 'bg-rose-600'
+            });
+
+            // Se confirmou (true), executa a exclusão
+            if (confirm) {
+                try {
+                    // 1. Remove o ID da lista local
+                    const newList = allRankings.filter(r => r.id !== appState.currentRankingId);
+                    
+                    // 2. Atualiza no Banco de Dados
+                    const rankingsDocRef = doc(db, 'users', appState.userId, 'app_data', 'rankings');
+                    await updateDoc(rankingsDocRef, { list: newList });
+
+                    showDialog({ title: "Sucesso", message: "Ranking excluído." });
+
+                    // 3. Muda a seleção para o primeiro da lista que sobrou
+                    appState.currentRankingId = newList.length > 0 ? newList[0].id : null;
+                    
+                    // (A tela vai atualizar sozinha via listener)
+                } catch (error) {
+                    console.error("Erro ao excluir ranking:", error);
+                    showDialog({ title: "Erro", message: "Não foi possível excluir o ranking." });
+                }
             }
         };
 
