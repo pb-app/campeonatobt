@@ -5167,7 +5167,7 @@ const renderTelaoView = () => {
         };
      
         // =================================================================
-        // === INICIALIZAÇÃO E CONTROLE DE SESSÃO (CORRIGIDO FINAL)
+        // === INICIALIZAÇÃO E CONTROLE DE SESSÃO (CORRIGIDO LOGIN)
         // =================================================================
         onAuthStateChanged(auth, async (user) => {
             // 1. Captura parâmetros da URL para saber se é Telão
@@ -5175,42 +5175,46 @@ const renderTelaoView = () => {
             const isTelaoUrl = urlParams.has('telao');
             const telaoChampId = urlParams.get('champId');
 
-            // 2. Garante que haja um usuário (seja Admin logado ou Anônimo novo)
+            // 2. Garante que haja um usuário
             if (!user) {
-                // Se não tem user, cria um anônimo e sai. 
-                // O onAuthStateChanged vai disparar de novo sozinho assim que criar.
                 signInAnonymously(auth).catch((error) => console.error("Erro login anônimo:", error));
                 return;
             }
 
-            // 3. Configura o Estado Global (apenas uma vez)
-            if (!appState.isAuthReady) {
+            // 3. Configura o Estado Global 
+            // CORREÇÃO AQUI: Atualiza se não estiver pronto OU se o usuário mudou (ex: de Visitante para Admin)
+            if (!appState.isAuthReady || appState.userId !== user.uid) {
                 const isAnonymous = user.isAnonymous;
-                appState.userId = user.uid;
-                appState.isAuthReady = true;
-                // Se for anônimo é Visitante, se tiver login é Admin
-                appState.isAdmin = !isAnonymous; 
+                
+                appState = {
+                    ...appState,
+                    userId: user.uid,
+                    isAuthReady: true,
+                    isAdmin: !isAnonymous // Se tem email, é Admin. Se não, é Visitante.
+                };
 
-                document.getElementById('user-id-footer').textContent = isAnonymous ? "Visitante" : user.email;
+                const footerUser = document.getElementById('user-id-footer');
+                if (footerUser) footerUser.textContent = isAnonymous ? "Visitante" : user.email;
 
-                // Inicia os listeners de dados do Firebase
+                // Reinicia os listeners para carregar os dados do novo usuário corretamente
                 listenToChampionships();
                 listenToRankingsList();
+                
+                // Força a atualização da tela se já estivermos logados mas a tela não mudou
+                if (appState.currentView === 'login' && appState.isAdmin) {
+                    navigateTo('championshipList');
+                }
             }
 
             // 4. ROTEAMENTO DE INICIALIZAÇÃO
-            // Só redireciona se estivermos nas telas de carregamento/login
+            // Redireciona apenas se estiver na tela de Loading, Login ou na raiz
             if (appState.currentView === 'loading' || appState.currentView === 'login') {
                 
                 // --- PRIORIDADE MÁXIMA: É URL DE TELÃO? ---
                 if (isTelaoUrl && telaoChampId) {
-                    console.log("Modo Telão Detectado via URL");
-                    
-                    // Força modo "apenas leitura" visualmente para o telão
                     appState.isTelaoMode = true;
                     appState.isAdmin = false; 
                     
-                    // Injeta CSS para esconder menus e deixar em tela cheia
                     const telaoStyles = document.createElement('style');
                     telaoStyles.innerHTML = `
                         body { background-color: #f1f5f9; overflow-y: hidden; } 
@@ -5219,21 +5223,16 @@ const renderTelaoView = () => {
                     `;
                     document.head.appendChild(telaoStyles);
 
-                    // Vai direto para o telão e ENCERRA a função (return)
                     navigateTo('telaoView', telaoChampId);
                     return; 
                 }
 
-                // --- ROTEAMENTO NORMAL (Só acontece se NÃO for telão) ---
-                
-                // Se for Admin, vai para o Painel de Controle
+                // --- ROTEAMENTO NORMAL ---
                 if (appState.isAdmin) {
                     navigateTo('championshipList');
-                    return;
+                } else {
+                    navigateTo('arenaList');
                 }
-
-                // Se for Visitante comum, vai para o Portal de Arenas
-                navigateTo('arenaList');
             }
         });
     </script>
