@@ -872,11 +872,21 @@
         };
 
         // =================================================================
-        // === VIEW: LISTA DE CAMPEONATOS
+        // === VIEW: LISTA DE CAMPEONATOS (COM CORREÇÃO DE FILTRO)
         // =================================================================
         const renderChampionshipList = () => {
-            // Ordena os campeonatos (mais novos primeiro)
-            const sortedChampionships = [...championships].sort((a, b) => b.createdAt - a.createdAt);
+            // 1. Prepara a lista base
+            let filteredList = [...championships];
+
+            // 2. FILTRO DE SEGURANÇA:
+            // Se for visitante e estiver dentro de uma Arena específica, 
+            // mostra APENAS os campeonatos daquela arena.
+            if (!appState.isAdmin && appState.currentOwnerId) {
+                filteredList = filteredList.filter(c => c.ownerId === appState.currentOwnerId);
+            }
+
+            // 3. Ordena os campeonatos filtrados (mais novos primeiro)
+            const sortedChampionships = filteredList.sort((a, b) => b.createdAt - a.createdAt);
             
             const championshipsListHtml = sortedChampionships.length === 0
                 ? `<p class="text-gray-500 text-center py-4">Nenhum campeonato cadastrado.</p>`
