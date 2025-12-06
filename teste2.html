@@ -5167,15 +5167,33 @@ const renderTelaoView = () => {
         };
      
         // =================================================================
-        // === INICIALIZAÇÃO E CONTROLE DE SESSÃO (MODO PORTAL)
+        // === INICIALIZAÇÃO E CONTROLE DE SESSÃO (CORRIGIDO)
         // =================================================================
         onAuthStateChanged(auth, async (user) => {
-            // Verifica URL para Telão (prioridade máxima)
+            // 1. Verifica se a URL pede o Modo Telão
             const urlParams = new URLSearchParams(window.location.search);
+            const isTelaoUrl = urlParams.has('telao');
             const telaoChampId = urlParams.get('champId');
 
+            // Função auxiliar para ativar o modo telão
+            const activateTelaoMode = () => {
+                appState.isTelaoMode = true;
+                appState.isAdmin = false; // Telão é sempre "apenas leitura"
+                
+                // Injeta CSS específico do Telão (Esconde menus, fundos, etc)
+                const telaoStyles = document.createElement('style');
+                telaoStyles.innerHTML = `
+                    body { background-color: #f1f5f9; overflow-y: hidden; } 
+                    #app-container { max-width: 100%; padding: 0.5rem; margin: 0; height: 100vh; }
+                    header, footer, #installBanner { display: none !important; }
+                `;
+                document.head.appendChild(telaoStyles);
+                
+                navigateTo('telaoView', telaoChampId);
+            };
+
             if (user) {
-                // --- CENÁRIO 1: DONO DA ARENA LOGADO ---
+                // --- CENÁRIO 1: USUÁRIO LOGADO (Admin ou Visitante Anônimo) ---
                 if (!appState.isAuthReady) {
                     const isAnonymous = user.isAnonymous;
                     
@@ -5183,7 +5201,7 @@ const renderTelaoView = () => {
                         ...appState, 
                         userId: user.uid, 
                         isAuthReady: true,
-                        isAdmin: !isAnonymous // Anônimo = Visitante, Email = Admin
+                        isAdmin: !isAnonymous 
                     };
                     
                     document.getElementById('user-id-footer').textContent = isAnonymous ? "Visitante" : user.email;
@@ -5192,38 +5210,34 @@ const renderTelaoView = () => {
                     listenToChampionships();
                     listenToRankingsList(); 
                     
-                    // Roteamento Pós-Login
+                    // ROTEAMENTO INTELIGENTE
                     if (appState.currentView === 'loading' || appState.currentView === 'login') {
-                        if (appState.isAdmin) {
-                            navigateTo('championshipList'); // Admin vai para seus jogos
+                        
+                        // AQUI ESTÁ A CORREÇÃO:
+                        // Se for URL de Telão, ativa o Telão MESMO se for Admin
+                        if (isTelaoUrl && telaoChampId) {
+                            activateTelaoMode();
+                        } 
+                        else if (appState.isAdmin) {
+                            navigateTo('championshipList'); // Admin normal vai para painel
                         } else {
-                            // Se for visitante anônimo, já vai carregar a lista no listenToChampionships
-                            if (!appState.currentView.includes('telao')) {
-                                navigateTo('arenaList'); // Visitante vai para o Portal
-                            }
+                            navigateTo('arenaList'); // Visitante normal vai para o Portal
                         }
                     }
                 }
             } else {
-                // --- CENÁRIO 2: VISITANTE PÚBLICO (SEM LOGIN) ---
+                // --- CENÁRIO 2: SEM LOGIN (Primeiro Acesso) ---
                 if (!appState.isAuthReady) {
-                     // Entra automaticamente como Anônimo para poder ler o banco
-                     // Isso é essencial para o Portal funcionar sem pedir senha
+                     // Entra como anônimo para ler o banco
                      signInAnonymously(auth).catch((error) => {
                          console.error("Erro no auto-login anônimo:", error);
                      });
                      
-                     // Enquanto loga anônimo, define view inicial
-                     if (urlParams.has('telao') && telaoChampId) {
-                         // Lógica do Telão...
-                         appState.isTelaoMode = true;
-                         appState.isAdmin = false;
-                         /* ... insira o estilo do telão aqui se necessário ... */
-                         navigateTo('telaoView', telaoChampId);
+                     // Enquanto o login processa, decide para onde vai
+                     if (isTelaoUrl && telaoChampId) {
+                         activateTelaoMode();
                      } else {
-                         // MUDANÇA: Agora vai para o Portal de Arenas
                          appState.currentView = 'arenaList';
-                         // Listener global já vai ser acionado pelo signInAnonymously acima
                      }
                 }
             }
