@@ -1310,13 +1310,23 @@
         };
 
        /**
-         * Renderiza a tabela de Ranking Geral (COM BOTÃO DE AÇÕES)
+         * Renderiza a tabela de Ranking Geral (CORRIGIDO: Sem onclick inline)
          */
         const renderGlobalRanking = () => {
-            // ... (código de setup inicial) ...
+            // Verifica se tem rankings
             if (allRankings.length === 0) {
-                /* ... (manter igual ao original, se não tiver ranking) ... */
-                mainContent.innerHTML = `<div class="text-center p-10"><p>Nenhum ranking criado.</p></div>`;
+                const addRankingBtn = appState.isAdmin ? `
+                <div class="text-center mt-4">
+                    <button id="btn-create-first-ranking" class="bg-cyan-600 text-white px-6 py-3 rounded-lg font-bold shadow hover:bg-cyan-700">
+                        Criar Primeiro Ranking
+                    </button>
+                </div>` : '';
+                
+                mainContent.innerHTML = `<div class="text-center p-10"><p>Nenhum ranking criado.</p>${addRankingBtn}</div>`;
+                
+                if(appState.isAdmin) {
+                     document.getElementById('btn-create-first-ranking')?.addEventListener('click', handleAddNewRanking);
+                }
                 return;
             }
 
@@ -1329,15 +1339,13 @@
                 return a.name.localeCompare(b.name);
             });
 
-            // HTML da Lista
+            // HTML da Lista de Jogadores
             const listHtml = sortedPlayers.map((player, index) => {
-                // Medalhas para Top 3
                 let posDisplay = `<span class="font-bold text-gray-500 text-lg w-6 text-center">${index + 1}º</span>`;
                 if (index === 0) posDisplay = `<span class="text-2xl">🥇</span>`;
                 if (index === 1) posDisplay = `<span class="text-2xl">🥈</span>`;
                 if (index === 2) posDisplay = `<span class="text-2xl">🥉</span>`;
 
-                // Botão de Opções (Só aparece para Admin)
                 const actionButton = appState.isAdmin ? `
                     <button class="player-options-btn p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition-all" 
                             data-id="${player.id}" 
@@ -1370,12 +1378,13 @@
                 `;
             }).join('');
 
-            // Botão Novo Ranking (Só Admin)
+            // Botão Novo Ranking (Topo)
             const addRankingBtn = appState.isAdmin ? `
                 <button id="btn-add-ranking" class="p-2 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition-colors">
                     ${icons.plus}
                 </button>` : '';
 
+            // --- HTML PRINCIPAL DA TELA ---
             mainContent.innerHTML = `
                 <div class="animate-fade-in max-w-2xl mx-auto pb-20">
                     <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl p-6 text-white shadow-lg mb-6 sticky top-0 z-10">
@@ -1389,8 +1398,8 @@
                         
                         <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                             ${allRankings.map(r => `
-                                <button class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${r.id === appState.currentRankingId ? 'bg-cyan-500 text-white shadow-lg transform scale-105' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
-                                    onclick="appState.currentRankingId = '${r.id}'; render(); listenToGlobalPlayers();">
+                                <button class="ranking-tab-btn px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${r.id === appState.currentRankingId ? 'bg-cyan-500 text-white shadow-lg transform scale-105' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
+                                    data-id="${r.id}">
                                     ${r.name}
                                 </button>
                             `).join('')}
@@ -1408,12 +1417,24 @@
                 </div>
             `;
 
-            // Listeners
+            // --- LISTENERS (Aqui consertamos o erro do appState is not defined) ---
+            
+            // 1. Clique nas Abas de Ranking
+            document.querySelectorAll('.ranking-tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const newId = btn.dataset.id;
+                    appState.currentRankingId = newId;
+                    listenToGlobalPlayers(); // Recarrega os dados do novo ranking
+                    render(); // Atualiza a tela (para pintar a aba certa)
+                });
+            });
+
+            // 2. Outros botões de Admin
             if(appState.isAdmin) {
                 document.getElementById('btn-add-ranking')?.addEventListener('click', handleAddNewRanking);
                 document.getElementById('fab-add-player')?.addEventListener('click', handleAddPlayerManually);
                 
-                // Listener dos botões de opção (Abrem o novo Menu)
+                // Listener dos botões de opção (Três pontinhos)
                 document.querySelectorAll('.player-options-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const player = {
@@ -1422,7 +1443,7 @@
                             points: parseInt(btn.dataset.points),
                             balance: parseInt(btn.dataset.balance)
                         };
-                        openPlayerActions(player); // <--- Nova função que vamos criar
+                        openPlayerActions(player); 
                     });
                 });
             }
