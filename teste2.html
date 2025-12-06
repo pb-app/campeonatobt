@@ -1378,11 +1378,20 @@
                 `;
             }).join('');
 
-            // Botão Novo Ranking (Topo)
-            const addRankingBtn = appState.isAdmin ? `
-                <button id="btn-add-ranking" class="p-2 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition-colors">
-                    ${icons.plus}
-                </button>` : '';
+            // Botões de Ação do Ranking (Adicionar e Excluir) - Só Admin
+            let rankingActionsHtml = '';
+            
+            if (appState.isAdmin) {
+                rankingActionsHtml = `
+                <div class="flex gap-2">
+                    <button id="btn-delete-ranking" class="p-2 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 transition-colors" title="Excluir este Ranking">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                    <button id="btn-add-ranking" class="p-2 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition-colors" title="Criar Novo Ranking">
+                        ${icons.plus}
+                    </button>
+                </div>`;
+            }
 
             // --- HTML PRINCIPAL DA TELA ---
             mainContent.innerHTML = `
@@ -1393,7 +1402,7 @@
                                 <h2 class="text-3xl font-bold">Ranking 🏆</h2>
                                 <p class="text-gray-400 text-sm">Temporada Atual</p>
                             </div>
-                            ${addRankingBtn}
+                            ${rankingActionsHtml}
                         </div>
                         
                         <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -1417,7 +1426,7 @@
                 </div>
             `;
 
-            // LISTENERS GERAIS (Abas e FAB)
+         // LISTENERS GERAIS (Abas e FAB)
             document.querySelectorAll('.ranking-tab-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     appState.currentRankingId = btn.dataset.id;
@@ -1426,14 +1435,20 @@
                 });
             });
 
+            // BLOCO DE ADMINISTRAÇÃO (Apenas um bloco contendo tudo)
             if(appState.isAdmin) {
+                // Adicionar Ranking
                 document.getElementById('btn-add-ranking')?.addEventListener('click', handleAddNewRanking);
+                
+                // --- NOVO: Listener do Botão Excluir Ranking ---
+                document.getElementById('btn-delete-ranking')?.addEventListener('click', handleDeleteRanking);
+                
+                // Adicionar Jogador
                 document.getElementById('fab-add-player')?.addEventListener('click', handleAddPlayerManually);
             }
             
             // NOTA: O listener dos 3 pontinhos foi removido daqui e será colocado globalmente abaixo.
         };
-
          // =================================================================
         // === LÓGICA DO MENU DE AÇÕES DO JOGADOR
         // =================================================================
