@@ -447,49 +447,61 @@
         }
     };
         /**
-         * Navega para uma nova view e carrega os dados do Dono correto
+         * Navega para uma nova view e gerencia o carregamento de dados
          */
         const navigateTo = (view, champId = null) => {
+            // Se estiver indo para o login, limpa os dados de sessão
             if (view === 'login') {
                 appState.isAdmin = false;
-                appState.currentOwnerId = null; // Limpa o dono ao sair
+                appState.currentOwnerId = null;
+                appState.currentRankingId = null;
             }
             
             appState.currentView = view;
             appState.currentChampionshipId = champId;
 
-            // --- LÓGICA DE VISITANTE: IDENTIFICAR O DONO ---
-            // Se for visitante e estiver entrando num campeonato, descobre quem é o dono
-            if (!appState.isAdmin && champId) {
-                const targetChamp = championships.find(c => c.id === champId);
-                if (targetChamp && targetChamp.ownerId) {
-                    // Define que agora estamos vendo os dados DESTE Admin
-                    if (appState.currentOwnerId !== targetChamp.ownerId) {
+            // --- LÓGICA DE VISITANTE ---
+            if (!appState.isAdmin) {
+                // 1. Se estiver entrando num campeonato específico, descobre o dono
+                if (champId) {
+                    const targetChamp = championships.find(c => c.id === champId);
+                    if (targetChamp && targetChamp.ownerId) {
                         appState.currentOwnerId = targetChamp.ownerId;
-                        console.log("Visitando Arena de:", appState.currentOwnerId);
-                        // Recarrega a lista de rankings deste novo dono
-                        listenToRankingsList(); 
                     }
                 }
-            }
-            // -----------------------------------------------
 
-            // Para qualquer navegação, cancela o ouvinte anterior
+                // 2. Se já sabemos quem é o dono (pelo Card da Arena ou pelo Camp), carrega os rankings dele!
+                if (appState.currentOwnerId) {
+                    // Isso garante que a lista de rankings e o ranking padrão sejam carregados
+                    // mesmo que você não tenha clicado em nenhum campeonato ainda.
+                    listenToRankingsList(); 
+                }
+            }
+
+            // Cancela ouvinte de campeonato anterior para não misturar dados
             unsubscribeActiveChampionship();
             activeChampionship = null;
 
+            // Configurações específicas de cada tela
             if ((view === 'championshipView' || view === 'telaoView') && champId) {
+                // Se o campeonato tem um ranking vinculado, seleciona ele automaticamente
                 const champ = championships.find(c => c.id === champId);
                 if (champ && champ.rankingId) {
                     if (appState.currentRankingId !== champ.rankingId) {
                         appState.currentRankingId = champ.rankingId;
-                        listenToGlobalPlayers(); // Carrega jogadores do ranking vinculado
+                        listenToGlobalPlayers(); 
                     }
                 }
                 listenToActiveChampionship(champId);
+
             } else if (view === 'globalRanking') {
+                // Ao entrar na tela de Ranking, se não tiver nenhum selecionado, força o primeiro
+                if (!appState.currentRankingId && allRankings.length > 0) {
+                    appState.currentRankingId = allRankings[0].id;
+                }
                 listenToGlobalPlayers();
                 render();
+
             } else {
                 render();
             }
