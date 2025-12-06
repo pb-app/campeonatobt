@@ -247,6 +247,7 @@
         let championships = []; 
         let globalPlayers = []; 
         let activeChampionship = null; 
+        let arenaNamesCache = {};
 
         // Funções de cancelamento de inscrição (listeners)
         let unsubscribeRankingsList = () => {}; 
@@ -508,7 +509,7 @@
         };
 
         /**
-         * Renderiza os botões do cabeçalho (CORRIGIDO: Voltar para Visitantes)
+         * Renderiza os botões do cabeçalho (COM BOTÃO DE CONFIGURAR NOME)
          */
         const renderHeaderButtons = () => {
             let navHtml = ''; 
@@ -535,12 +536,12 @@
                 `;
             }
 
-            // 2. Botões da Direita (Auth ou Voltar ao Portal)
+            // 2. Botões da Direita (Auth, Config ou Sair)
             if (appState.currentView === 'login') {
-                authHtml = ''; // Nada na tela de login
+                authHtml = ''; 
             }
-            // SE FOR VISITANTE DENTRO DE UMA ARENA -> MOSTRA BOTÃO VOLTAR
             else if (appState.currentView === 'championshipList' && !appState.isAdmin) {
+                // Visitante dentro da arena
                 authHtml = `
                 <button
                     id="nav-to-portal"
@@ -550,19 +551,27 @@
                 </button>
                 `;
             }
-            // CASO CONTRÁRIO -> MOSTRA LOGIN/LOGOUT PADRÃO
             else {
                 if (appState.isAdmin) {
+                    // ADMIN: Botão de Configurar Nome + Sair
                     authHtml = `
-                    <button
-                        id="nav-to-login"
-                        class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                        ${icons.logOut}
-                        Sair (Admin)
-                    </button>
+                    <div class="flex gap-2">
+                        <button
+                            id="config-arena-btn"
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-3 rounded-lg shadow-sm transition-all flex items-center justify-center"
+                            title="Alterar Nome da Arena">
+                            ⚙️
+                        </button>
+                        <button
+                            id="nav-to-login"
+                            class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+                            ${icons.logOut}
+                            Sair
+                        </button>
+                    </div>
                     `;
                 } else {
-                    // Visitante no Portal ou em outras telas
+                    // Visitante no Portal
                     authHtml = `
                     <button
                         id="nav-to-login"
@@ -583,24 +592,22 @@
             const listBtn = document.getElementById('nav-to-list');
             if (listBtn) listBtn.addEventListener('click', () => navigateTo('championshipList'));
             
-            // Listener do novo botão VOLTAR AO PORTAL
             const portalBtn = document.getElementById('nav-to-portal');
             if (portalBtn) portalBtn.addEventListener('click', () => {
-                appState.currentOwnerId = null; // Limpa a seleção da arena
-                navigateTo('arenaList');        // Volta pra tela inicial
+                appState.currentOwnerId = null;
+                navigateTo('arenaList');
             });
+
+            // Listener do Botão de Configurar Nome
+            const configBtn = document.getElementById('config-arena-btn');
+            if (configBtn) configBtn.addEventListener('click', handleEditArenaName);
 
             // Listener de Login/Logout
             const loginBtn = document.getElementById('nav-to-login');
             if (loginBtn) {
                 loginBtn.addEventListener('click', () => {
                     if (appState.isAdmin) {
-                        signOut(auth).then(() => {
-                            window.location.reload();
-                        }).catch((error) => {
-                            console.error("Erro ao sair:", error);
-                            alert("Erro ao tentar sair.");
-                        });
+                        signOut(auth).then(() => window.location.reload());
                     } else {
                         navigateTo('login');
                     }
@@ -608,19 +615,48 @@
             }
         };
 
+        /**
+         * (ADMIN) Edita o nome público da Arena
+         */
+        const handleEditArenaName = async () => {
+            const newName = await showDialog({
+                type: 'prompt',
+                title: 'Nome da Arena',
+                message: 'Como você quer que sua arena apareça para os visitantes?',
+                placeholder: 'Ex: Arena Beach Pro',
+                confirmText: 'Salvar Nome'
+            });
+
+            if (!newName || newName.trim() === '') return;
+
+            try {
+                // Salva em uma coleção de configurações do usuário
+                const settingsRef = doc(db, 'users', appState.userId, 'app_data', 'settings');
+                await setDoc(settingsRef, { arenaName: newName.trim() }, { merge: true });
+                
+                // Atualiza o cache local imediatamente
+                arenaNamesCache[appState.userId] = newName.trim();
+                
+                showDialog({ title: "Sucesso", message: "Nome da arena atualizado!" });
+            } catch (error) {
+                console.error("Erro ao salvar nome:", error);
+                showDialog({ title: "Erro", message: "Não foi possível salvar o nome." });
+            }
+        };
+
          // =================================================================
-        // === VIEW: PORTAL DE ARENAS (SEM BOTÃO DUPLICADO)
+        // === VIEW: PORTAL DE ARENAS (COM NOMES REAIS)
         // =================================================================
-        const renderArenaList = () => {
-            // 1. Agrupa campeonatos por Dono (Arena)
+        const renderArenaList = async () => {
+            // 1. Agrupa campeonatos por Dono
             const arenasMap = {};
-            
             championships.forEach(champ => {
                 const ownerId = champ.ownerId || 'desconhecido';
                 if (!arenasMap[ownerId]) {
                     arenasMap[ownerId] = {
                         id: ownerId,
-                        name: `Arena ${ownerId.slice(0, 5)}...`,
+                        // Tenta pegar do cache, se não tiver, usa ID provisório
+                        name: arenaNamesCache[ownerId] || `Arena (ID: ${ownerId.slice(0, 4)}...)`,
                         tournaments: []
                     };
                 }
@@ -629,16 +665,16 @@
 
             const arenasList = Object.values(arenasMap);
 
-            // 2. HTML da Lista de Arenas
+            // 2. Renderiza HTML Inicial
             const arenasListHtml = arenasList.length === 0
                 ? `<div class="text-center py-10 text-gray-500">
                      <p class="text-xl">Nenhum torneio encontrado.</p>
-                     <p class="text-sm mt-2">As arenas aparecerão aqui assim que criarem campeonatos.</p>
                    </div>`
                 : arenasList.map(arena => {
                     const activeCount = arena.tournaments.length;
                     const lastChampName = arena.tournaments[0]?.name || "Torneios";
                     
+                    // Adicionamos uma classe 'arena-name-text' e o dataset-owner para atualizar depois
                     return `
                     <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all cursor-pointer arena-card-btn" 
                          data-owner-id="${arena.id}">
@@ -647,7 +683,9 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4 8 4v14"/><path d="M8 21v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             </div>
                             <div class="flex-1">
-                                <h3 class="text-xl font-bold text-gray-800">Arena (ID: ${arena.id.slice(0,4)})</h3>
+                                <h3 class="text-xl font-bold text-gray-800 arena-name-text" data-owner="${arena.id}">
+                                    ${arena.name}
+                                </h3>
                                 <p class="text-sm text-gray-500">${activeCount} campeonato(s) ativo(s)</p>
                                 <p class="text-xs text-cyan-600 mt-1 font-medium">Último: ${lastChampName}</p>
                             </div>
@@ -659,14 +697,12 @@
                     `;
                 }).join('');
 
-            // 3. Renderiza a Tela Principal (LIMPA)
             mainContent.innerHTML = `
                 <div class="animate-fade-in space-y-8">
                     <div class="text-center py-10 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-3xl shadow-xl text-white mb-8 mx-2 sm:mx-0">
                         <h1 class="text-3xl sm:text-5xl font-black mb-2 tracking-tight">Portal BT 🎾</h1>
                         <p class="text-cyan-100 text-lg">Encontre arenas e acompanhe torneios em tempo real.</p>
                     </div>
-
                     <div class="px-2 sm:px-0">
                         <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                             🏟️ Arenas Disponíveis
@@ -678,7 +714,34 @@
                 </div>
             `;
 
-            // Listeners dos Cards de Arena
+            // 3. Busca assíncrona dos nomes (Background Fetch)
+            // Isso roda "por trás" para não travar a tela
+            arenasList.forEach(async (arena) => {
+                if (!arenaNamesCache[arena.id]) {
+                    try {
+                        const settingsRef = doc(db, 'users', arena.id, 'app_data', 'settings');
+                        const docSnap = await getDoc(settingsRef);
+                        if (docSnap.exists() && docSnap.data().arenaName) {
+                            const realName = docSnap.data().arenaName;
+                            
+                            // Atualiza Cache
+                            arenaNamesCache[arena.id] = realName;
+                            
+                            // Atualiza Tela se o elemento ainda existir
+                            const el = document.querySelector(`.arena-name-text[data-owner="${arena.id}"]`);
+                            if (el) {
+                                el.textContent = realName;
+                                // Adiciona uma animaçãozinha suave
+                                el.classList.add('animate-fade-in-sm'); 
+                            }
+                        }
+                    } catch (e) {
+                        console.log("Sem nome configurado para:", arena.id);
+                    }
+                }
+            });
+
+            // Listeners
             document.querySelectorAll('.arena-card-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const ownerId = btn.dataset.ownerId;
