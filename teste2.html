@@ -1576,6 +1576,18 @@
             }
         });
 
+        // =================================================================
+        // === LISTENER GLOBAL DO WHATSAPP (CORREÇÃO)
+        // =================================================================
+        document.addEventListener('click', (e) => {
+            // Procura se o clique foi no botão de WhatsApp (ou no ícone dentro dele)
+            const shareBtn = e.target.closest('#btn-share-whatsapp');
+            
+            if (shareBtn) {
+                handleShareRanking();
+            }
+        });
+
         // Listeners do Modal de Ações
         document.getElementById('close-actions-btn').addEventListener('click', closePlayerActions);
         document.getElementById('action-cancel').addEventListener('click', closePlayerActions);
