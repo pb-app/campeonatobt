@@ -198,70 +198,57 @@
             </div>
         </div>
     </div>
-
-    <div id="arena-settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
-        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
-            <div class="bg-cyan-600 p-4 text-white text-center">
-                <h3 class="font-bold text-lg">Configurar Arena</h3>
-            </div>
-            
-            <div class="p-6 flex flex-col items-center gap-4">
-                <div class="relative group cursor-pointer" id="btn-change-photo">
-                    <img id="settings-preview-img" src="https://via.placeholder.com/150?text=Logo" 
-                         class="w-32 h-32 rounded-full object-cover border-4 border-gray-100 shadow-md group-hover:opacity-70 transition-all">
-                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span class="text-gray-700 font-bold bg-white/80 px-2 py-1 rounded text-xs">Trocar</span>
-                    </div>
-                    <input type="file" id="arena-photo-input" accept="image/*" class="hidden">
-                </div>
-                <p class="text-xs text-gray-400">Toque na imagem para alterar</p>
-
-                <div class="w-full">
-                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Nome da Arena</label>
-                    <input type="text" id="settings-arena-name" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-gray-700 font-bold focus:outline-none focus:border-cyan-500 transition-colors" placeholder="Ex: Arena Beach Pro">
-                </div>
-            </div>
-
-            <div class="p-4 bg-gray-50 flex gap-3">
-                <button id="btn-cancel-settings" class="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
-                <button id="btn-save-settings" class="flex-1 py-3 bg-cyan-600 text-white font-bold rounded-xl shadow-lg hover:bg-cyan-700 transition-colors flex justify-center items-center gap-2">
-                    Salvar
-                </button>
-            </div>
-        </div>
-    </div>
     
     <script type="module">
         // =================================================================
         // === IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
         // =================================================================
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { 
-        getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, 
-        onSnapshot, query, where, orderBy, setDoc, getDoc, collectionGroup 
-    } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
-    import { 
-        getAuth, onAuthStateChanged, signInWithEmailAndPassword, 
-        signOut, signInAnonymously, createUserWithEmailAndPassword 
-    } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-    // --- NOVO: Importamos o Storage aqui ---
-    import { 
-        getStorage, ref, uploadBytes, getDownloadURL 
-    } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js";
+        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        
+        // Importações de Autenticação
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged,
+            signInWithEmailAndPassword,
+            signOut // <--- ADICIONE ESTA LINHA (com a vírgula antes)
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDssRXcskF1ozqVrTDmQX09QP7GrAWZKNg",
-        authDomain: "beach-tennis-app-8e863.firebaseapp.com",
-        projectId: "beach-tennis-app-8e863",
-        storageBucket: "beach-tennis-app-8e863.appspot.com", // Adicionamos o bucket
-        messagingSenderId: "36728413727",
-        appId: "1:36728413727:web:2c8774055273397960117d"
-    };
+        // Importações do Banco de Dados (ISTO ESTAVA FALTANDO!)
+       import {
+            getFirestore,
+            collection,
+            collectionGroup, // <--- ADICIONE ESTA LINHA IMPORTANTE
+            doc,
+            getDoc,
+            setDoc,
+            addDoc,
+            updateDoc,
+            deleteDoc,
+            writeBatch,
+            runTransaction,
+            query,
+            onSnapshot,
+            Timestamp
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-    const storage = getStorage(app); // --- NOVO: Iniciamos o Storage
+        // Configuração do Firebase (Substitua pelos seus dados)
+        const firebaseConfig = {
+  apiKey: "AIzaSyDssRXcskF1ozqVrTDmQX09QP7GrAWZKNg",
+  authDomain: "raking-beach-tennis-pro.firebaseapp.com",
+  projectId: "raking-beach-tennis-pro",
+  storageBucket: "raking-beach-tennis-pro.firebasestorage.app",
+  messagingSenderId: "289005072476",
+  appId: "1:289005072476:web:9934650195920baf343699",
+  measurementId: "G-FW62QF334R"
+};
+
+        // Inicialização dos serviços do Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        setLogLevel('debug'); // Ativa logs detalhados do Firestore no console
+
         // =================================================================
         // === CONSTANTES E ESTADO GLOBAL
         // =================================================================
@@ -286,7 +273,6 @@
         let globalPlayers = []; 
         let activeChampionship = null; 
         let arenaNamesCache = {};
-        let arenaPhotosCache = {}; // <--- ADICIONE ESTA LINHA
 
         // Funções de cancelamento de inscrição (listeners)
         let unsubscribeRankingsList = () => {}; 
@@ -639,7 +625,7 @@
 
             // Listener do Botão de Configurar Nome
             const configBtn = document.getElementById('config-arena-btn');
-            if (configBtn) configBtn.addEventListener('click', openArenaSettings);
+            if (configBtn) configBtn.addEventListener('click', handleEditArenaName);
 
             // Listener de Login/Logout
             const loginBtn = document.getElementById('nav-to-login');
@@ -654,103 +640,142 @@
             }
         };
 
-        // =================================================================
-        // === CONFIGURAÇÕES DA ARENA (FOTO + NOME) E PORTAL
-        // =================================================================
-        
-        let selectedPhotoFile = null; 
-
-        // Função para comprimir foto (economia de dados)
-        const compressImage = (file) => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 300; 
-                        const scaleSize = MAX_WIDTH / Math.max(img.width, img.height);
-                        canvas.width = img.width * scaleSize;
-                        canvas.height = img.height * scaleSize;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.7);
-                    };
-                };
+        /**
+         * (ADMIN) Edita o nome público da Arena
+         */
+        const handleEditArenaName = async () => {
+            const newName = await showDialog({
+                type: 'prompt',
+                title: 'Nome da Arena',
+                message: 'Como você quer que sua arena apareça para os visitantes?',
+                placeholder: 'Ex: Arena Beach Pro',
+                confirmText: 'Salvar Nome'
             });
-        };
 
-        const openArenaSettings = () => {
-            const modal = document.getElementById('arena-settings-modal');
-            const nameInput = document.getElementById('settings-arena-name');
-            const imgPreview = document.getElementById('settings-preview-img');
-            
-            const currentName = arenaNamesCache[appState.userId] || "";
-            const currentPhoto = arenaPhotosCache[appState.userId] || "https://cdn-icons-png.flaticon.com/512/1077/1077114.png";
-            
-            nameInput.value = currentName;
-            imgPreview.src = currentPhoto;
-            selectedPhotoFile = null;
-            modal.classList.remove('hidden');
-        };
-
-        const closeArenaSettings = () => {
-            document.getElementById('arena-settings-modal').classList.add('hidden');
-        };
-
-        // Listeners do Modal
-        document.getElementById('btn-change-photo')?.addEventListener('click', () => {
-            document.getElementById('arena-photo-input').click();
-        });
-
-        document.getElementById('arena-photo-input')?.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                selectedPhotoFile = file;
-                const reader = new FileReader();
-                reader.onload = (e) => document.getElementById('settings-preview-img').src = e.target.result;
-                reader.readAsDataURL(file);
-            }
-        });
-
-        document.getElementById('btn-cancel-settings')?.addEventListener('click', closeArenaSettings);
-
-        document.getElementById('btn-save-settings')?.addEventListener('click', async () => {
-            const btn = document.getElementById('btn-save-settings');
-            const newName = document.getElementById('settings-arena-name').value.trim();
-            
-            if (!newName) return alert("Nome obrigatório.");
-            btn.textContent = "Salvando..."; btn.disabled = true;
+            if (!newName || newName.trim() === '') return;
 
             try {
-                const updates = { arenaName: newName };
-                
-                if (selectedPhotoFile) {
-                    const compressedBlob = await compressImage(selectedPhotoFile);
-                    const storageRef = ref(storage, `arenas/${appState.userId}/logo.jpg`);
-                    await uploadBytes(storageRef, compressedBlob);
-                    const photoURL = await getDownloadURL(storageRef);
-                    updates.arenaPhoto = photoURL;
-                    arenaPhotosCache[appState.userId] = photoURL;
-                }
-
+                // Salva em uma coleção de configurações do usuário
                 const settingsRef = doc(db, 'users', appState.userId, 'app_data', 'settings');
-                await setDoc(settingsRef, updates, { merge: true });
-                arenaNamesCache[appState.userId] = newName;
+                await setDoc(settingsRef, { arenaName: newName.trim() }, { merge: true });
                 
-                showDialog({ title: "Sucesso", message: "Salvo!" });
-                closeArenaSettings();
+                // Atualiza o cache local imediatamente
+                arenaNamesCache[appState.userId] = newName.trim();
+                
+                showDialog({ title: "Sucesso", message: "Nome da arena atualizado!" });
             } catch (error) {
-                console.error(error);
-                alert("Erro ao salvar.");
-            } finally {
-                btn.innerHTML = "Salvar"; btn.disabled = false;
+                console.error("Erro ao salvar nome:", error);
+                showDialog({ title: "Erro", message: "Não foi possível salvar o nome." });
             }
-        });
+        };
 
-        
+         // =================================================================
+        // === VIEW: PORTAL DE ARENAS (COM NOMES REAIS)
+        // =================================================================
+        const renderArenaList = async () => {
+            // 1. Agrupa campeonatos por Dono
+            const arenasMap = {};
+            championships.forEach(champ => {
+                const ownerId = champ.ownerId || 'desconhecido';
+                if (!arenasMap[ownerId]) {
+                    arenasMap[ownerId] = {
+                        id: ownerId,
+                        // Tenta pegar do cache, se não tiver, usa ID provisório
+                        name: arenaNamesCache[ownerId] || `Arena (ID: ${ownerId.slice(0, 4)}...)`,
+                        tournaments: []
+                    };
+                }
+                arenasMap[ownerId].tournaments.push(champ);
+            });
+
+            const arenasList = Object.values(arenasMap);
+
+            // 2. Renderiza HTML Inicial
+            const arenasListHtml = arenasList.length === 0
+                ? `<div class="text-center py-10 text-gray-500">
+                     <p class="text-xl">Nenhum torneio encontrado.</p>
+                   </div>`
+                : arenasList.map(arena => {
+                    const activeCount = arena.tournaments.length;
+                    const lastChampName = arena.tournaments[0]?.name || "Torneios";
+                    
+                    // Adicionamos uma classe 'arena-name-text' e o dataset-owner para atualizar depois
+                    return `
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all cursor-pointer arena-card-btn" 
+                         data-owner-id="${arena.id}">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-cyan-100 p-4 rounded-full text-cyan-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4 8 4v14"/><path d="M8 21v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold text-gray-800 arena-name-text" data-owner="${arena.id}">
+                                    ${arena.name}
+                                </h3>
+                                <p class="text-sm text-gray-500">${activeCount} campeonato(s) ativo(s)</p>
+                                <p class="text-xs text-cyan-600 mt-1 font-medium">Último: ${lastChampName}</p>
+                            </div>
+                            <div class="text-gray-400">
+                                ${icons.arrowLeft.replace('<svg', '<svg style="transform: rotate(180deg);"')}
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+            mainContent.innerHTML = `
+                <div class="animate-fade-in space-y-8">
+                    <div class="text-center py-10 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-3xl shadow-xl text-white mb-8 mx-2 sm:mx-0">
+                        <h1 class="text-3xl sm:text-3xl font-black mb-2 tracking-tight">Arenas e Ligas</h1>
+                        <p class="text-cyan-100 text-lg"></p>
+                    </div>
+                    <div class="px-2 sm:px-0">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${arenasListHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 3. Busca assíncrona dos nomes (Background Fetch)
+            // Isso roda "por trás" para não travar a tela
+            arenasList.forEach(async (arena) => {
+                if (!arenaNamesCache[arena.id]) {
+                    try {
+                        const settingsRef = doc(db, 'users', arena.id, 'app_data', 'settings');
+                        const docSnap = await getDoc(settingsRef);
+                        if (docSnap.exists() && docSnap.data().arenaName) {
+                            const realName = docSnap.data().arenaName;
+                            
+                            // Atualiza Cache
+                            arenaNamesCache[arena.id] = realName;
+                            
+                            // Atualiza Tela se o elemento ainda existir
+                            const el = document.querySelector(`.arena-name-text[data-owner="${arena.id}"]`);
+                            if (el) {
+                                el.textContent = realName;
+                                // Adiciona uma animaçãozinha suave
+                                el.classList.add('animate-fade-in-sm'); 
+                            }
+                        }
+                    } catch (e) {
+                        console.log("Sem nome configurado para:", arena.id);
+                    }
+                }
+            });
+
+            // Listeners
+            document.querySelectorAll('.arena-card-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const ownerId = btn.dataset.ownerId;
+                    appState.currentOwnerId = ownerId;
+                    appState.isAdmin = false; 
+                    navigateTo('championshipList');
+                });
+            });
+        };
         
         // === VIEW: LOGIN (Versão Comercial com Firebase Auth)
         // =================================================================
