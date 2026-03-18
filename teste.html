@@ -2112,7 +2112,22 @@
                     ${!canGenerate ? `<p class="text-rose-600 text-sm mt-3">O Torneio Sortudo requer no mínimo ${minPlayers} jogadores. Você tem ${playerCount}.</p>` : ''}
                 </div>
                 `;
-            } else {
+                } else if (champType === 'duplas_fixas') {
+                    // --- NOVO ---
+                    const generateBtn = document.getElementById('generate-champ-btn-duplas');
+                    if (generateBtn) generateBtn.addEventListener('click', handleGenerateChampionship_Duplas);
+                    
+                    // Os listeners de confirmar placar e finalizar reaproveitamos do mata-mata!
+                    if (activeChampionship.status === 'knockout' || champInfo?.status === 'finished') {
+                         document.querySelectorAll('.confirm-knockout-score-btn').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                handleConfirmKnockoutScore(e.currentTarget.dataset.bracketType, e.currentTarget.dataset.matchId);
+                            });
+                        });
+                    }
+                    const finalizeBtn = document.getElementById('finalize-champ-btn-mm');
+                    if (finalizeBtn) finalizeBtn.addEventListener('click', handleManualFinalize_MataMata);
+                } else {
                 // Mata-Mata
                 const isMultipleOfFour = playerCount % 4 === 0;
                 const minPlayersForGroups = 4;
@@ -3363,6 +3378,65 @@ const renderTelaoView = () => {
             } catch (error) {
                 console.error("Erro ao gerar campeonato (cabeça de chave):", error);
                 showModal("Erro", "Não foi possível gerar os grupos. " + error.message);
+            }
+        };
+        /**
+         * Gera as Duplas Fixas (Sorteio) e o Mata-Mata Direto
+         */
+        const handleGenerateChampionship_Duplas = async () => {
+            const players = [...activeChampionship.players];
+            const playerCount = players.length;
+
+            if (playerCount < 4 || playerCount % 2 !== 0) {
+                showModal("Erro", "É necessário um número par de jogadores (mínimo 4) para formar as duplas.");
+                return;
+            }
+
+            // Pergunta ao admin se quer sortear
+            const tipoSorteio = confirm("Deseja SORTEAR as duplas aleatoriamente?\n\n[OK] = Sim, sortear.\n[Cancelar] = Não, formar duplas pela ordem de inscrição (1 com 2, 3 com 4...).");
+
+            let shuffledPlayers = [...players];
+            if (tipoSorteio) {
+                shuffledPlayers = shuffledPlayers.sort(() => 0.5 - Math.random());
+            }
+
+            // Cria as duplas permanentemente!
+            const pairs = [];
+            for (let i = 0; i < shuffledPlayers.length; i += 2) {
+                const p1 = shuffledPlayers[i];
+                const p2 = shuffledPlayers[i+1];
+                pairs.push({
+                    id: `${p1.id}_${p2.id}`, // ID único da dupla
+                    name: `${p1.name} / ${p2.name}`,
+                    players: [p1, p2], // Jogadores reais dentro da dupla
+                    gamesWon: 0,
+                    type: 'gold' 
+                });
+            }
+
+            if (!confirm(`Foram formadas ${pairs.length} duplas. Pressione OK para gerar a chave e iniciar o torneio.`)) return;
+
+            try {
+                // Reaproveitamos a função MÁGICA de chaves do seu código!
+                const goldBracket = createBracketWithByes(pairs, 'gold_');
+
+                const newChampData = {
+                    ...activeChampionship,
+                    status: 'knockout', // Pula direto pro mata-mata
+                    goldBracket: goldBracket,
+                    silverBracket: [], // Fica vazio
+                    groups: [] // Fica vazio
+                };
+
+                await saveActiveChampionship(newChampData);
+
+                // Atualiza o status no documento principal
+                const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
+                await setDoc(champRef, { status: 'knockout' }, { merge: true });
+
+            } catch (error) {
+                console.error("Erro ao gerar chaves de duplas:", error);
+                showModal("Erro", "Ocorreu um erro ao gerar as chaves. " + error.message);
             }
         };
         /**
