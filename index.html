@@ -3505,25 +3505,6 @@ const renderTelaoView = () => {
                 allPairs.push(silverPair);
             });
 
-           /**
-         * Retorna o mapa de "seeding" para qualquer tamanho de chave.
-         * Dinâmico: Funciona para 2, 4, 8, 16, 32, 64, 128...
-         */
-        const getSeedingMap = (size) => {
-            let map = [0, 1];
-            while (map.length < size) {
-                const currentSize = map.length;
-                const nextMap = [];
-                for (let i = 0; i < currentSize; i++) {
-                    nextMap.push(map[i]);
-                    // Calcula a posição do adversário na extremidade oposta
-                    nextMap.push((currentSize * 2 - 1) - map[i]);
-                }
-                map = nextMap;
-            }
-            return map;
-        };
-
             // 2. Classificação global das duplas (para aplicar Byes)
             // Ordem: Dupla Gold 1, Dupla Gold 2, ..., Dupla Silver 1, Dupla Silver 2, ...
             const rankedGoldPairs = goldSeriesPairs.sort((a, b) => b.gamesWon - a.gamesWon);
@@ -3563,6 +3544,25 @@ const renderTelaoView = () => {
                 power *= 2;
             }
             return power;
+        };
+
+        /**
+         * Retorna o mapa de "seeding" para qualquer tamanho de chave.
+         * Dinâmico: Funciona para 2, 4, 8, 16, 32, 64, 128...
+         */
+        const getSeedingMap = (size) => {
+            let map = [0, 1];
+            while (map.length < size) {
+                const currentSize = map.length;
+                const nextMap = [];
+                for (let i = 0; i < currentSize; i++) {
+                    nextMap.push(map[i]);
+                    // Calcula a posição do adversário na extremidade oposta
+                    nextMap.push((currentSize * 2 - 1) - map[i]);
+                }
+                map = nextMap;
+            }
+            return map;
         };
 
         /**
