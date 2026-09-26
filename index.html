@@ -1407,6 +1407,12 @@
             if (appState.isAdmin) {
                 rankingActionsHtml = `
                 <div class="flex gap-2">
+                    <button id="btn-print-ranking" class="p-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors" title="Imprimir PDF do Ranking">
+                        ${icons.printer}
+                    </button>
+                    <button id="btn-reset-season" class="p-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors" title="Zerar Temporada">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    </button>
                     <button id="btn-delete-ranking" class="p-2 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 transition-colors" title="Excluir este Ranking">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
@@ -1462,9 +1468,11 @@
             if(appState.isAdmin) {
                 // Adicionar Ranking
                 document.getElementById('btn-add-ranking')?.addEventListener('click', handleAddNewRanking);
-                
-                // --- NOVO: Listener do Botão Excluir Ranking ---
                 document.getElementById('btn-delete-ranking')?.addEventListener('click', handleDeleteRanking);
+                
+                // NOVO: Adiciona os listeners para o PDF e Zerar Temporada
+                document.getElementById('btn-print-ranking')?.addEventListener('click', handlePrintRankingPDF);
+                document.getElementById('btn-reset-season')?.addEventListener('click', handleResetSeason);
                 
                 // Adicionar Jogador
                 document.getElementById('fab-add-player')?.addEventListener('click', handleAddPlayerManually);
@@ -1615,15 +1623,29 @@
         const handleResetSeason = async () => {
             if (!appState.isAdmin) return;
 
-            // Confirmação 1
-            if (!confirm("⚠️ ATENÇÃO: Vai iniciar uma NOVA TEMPORADA?\n\nIsso irá ZERAR a pontuação, vitórias e estatísticas de TODOS os jogadores deste ranking.\n\nOs jogadores continuarão na lista, mas com 0 pontos. Essa ação não pode ser desfeita.")) {
-                return;
-            }
+            // Confirmação 1 (Moderna)
+            const confirm1 = await showDialog({
+                type: 'confirm',
+                title: 'Nova Temporada?',
+                message: '⚠️ <b>ATENÇÃO:</b> Isso irá ZERAR a pontuação, vitórias e estatísticas de TODOS os jogadores deste ranking.<br><br>Eles continuarão na lista, mas com 0 pontos. Essa ação não pode ser desfeita.',
+                confirmText: 'Avançar',
+                confirmColor: 'bg-orange-500'
+            });
 
-            // Confirmação 2 (Segurança extra)
-            const confirmWord = prompt("Para confirmar, digite a palavra ZERAR (em maiúsculo):");
+            if (!confirm1) return;
+
+            // Confirmação 2 (Segurança extra com prompt moderno)
+            const confirmWord = await showDialog({
+                type: 'prompt',
+                title: 'Confirmação de Segurança',
+                message: 'Para confirmar, digite a palavra <b>ZERAR</b> (em maiúsculo):',
+                placeholder: 'ZERAR',
+                confirmText: 'ZERAR TUDO',
+                confirmColor: 'bg-rose-600'
+            });
+
             if (confirmWord !== "ZERAR") {
-                alert("Ação cancelada. A palavra de confirmação estava incorreta.");
+                if (confirmWord !== null) showDialog({ title: "Cancelado", message: "A palavra de confirmação estava incorreta." });
                 return;
             }
 
@@ -1633,7 +1655,6 @@
                 const batch = writeBatch(db);
                 let count = 0;
                 
-                // Prepara a atualização para cada jogador
                 globalPlayers.forEach(player => {
                     const playerRef = doc(db, 'users', appState.userId, 'rankings', appState.currentRankingId, 'players', player.id);
                     batch.update(playerRef, {
@@ -1645,24 +1666,21 @@
                     count++;
                 });
 
-                // O Firebase limita batches a 500 operações. Se tiver mais que isso, precisaria de lógica extra,
-                // mas para Beach Tennis local isso geralmente sobra.
                 if (count > 0) {
                     await batch.commit();
-                    hideModal();
+                    closeModal(); // CORRIGIDO O ERRO DO HIDEMODAL AQUI
                     showModal("Sucesso!", "Nova temporada iniciada! Todos os pontos foram zerados.");
                 } else {
-                    hideModal();
+                    closeModal(); // CORRIGIDO
                     showModal("Aviso", "Não havia jogadores para zerar.");
                 }
 
             } catch (error) {
                 console.error("Erro ao zerar temporada:", error);
-                hideModal();
+                closeModal(); // CORRIGIDO
                 showModal("Erro", "Falha ao zerar os pontos: " + error.message);
             }
         };
-
         
         /**
          * Renderiza o modal de gerenciamento (excluir) rankings
@@ -2307,7 +2325,14 @@
          * Lida com a remoção de um jogador DO TORNEIO (não do ranking)
          */
         const handleDeletePlayerFromChampionship = async (playerId) => {
-            if (!confirm("Tem certeza que deseja remover este jogador DO TORNEIO?")) return;
+            const confirmacao = await showDialog({
+                type: 'confirm',
+                title: 'Remover Jogador',
+                message: 'Tem certeza que deseja remover este jogador DO TORNEIO?',
+                confirmText: 'Remover',
+                confirmColor: 'bg-rose-600'
+            });
+            if (!confirmacao) return;
             
             const newChampData = {
                 ...activeChampionship,
@@ -3279,8 +3304,14 @@ const renderTelaoView = () => {
             
             const numGroups = playerCount / 4;
             
-            if (!confirm(`Iniciar grupos com ${playerCount} jogadores? Os ${numGroups} melhores do ranking serão os "Cabeças de Chave" e o restante será sorteado.`)) {
-                return;
+            const confirmacao = await showDialog({
+                type: 'confirm',
+                title: 'Gerar Grupos',
+                message: `Iniciar grupos com ${playerCount} jogadores?<br>Os ${numGroups} melhores do ranking serão os "Cabeças de Chave" e o restante será sorteado.`,
+                confirmText: 'Gerar Grupos',
+                confirmColor: 'bg-emerald-600'
+            });
+            if (!confirmacao) return;
             }
 
             try {
@@ -3474,7 +3505,14 @@ const renderTelaoView = () => {
          * --- VERSÃO CORRETA (DUPLAS) ---
          */
         const handleFinalizeGroups = async () => {
-            if (!confirm("Finalizar Fase de Grupos? Isso irá gerar as chaves Ouro e Prata e bloquear os grupos.")) return;
+            const confirmacao = await showDialog({
+                type: 'confirm',
+                title: 'Finalizar Grupos',
+                message: 'Deseja finalizar a Fase de Grupos?<br>Isso irá gerar as chaves Ouro e Prata e bloquear a edição dos grupos.',
+                confirmText: 'Gerar Chaves',
+                confirmColor: 'bg-emerald-600'
+            });
+            if (!confirmacao) return;
 
             let goldSeriesPairs = [];
             let silverSeriesPairs = [];
@@ -3762,8 +3800,14 @@ const renderTelaoView = () => {
          * --- CORREÇÃO: Lógica de finalização HÍBRIDA ---
          */
         const handleManualFinalize_MataMata = async () => {
-            if (!confirm("Confirmar Finalização?\nEsta ação irá calcular os pontos, lançar no ranking e marcar o campeonato como 'Finalizado'. Esta ação não pode ser desfeita.")) {
-                return;
+            const confirmacao = await showDialog({
+                type: 'confirm',
+                title: 'Finalizar Campeonato',
+                message: 'Confirmar Finalização?<br>Esta ação irá calcular os pontos, lançar no ranking e marcar o campeonato como "Finalizado". <b>Não pode ser desfeita.</b>',
+                confirmText: 'Finalizar e Lançar',
+                confirmColor: 'bg-emerald-600'
+            });
+            if (!confirmacao) return;
             }
             
             const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
@@ -4437,8 +4481,14 @@ const renderTelaoView = () => {
          * Finaliza o torneio (Sortudo) e lança no Ranking
          */
         const handleManualFinalize_Sortudo = async () => {
-            if (!confirm("Confirmar Finalização?\nEsta ação irá calcular os pontos, lançar no ranking e marcar o campeonato como 'Finalizado'. Esta ação não pode ser desfeita.")) {
-                return;
+            const confirmacao = await showDialog({
+                type: 'confirm',
+                title: 'Finalizar Campeonato',
+                message: 'Confirmar Finalização?<br>Esta ação irá calcular os pontos, lançar no ranking e marcar o campeonato como "Finalizado". <b>Não pode ser desfeita.</b>',
+                confirmText: 'Finalizar e Lançar',
+                confirmColor: 'bg-emerald-600'
+            });
+            if (!confirmacao) return;
             }
             
             const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
