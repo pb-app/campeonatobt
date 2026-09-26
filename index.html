@@ -3505,23 +3505,23 @@ const renderTelaoView = () => {
                 allPairs.push(silverPair);
             });
 
-            /**
-         * (NOVO HELPER) Retorna o mapa de "seeding" para um tamanho de chave.
-         * Garante que Seed 1 e Seed 2 fiquem em pontas opostas.
+           /**
+         * Retorna o mapa de "seeding" para qualquer tamanho de chave.
+         * Dinâmico: Funciona para 2, 4, 8, 16, 32, 64, 128...
          */
         const getSeedingMap = (size) => {
-            if (size === 2) return [0, 1];
-            // Seed 1 vs Seed 4, Seed 2 vs Seed 3
-            if (size === 4) return [0, 3, 2, 1]; 
-            // Seed 1 vs 8, Seed 4 vs 5, Seed 3 vs 6, Seed 2 vs 7
-            if (size === 8) return [0, 7, 5, 3, 4, 2, 6, 1];
-            // Padrão 16
-            if (size === 16) return [0, 15, 8, 7, 4, 11, 12, 3, 2, 13, 10, 5, 6, 9, 14, 1];
-            
-            // Fallback (lógica simples se não for 2, 4, 8 ou 16)
-            const map = [];
-            for(let i=0; i < size; i++) map.push(i);
-            return map; 
+            let map = [0, 1];
+            while (map.length < size) {
+                const currentSize = map.length;
+                const nextMap = [];
+                for (let i = 0; i < currentSize; i++) {
+                    nextMap.push(map[i]);
+                    // Calcula a posição do adversário na extremidade oposta
+                    nextMap.push((currentSize * 2 - 1) - map[i]);
+                }
+                map = nextMap;
+            }
+            return map;
         };
 
             // 2. Classificação global das duplas (para aplicar Byes)
