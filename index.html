@@ -4487,7 +4487,7 @@ const renderTelaoView = () => {
                 confirmColor: 'bg-emerald-600'
             });
             if (!confirmacao) return;
-            }
+            
             
             const champRef = doc(db, 'users', appState.userId, 'championships', appState.currentChampionshipId);
             const champDoc = await getDoc(champRef);
