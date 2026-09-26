@@ -3860,7 +3860,7 @@ const renderTelaoView = () => {
                     winnerSilver: silverWinner?.name || '?'
                 }, { merge: true });
 
-                hideModal();
+                closeModal();
                 showModal("Sucesso!", `Ranking global atualizado! Campeões Ouro: ${goldWinner.name}.`);
 
             } catch (error) {
@@ -4512,7 +4512,7 @@ const renderTelaoView = () => {
                     winnerSilver: null
                 }, { merge: true });
                 
-                hideModal();
+                closeModal();
                 showModal("Sucesso!", `Ranking global atualizado! Campeão: ${winnerName}.`);
 
             } catch (error) {
